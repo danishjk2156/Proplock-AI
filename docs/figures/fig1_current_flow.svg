@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 860" width="680" height="860" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#73726c"/>
+    </marker>
+    <style>
+      .ln{stroke:#73726c;stroke-width:1.4;fill:none}
+      .t{font-size:14px;font-weight:600}
+      .s{font-size:12px}
+      .lb{font-size:11.5px;font-weight:600;fill:#5F5E5A}
+      .bt{font-size:11px;font-weight:700;fill:#fff}
+    </style>
+  </defs>
+
+  <!-- 1 request -->
+  <rect x="190" y="12" width="300" height="56" rx="10" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="340" y="36" text-anchor="middle" class="t" fill="#2C2C2A">POST /api/v1/listings/audit</text>
+  <text x="340" y="55" text-anchor="middle" class="s" fill="#5F5E5A">broker metadata JSON + photos</text>
+  <line x1="340" y1="68" x2="340" y2="96" class="ln" marker-end="url(#a)"/>
+
+  <!-- 2 ground truth -->
+  <rect x="190" y="100" width="300" height="56" rx="10" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="340" y="124" text-anchor="middle" class="t" fill="#2C2C2A">Ground truth lookup</text>
+  <text x="340" y="143" text-anchor="middle" class="s" fill="#5F5E5A">DB first, then in-memory seed</text>
+  <rect x="458" y="90" width="44" height="20" rx="10" fill="#A32D2D"/><text x="480" y="104" text-anchor="middle" class="bt">M6</text>
+  <line x1="190" y1="128" x2="134" y2="128" class="ln" marker-end="url(#a)"/>
+  <rect x="30" y="108" width="100" height="40" rx="8" fill="#fff" stroke="#B4B2A9"/>
+  <text x="80" y="133" text-anchor="middle" class="s" fill="#5F5E5A">404 if unknown</text>
+  <text x="520" y="124" class="s" fill="#A32D2D">anyone can write</text>
+  <text x="520" y="140" class="s" fill="#A32D2D">“owner” data</text>
+  <line x1="340" y1="156" x2="340" y2="184" class="ln" marker-end="url(#a)"/>
+
+  <!-- 3 fan-out -->
+  <rect x="250" y="188" width="180" height="38" rx="19" fill="#EEEDFE" stroke="#534AB7"/>
+  <text x="340" y="212" text-anchor="middle" class="t" fill="#3C3489">LangGraph fan-out</text>
+  <path d="M300 226 C300 250 120 246 120 272" class="ln" marker-end="url(#a)"/>
+  <line x1="340" y1="226" x2="340" y2="272" class="ln" marker-end="url(#a)"/>
+  <path d="M380 226 C380 250 560 246 560 272" class="ln" marker-end="url(#a)"/>
+
+  <!-- 4 checks -->
+  <g>
+    <rect x="20" y="276" width="200" height="118" rx="10" fill="#fff" stroke="#A32D2D" stroke-width="1.5"/>
+    <rect x="20" y="276" width="200" height="32" rx="10" fill="#FCEBEB"/><rect x="20" y="296" width="200" height="12" fill="#FCEBEB"/>
+    <text x="120" y="297" text-anchor="middle" class="t" fill="#791F1F">Check A · Photos</text>
+    <text x="36" y="330" class="s" fill="#2C2C2A">• Gemini 1.5 Flash (old SDK)</text>
+    <text x="36" y="349" class="s" fill="#2C2C2A">• no key → guess from filename</text>
+    <text x="36" y="368" class="s" fill="#2C2C2A">• baseline pHash thrown away</text>
+    <rect x="150" y="380" width="60" height="20" rx="10" fill="#B4682A"/><text x="180" y="394" text-anchor="middle" class="bt">D1–D3</text>
+  </g>
+  <g>
+    <rect x="240" y="276" width="200" height="118" rx="10" fill="#fff" stroke="#A32D2D" stroke-width="1.5"/>
+    <rect x="240" y="276" width="200" height="32" rx="10" fill="#FCEBEB"/><rect x="240" y="296" width="200" height="12" fill="#FCEBEB"/>
+    <text x="340" y="297" text-anchor="middle" class="t" fill="#791F1F">Check B · Commute</text>
+    <text x="256" y="330" class="s" fill="#2C2C2A">• only the claims form field</text>
+    <text x="256" y="349" class="s" fill="#2C2C2A">• Maps “now”, not peak hour</text>
+    <text x="256" y="368" class="s" fill="#2C2C2A">• unknown place → invented time</text>
+    <rect x="356" y="380" width="74" height="20" rx="10" fill="#A32D2D"/><text x="393" y="394" text-anchor="middle" class="bt">M2 · M3</text>
+  </g>
+  <g>
+    <rect x="460" y="276" width="200" height="118" rx="10" fill="#fff" stroke="#BA7517" stroke-width="1.5"/>
+    <rect x="460" y="276" width="200" height="32" rx="10" fill="#FAEEDA"/><rect x="460" y="296" width="200" height="12" fill="#FAEEDA"/>
+    <text x="560" y="297" text-anchor="middle" class="t" fill="#633806">Check C · Deposit</text>
+    <text x="476" y="330" class="s" fill="#2C2C2A">• hard-coded dict, not RAG</text>
+    <text x="476" y="349" class="s" fill="#2C2C2A">• 3 months for every state</text>
+    <text x="476" y="368" class="s" fill="#2C2C2A">• no source date or version</text>
+    <rect x="610" y="380" width="40" height="20" rx="10" fill="#B4682A"/><text x="630" y="394" text-anchor="middle" class="bt">D6</text>
+  </g>
+
+  <path d="M120 400 C120 430 290 420 290 446" class="ln" marker-end="url(#a)"/>
+  <line x1="340" y1="400" x2="340" y2="446" class="ln" marker-end="url(#a)"/>
+  <path d="M560 400 C560 430 390 420 390 446" class="ln" marker-end="url(#a)"/>
+
+  <!-- 5 decision -->
+  <rect x="190" y="450" width="300" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7"/>
+  <text x="340" y="475" text-anchor="middle" class="t" fill="#3C3489">Decision engine</text>
+  <text x="340" y="495" text-anchor="middle" class="s" fill="#534AB7">all three PASS · never compares with owner</text>
+  <rect x="458" y="440" width="44" height="20" rx="10" fill="#A32D2D"/><text x="480" y="454" text-anchor="middle" class="bt">M1</text>
+
+  <path d="M250 510 L250 530 L160 530 L160 556" class="ln" marker-end="url(#a)"/>
+  <text x="168" y="548" class="lb">any FAIL</text>
+  <path d="M430 510 L430 530 L520 530 L520 556" class="ln" marker-end="url(#a)"/>
+  <text x="528" y="548" class="lb">all PASS</text>
+
+  <!-- 6 rejected / hash -->
+  <rect x="40" y="560" width="240" height="56" rx="10" fill="#FAECE7" stroke="#993C1D"/>
+  <text x="160" y="584" text-anchor="middle" class="t" fill="#712B13">REJECTED</text>
+  <text x="160" y="603" text-anchor="middle" class="s" fill="#993C1D">proof summary · no fix or review path</text>
+
+  <rect x="400" y="560" width="240" height="56" rx="10" fill="#fff" stroke="#A32D2D" stroke-width="1.5"/>
+  <text x="520" y="584" text-anchor="middle" class="t" fill="#791F1F">SHA-256 audit hash</text>
+  <text x="520" y="603" text-anchor="middle" class="s" fill="#A32D2D">owner photos only · no secret key</text>
+  <rect x="608" y="550" width="44" height="20" rx="10" fill="#A32D2D"/><text x="630" y="564" text-anchor="middle" class="bt">M4</text>
+  <line x1="520" y1="616" x2="520" y2="646" class="ln" marker-end="url(#a)"/>
+
+  <!-- 7 paypal -->
+  <rect x="400" y="650" width="240" height="70" rx="10" fill="#fff" stroke="#A32D2D" stroke-width="1.5"/>
+  <text x="520" y="674" text-anchor="middle" class="t" fill="#791F1F">PayPal create_product</text>
+  <text x="520" y="693" text-anchor="middle" class="s" fill="#A32D2D">283-char description is rejected</text>
+  <text x="520" y="710" text-anchor="middle" class="s" fill="#A32D2D">→ returns a fake PROD-PL id</text>
+  <rect x="608" y="640" width="44" height="20" rx="10" fill="#A32D2D"/><text x="630" y="654" text-anchor="middle" class="bt">M5</text>
+
+  <path d="M160 616 L160 770 L186 770" class="ln" marker-end="url(#a)"/>
+  <path d="M520 720 L520 770 L494 770" class="ln" marker-end="url(#a)"/>
+
+  <!-- 8 sqlite -->
+  <rect x="190" y="742" width="300" height="56" rx="10" fill="#fff" stroke="#A32D2D" stroke-width="1.5"/>
+  <text x="340" y="766" text-anchor="middle" class="t" fill="#791F1F">SQLite + memory cache</text>
+  <text x="340" y="785" text-anchor="middle" class="s" fill="#A32D2D">errors swallowed · findings never saved</text>
+  <rect x="458" y="732" width="44" height="20" rx="10" fill="#A32D2D"/><text x="480" y="746" text-anchor="middle" class="bt">M7</text>
+
+  <!-- legend -->
+  <rect x="20" y="822" width="14" height="14" rx="3" fill="#fff" stroke="#A32D2D" stroke-width="1.5"/>
+  <text x="40" y="834" class="s" fill="#5F5E5A">broken by a probe</text>
+  <rect x="160" y="822" width="14" height="14" rx="3" fill="#fff" stroke="#BA7517" stroke-width="1.5"/>
+  <text x="180" y="834" class="s" fill="#5F5E5A">works, but weak</text>
+  <rect x="290" y="821" width="34" height="16" rx="8" fill="#A32D2D"/><text x="307" y="833" text-anchor="middle" class="bt">M#</text>
+  <text x="330" y="834" class="s" fill="#5F5E5A">major issue</text>
+  <rect x="420" y="821" width="34" height="16" rx="8" fill="#B4682A"/><text x="437" y="833" text-anchor="middle" class="bt">D#</text>
+  <text x="460" y="834" class="s" fill="#5F5E5A">medium issue (see section 5)</text>
+</svg>

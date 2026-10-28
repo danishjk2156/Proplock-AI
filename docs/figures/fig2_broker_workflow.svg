@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 400" width="680" height="400" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#73726c"/>
+    </marker>
+    <marker id="m" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#0F6E56"/>
+    </marker>
+    <style>
+      .t{font-size:13px;font-weight:600;fill:#2C2C2A}
+      .s{font-size:11px;fill:#5F5E5A}
+      .h{font-size:11px;font-weight:700;fill:#534AB7;letter-spacing:1px}
+      .n{font-size:14px;font-weight:700;fill:#fff}
+      .lb{font-size:11.5px;fill:#2C2C2A}
+      .mn{font-size:11.5px;font-weight:600;fill:#0F6E56}
+    </style>
+  </defs>
+
+  <text x="20" y="22" class="h">THE BROKER’S DAY</text>
+  <line x1="70" y1="56" x2="610" y2="56" stroke="#CECBF6" stroke-width="4" stroke-linecap="round"/>
+
+  <g text-anchor="middle">
+    <circle cx="70" cy="56" r="17" fill="#534AB7"/><text x="70" y="61" class="n">1</text>
+    <text x="70" y="96" class="t">Get the flat</text>
+    <text x="70" y="114" class="s">Owner hands keys</text><text x="70" y="129" class="s">to one or more</text><text x="70" y="144" class="s">brokers</text>
+
+    <circle cx="178" cy="56" r="17" fill="#534AB7"/><text x="178" y="61" class="n">2</text>
+    <text x="178" y="96" class="t">Advertise</text>
+    <text x="178" y="114" class="s">Portals, WhatsApp,</text><text x="178" y="129" class="s">Facebook groups</text><text x="178" y="144" class="s" fill="#A32D2D" style="fill:#A32D2D">ads get inflated</text>
+
+    <circle cx="286" cy="56" r="17" fill="#534AB7"/><text x="286" y="61" class="n">3</text>
+    <text x="286" y="96" class="t">Handle leads</text>
+    <text x="286" y="114" class="s">Dozens of calls:</text><text x="286" y="129" class="s">deposit? pets?</text><text x="286" y="144" class="s">bachelors?</text>
+
+    <circle cx="394" cy="56" r="17" fill="#534AB7"/><text x="394" y="61" class="n">4</text>
+    <text x="394" y="96" class="t">Site visit</text>
+    <text x="394" y="114" class="s">Time and fuel</text><text x="394" y="129" class="s">per visit</text><text x="394" y="144" class="s" style="fill:#A32D2D">many no-shows</text>
+
+    <circle cx="502" cy="56" r="17" fill="#534AB7"/><text x="502" y="61" class="n">5</text>
+    <text x="502" y="96" class="t">Close</text>
+    <text x="502" y="114" class="s">Token advance,</text><text x="502" y="129" class="s">agreement signed</text><text x="502" y="144" class="s">owner + tenant</text>
+
+    <circle cx="610" cy="56" r="17" fill="#0F6E56"/><text x="610" y="61" class="n">6</text>
+    <text x="610" y="96" class="t">Get paid</text>
+    <text x="610" y="114" class="s">Brokerage fee,</text><text x="610" y="129" class="s">often 1 month’s</text><text x="610" y="144" class="s">rent</text>
+  </g>
+
+  <line x1="20" y1="176" x2="660" y2="176" stroke="#E5E3DC"/>
+  <text x="20" y="204" class="h">WHO PAYS WHOM</text>
+
+  <!-- actors -->
+  <rect x="30" y="236" width="150" height="54" rx="10" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="105" y="259" text-anchor="middle" class="t">Owner</text>
+  <text x="105" y="277" text-anchor="middle" class="s">has the empty flat</text>
+
+  <rect x="265" y="236" width="150" height="54" rx="10" fill="#EEEDFE" stroke="#534AB7"/>
+  <text x="340" y="259" text-anchor="middle" class="t" style="fill:#3C3489">Broker</text>
+  <text x="340" y="277" text-anchor="middle" class="s">earns on closing only</text>
+
+  <rect x="500" y="236" width="150" height="54" rx="10" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="575" y="259" text-anchor="middle" class="t">Tenant</text>
+  <text x="575" y="277" text-anchor="middle" class="s">looking for a flat</text>
+
+  <line x1="180" y1="263" x2="261" y2="263" stroke="#73726c" stroke-width="1.4" marker-end="url(#a)"/>
+  <text x="222" y="254" text-anchor="middle" class="lb">keys</text>
+
+  <line x1="500" y1="252" x2="419" y2="252" stroke="#0F6E56" stroke-width="1.6" marker-end="url(#m)"/>
+  <text x="458" y="244" text-anchor="middle" class="mn">token + fee</text>
+  <line x1="415" y1="276" x2="496" y2="276" stroke="#73726c" stroke-width="1.4" marker-end="url(#a)"/>
+  <text x="458" y="300" text-anchor="middle" class="lb">ads + visits</text>
+
+  <path d="M575 290 C575 360 105 360 105 294" fill="none" stroke="#0F6E56" stroke-width="1.6" marker-end="url(#m)"/>
+  <text x="340" y="370" text-anchor="middle" class="mn">monthly rent + security deposit (signed lease)</text>
+  <text x="340" y="390" text-anchor="middle" class="s">The token is the risky payment: informal, often cash or UPI, with no refund guarantee.</text>
+</svg>

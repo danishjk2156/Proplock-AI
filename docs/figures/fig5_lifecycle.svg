@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 302" width="680" height="302" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#73726c"/>
+    </marker>
+    <style>
+      .ln{stroke:#73726c;stroke-width:1.4;fill:none}
+      .st{font-size:12.5px;font-weight:700;letter-spacing:.5px}
+      .lb{font-size:11px;fill:#5F5E5A}
+    </style>
+  </defs>
+
+  <!-- edit loop over the top -->
+  <path d="M485 112 L485 66 Q485 56 475 56 L73 56 Q63 56 63 66 L63 108" class="ln" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <text x="274" y="48" text-anchor="middle" class="lb">broker edits a live listing → new version, full re-audit</text>
+
+  <!-- happy path -->
+  <rect x="9" y="112" width="108" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="63" y="137" text-anchor="middle" class="st" fill="#444441">DRAFT</text>
+  <line x1="117" y1="132" x2="143" y2="132" class="ln" marker-end="url(#a)"/>
+  <rect x="147" y="112" width="118" height="40" rx="20" fill="#EEEDFE" stroke="#534AB7"/>
+  <text x="206" y="137" text-anchor="middle" class="st" fill="#3C3489">SUBMITTED</text>
+  <line x1="265" y1="132" x2="291" y2="132" class="ln" marker-end="url(#a)"/>
+  <rect x="295" y="112" width="112" height="40" rx="20" fill="#E1F5EE" stroke="#0F6E56"/>
+  <text x="351" y="137" text-anchor="middle" class="st" fill="#085041">VERIFIED</text>
+  <line x1="407" y1="132" x2="433" y2="132" class="ln" marker-end="url(#a)"/>
+  <rect x="437" y="112" width="96" height="40" rx="20" fill="#0F6E56" stroke="#0F6E56"/>
+  <text x="485" y="137" text-anchor="middle" class="st" fill="#fff">LIVE</text>
+  <line x1="533" y1="132" x2="559" y2="132" class="ln" marker-end="url(#a)"/>
+  <rect x="563" y="112" width="108" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="617" y="137" text-anchor="middle" class="st" fill="#444441">RENTED</text>
+
+  <text x="130" y="104" text-anchor="middle" class="lb">submit</text>
+  <text x="278" y="104" text-anchor="middle" class="lb">all pass</text>
+  <text x="420" y="104" text-anchor="middle" class="lb">minted</text>
+  <text x="546" y="104" text-anchor="middle" class="lb">closed</text>
+
+  <!-- branches -->
+  <rect x="40" y="214" width="130" height="40" rx="20" fill="#FAECE7" stroke="#993C1D"/>
+  <text x="105" y="239" text-anchor="middle" class="st" fill="#712B13">NEEDS_FIX</text>
+  <rect x="236" y="214" width="130" height="40" rx="20" fill="#FAEEDA" stroke="#BA7517"/>
+  <text x="301" y="239" text-anchor="middle" class="st" fill="#633806">IN_REVIEW</text>
+  <rect x="440" y="214" width="110" height="40" rx="20" fill="#fff" stroke="#993C1D" stroke-dasharray="4 3"/>
+  <text x="495" y="239" text-anchor="middle" class="st" fill="#712B13">EXPIRED</text>
+
+  <!-- SUBMITTED -> NEEDS_FIX -->
+  <path d="M180 152 L180 180 Q180 186 174 186 L141 186 Q135 186 135 192 L135 210" class="ln" marker-end="url(#a)"/>
+  <text x="150" y="179" text-anchor="end" class="lb">check failed</text>
+  <!-- NEEDS_FIX -> DRAFT -->
+  <line x1="63" y1="214" x2="63" y2="156" class="ln" marker-end="url(#a)"/>
+  <text x="55" y="190" text-anchor="end" class="lb">edit</text>
+  <!-- SUBMITTED -> IN_REVIEW -->
+  <path d="M232 152 L232 180 Q232 186 238 186 L266 186 Q272 186 272 192 L272 210" class="ln" marker-end="url(#a)"/>
+  <text x="280" y="204" class="lb">unsure</text>
+  <!-- IN_REVIEW -> VERIFIED -->
+  <line x1="340" y1="214" x2="340" y2="156" class="ln" marker-end="url(#a)"/>
+  <text x="348" y="190" class="lb">approve</text>
+  <!-- IN_REVIEW -> NEEDS_FIX -->
+  <line x1="236" y1="234" x2="174" y2="234" class="ln" marker-end="url(#a)"/>
+  <text x="205" y="268" text-anchor="middle" class="lb">reject</text>
+  <line x1="205" y1="258" x2="205" y2="238" stroke="#B4B2A9" stroke-dasharray="2 2"/>
+  <!-- LIVE <-> EXPIRED -->
+  <line x1="470" y1="152" x2="470" y2="210" class="ln" marker-end="url(#a)"/>
+  <line x1="520" y1="214" x2="520" y2="156" class="ln" marker-end="url(#a)"/>
+  <text x="462" y="180" text-anchor="end" class="lb">no confirm</text>
+  <text x="462" y="194" text-anchor="end" class="lb">in 7 days</text>
+  <text x="528" y="190" class="lb">broker confirms</text>
+
+  <text x="9" y="298" class="lb">Solid pills are the happy path. Every edit creates a new signed version, so old terms stay on record for disputes.</text>
+</svg>

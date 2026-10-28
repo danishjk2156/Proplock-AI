@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PropLock AI — Feature 1 Technical Review</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm;
+    @bottom-center { content: "PropLock AI · Feature 1 Technical Review"; font: 8pt 'Segoe UI', sans-serif; color: #888; }
+    @bottom-right { content: counter(page) " / " counter(pages); font: 8pt 'Segoe UI', sans-serif; color: #888; } }
+  @page :first { @bottom-center { content: none; } @bottom-right { content: none; } }
+  :root { --ink:#1f2328; --muted:#5f6368; --line:#d8dee4; --pur:#534AB7; --pur-bg:#EEEDFE; --teal:#0F6E56; --teal-bg:#E1F5EE;
+          --red:#A32D2D; --red-bg:#FCEBEB; --amb:#854F0B; --amb-bg:#FAEEDA; --code-bg:#f6f8fa; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 20pt; margin: 0 0 6pt; color: var(--pur); font-weight: 600; }
+  h2 { font-size: 15pt; margin: 18pt 0 6pt; padding-bottom: 4pt; border-bottom: 2px solid var(--pur); font-weight: 600; break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 14pt 0 4pt; font-weight: 600; break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 10pt 0 3pt; font-weight: 600; color: var(--muted); break-after: avoid; }
+  p { margin: 4pt 0 6pt; }
+  ul, ol { margin: 4pt 0 6pt; padding-left: 18pt; }
+  li { margin: 2pt 0; }
+  code { font-family: 'Cascadia Code', Consolas, monospace; font-size: 8.6pt; background: var(--code-bg); padding: 0 3px; border-radius: 3px; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 7pt 9pt; margin: 4pt 0 8pt;
+        white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
+  pre code { background: none; padding: 0; font-size: 8.2pt; line-height: 1.45; }
+  pre.bad { border-left: 4px solid var(--red); }
+  pre.good { border-left: 4px solid var(--teal); }
+  .lbl { font-size: 7.5pt; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; margin: 6pt 0 1pt; }
+  .lbl.bad { color: var(--red); } .lbl.good { color: var(--teal); }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 8.8pt; }
+  th, td { border: 1px solid var(--line); padding: 4pt 6pt; vertical-align: top; text-align: left; }
+  th { background: #f3f2fb; font-weight: 600; }
+  tr { break-inside: avoid; }
+  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: center; break-after: page; }
+  .cover .kicker { color: var(--muted); font-size: 10pt; letter-spacing: 1.5px; text-transform: uppercase; }
+  .cover h1 { font-size: 30pt; line-height: 1.15; margin: 8pt 0; }
+  .cover .sub { font-size: 13pt; color: var(--muted); margin-bottom: 26pt; }
+  .meta { font-size: 9.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 8pt; margin-top: 26pt; }
+  .box { border-radius: 8px; padding: 8pt 11pt; margin: 6pt 0 10pt; break-inside: avoid; }
+  .box.info { background: var(--pur-bg); border: 1px solid #AFA9EC; }
+  .box.ok { background: var(--teal-bg); border: 1px solid #5DCAA5; }
+  .box.warn { background: var(--amb-bg); border: 1px solid #EF9F27; }
+  .box.bad { background: var(--red-bg); border: 1px solid #F09595; }
+  .box p:first-child { margin-top: 0; } .box p:last-child { margin-bottom: 0; }
+  .issue { border: 1px solid var(--line); border-radius: 8px; padding: 6pt 11pt 4pt; margin: 10pt 0; }
+  .issue h3 { margin-top: 2pt; }
+  .tag { display: inline-block; font-size: 7.5pt; font-weight: 700; padding: 1pt 6pt; border-radius: 10px; margin-right: 4pt; vertical-align: middle; }
+  .tag.major { background: var(--red-bg); color: var(--red); border: 1px solid #F09595; }
+  .tag.med { background: var(--amb-bg); color: var(--amb); border: 1px solid #EF9F27; }
+  .tag.ok { background: var(--teal-bg); color: var(--teal); border: 1px solid #5DCAA5; }
+  .stats { display: flex; gap: 8pt; margin: 8pt 0; }
+  .stat { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 7pt 9pt; }
+  .stat b { display: block; font-size: 17pt; color: var(--pur); }
+  .stat span { font-size: 8.5pt; color: var(--muted); }
+  .diagram { border: 1px solid var(--line); border-radius: 8px; padding: 8pt; margin: 6pt 0 10pt; text-align: center; break-inside: avoid; }
+  .diagram svg { max-width: 100% !important; max-height: 150mm; height: auto; }
+  .diagram.tall svg { max-height: 232mm; width: 100%; }
+  .cap { font-size: 8.5pt; color: var(--muted); text-align: center; margin-top: 3pt; }
+  .toc ol { columns: 2; column-gap: 24pt; font-size: 10pt; }
+  .pb { break-before: page; }
+  .muted { color: var(--muted); }
+  .small { font-size: 8.5pt; }
+  a { color: var(--pur); text-decoration: none; }
+
+  figure.fig { margin: 8pt 0 12pt; padding: 0; break-inside: avoid; text-align: center; }
+  figure.fig img { width: 100%; height: auto; display: block; }
+  figure.fig figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 5pt; }
+  figure.fig2_broker_workflow img, figure.fig5_lifecycle img { width: 96%; margin: 0 auto; }
+  h2 { border-bottom: none; padding: 5pt 0 5pt 10pt; border-left: 5px solid var(--pur); background: linear-gradient(90deg,#f3f2fb,#fff 70%); border-radius: 0 6px 6px 0; }
+  .cover { position: relative; }
+  .cover::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 9mm; background: var(--pur); border-radius: 6px; }
+  .cover h1 { color: #26215C; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div class="kicker">PayPal AI Hackathon · Agentic Commerce Track</div>
+  <h1>PropLock AI<br>Feature 1: Multimodal Listing Audit &amp; Commute-Truth Agent</h1>
+  <div class="sub">Technical review, issues and fixes, real-world broker analysis, and target architecture</div>
+  <div class="stats">
+    <div class="stat"><b>9 / 9</b><span>existing tests pass</span></div>
+    <div class="stat"><b>8</b><span>major issues confirmed by running the code</span></div>
+    <div class="stat"><b>9</b><span>medium issues</span></div>
+    <div class="stat"><b>4</b><span>checks in the target design (A–D)</span></div>
+  </div>
+  <div class="box warn"><p><b>Verdict.</b> The skeleton is solid (FastAPI → LangGraph fan-out → 3 checks → decision engine → PayPal Catalog), but the trust logic has gaps that let a dishonest broker earn a <b>VERIFIED</b> badge, and failures are hidden behind fallbacks. This document lists each gap with the buggy code, the evidence, and a concrete fix.</p></div>
+  <div class="meta">
+    Codebase reviewed: <code>D:\hackathon\paypal\backend</code><br>
+    Reference: <i>PropLock AI Product Blueprint</i> (5 pages) and the Feature 1 flow diagram<br>
+    Review date: 22 October 2026
+  </div>
+</section>
+
+<!-- ============ TOC ============ -->
+<section class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li>Executive summary</li>
+    <li>What Feature 1 does: checks A–D</li>
+    <li>Current implementation</li>
+    <li>Major issues (M1–M8)</li>
+    <li>Medium and minor issues</li>
+    <li>How rental brokers work in real life</li>
+    <li>Broker scams and how Feature 1 catches them</li>
+    <li>Fake photo defenses</li>
+    <li>Commission vs rent markup</li>
+    <li>Target architecture (all fixes applied)</li>
+    <li>Integrating the broker workflow</li>
+    <li>Existing solutions in the market</li>
+    <li>Build plan for the demo</li>
+    <li>Appendix: probe results and sources</li>
+  </ol>
+</section>
+
+<!-- ============ 1 ============ -->
+<h2>1. Executive summary</h2>
+<p>Feature 1 is PropLock's <b>trust layer</b>. Before a broker's rental ad goes live, it checks the ad against three sources of truth, the owner's verified record, real map routes and state tenancy rules, and only then mints the listing as a PayPal Catalog product with a <i>Verified Commute &amp; Refund Protected</i> badge. Features 2–4 (qualification, escrow hold, invoicing) all rely on that verified record.</p>
+<table>
+  <tr><th style="width:28%">Area</th><th>Status</th></tr>
+  <tr><td>Architecture and code structure</td><td><span class="tag ok">GOOD</span> Clean separation of API, agents, services and DB; compiled LangGraph StateGraph with parallel fan-out.</td></tr>
+  <tr><td>Test suite</td><td><span class="tag ok">PASSES</span> 9/9, but tests rely on filename heuristics and fallbacks, so they don't cover the bypasses below.</td></tr>
+  <tr><td>Trust guarantees</td><td><span class="tag major">BROKEN</span> Rent/furnishing never compared with the owner (M1); lies in ad text skip the commute check (M2); audit hash doesn't lock broker photos (M4); unauthenticated ground-truth writes (M6).</td></tr>
+  <tr><td>Failure handling</td><td><span class="tag major">FAIL-OPEN</span> PayPal failure returns a fake product ID (M5); DB errors swallowed and reports fabricated (M7); commute fallback invents evidence (M3).</td></tr>
+  <tr><td>Reproducibility</td><td><span class="tag major">BROKEN</span> <code>requirements.txt</code> lacks <code>sqlalchemy</code> and <code>langgraph</code> (M8).</td></tr>
+</table>
+<div class="box info"><p><b>Recommended fix order:</b> M8 → M1 → M2 → M5 → M3 → M4 → M7 → M6. The first four make the demo honest; the rest make it robust.</p></div>
+
+<!-- ============ 2 ============ -->
+<h2>2. What Feature 1 does: checks A–D</h2>
+<p>Every listing goes through four independent checks, run in parallel. A, B and C exist in the code today; D is the new check proposed in this review.</p>
+<table>
+  <tr><th style="width:5%">#</th><th style="width:17%">Check</th><th style="width:28%">Question it answers</th><th style="width:28%">Compared against</th><th>Source file</th></tr>
+  <tr><td><b>A</b></td><td>Photo inspector</td><td>Are these real photos of <i>this</i> flat, and do they match the claims?</td><td>Owner baseline photos, the web, capture GPS</td><td><code>agents/photo_inspector.py</code></td></tr>
+  <tr><td><b>B</b></td><td>Commute truth</td><td>Is "5 min to metro" true?</td><td>Peak-hour route from the owner's verified coordinates</td><td><code>agents/distance_calculator.py</code></td></tr>
+  <tr><td><b>C</b></td><td>Rental compliance</td><td>Is the deposit legal in this state?</td><td>State tenancy rules (TN, Karnataka, …)</td><td><code>agents/law_checker.py</code></td></tr>
+  <tr><td><b>D</b></td><td>Ground truth <span class="tag ok">NEW</span></td><td>Do rent, deposit, furnishing match what the owner agreed?</td><td>Owner record / broker mandate</td><td><code>agents/ground_truth_checker.py</code></td></tr>
+</table>
+
+<h3>Check A: photo inspector</h3>
+<table>
+  <tr><th>Sub-check</th><th>Example it catches</th><th style="width:22%">In code today?</th></tr>
+  <tr><td>Watermark detection</td><td>Photo copied from NoBroker with its logo</td><td>✅ Gemini, or filename guess without a key</td></tr>
+  <tr><td>Furnishing match</td><td>Claims "Fully Furnished", photo shows an empty room</td><td>✅</td></tr>
+  <tr><td>Same room as baseline</td><td>Photo of a different flat from the web</td><td>❌ hash computed, then discarded</td></tr>
+  <tr><td>Taken at the flat (GPS)</td><td>Photo not taken at the property</td><td>❌ new</td></tr>
+  <tr><td>Reverse image search</td><td>Photo exists elsewhere online</td><td>❌ new</td></tr>
+  <tr><td>Duplicate across properties</td><td>Same photo used for two different flats</td><td>❌ new</td></tr>
+</table>
+
+<h3>Check B: commute truth</h3>
+<pre><code class="language-text">Broker says:  "5 min walk to Indiranagar Metro"
+Maps says:    22 min walk at 08:30 on a weekday
+Allowed:      max(5 × 1.2, 5 + 5) = 10 min
+22 &gt; 10  →  FAIL      (no route data → UNVERIFIABLE, never an invented number)</code></pre>
+<p>The origin is the owner's verified coordinates, which the broker cannot change; the destination and minutes come from the broker's claims.</p>
+
+<h3>Check C: rental compliance</h3>
+<pre><code class="language-text">Chennai flat: rent ₹40,000, deposit ₹2,40,000  →  6 months
+Tamil Nadu rule: max 3 months                  →  FAIL, with legal citation</code></pre>
+
+<h3>Check D: ground truth (new)</h3>
+<pre><code class="language-text">Owner mandate:   rent ₹32k–₹35k, deposit ≤ ₹70k, Unfurnished, brokerage ≤ 1 month
+Broker listing:  rent ₹40k,       deposit ₹1.4L,  Fully Furnished
+                 ❌ over range     ❌ over owner    ❌ owner says Unfurnished</code></pre>
+<p>No AI or external API is needed: it compares numbers already in your database. It is the cheapest check and catches the most common scam.</p>
+
+<h3>How the results combine</h3>
+<table>
+  <tr><th>A</th><th>B</th><th>C</th><th>D</th><th>Outcome</th></tr>
+  <tr><td>PASS</td><td>PASS</td><td>PASS</td><td>PASS</td><td><b>VERIFIED</b> → PayPal product + badge</td></tr>
+  <tr><td>PASS</td><td>FAIL</td><td>PASS</td><td>PASS</td><td><b>NEEDS_FIX</b> → evidence and suggested fix sent to broker</td></tr>
+  <tr><td>PASS</td><td>UNVERIFIABLE</td><td>PASS</td><td>PASS</td><td><b>IN_REVIEW</b> → a manager decides</td></tr>
+</table>
+
+<!-- ============ 3 ============ -->
+<h2 class="pb">3. Current implementation</h2>
+<figure class="fig fig1_current_flow"><img src="figures/fig1_current_flow.svg" alt=""><figcaption><b>Figure 1.</b> Current flow. Red steps were broken by at least one probe.</figcaption></figure>
+
+<table>
+  <tr><th style="width:20%">Component</th><th style="width:30%">File</th><th>What it really does</th></tr>
+  <tr><td>API</td><td><code>api/v1/listings.py</code></td><td><code>POST /listings/audit</code>, <code>GET /listings/audit/{id}</code>, <code>GET /listings/{key}</code></td></tr>
+  <tr><td>Ground truth</td><td><code>db/ground_truth_store.py</code></td><td>Reads the DB first, then an in-memory seed. <code>POST /ground-truth</code> writes only to memory.</td></tr>
+  <tr><td>Orchestrator</td><td><code>agents/orchestrator.py</code></td><td>Compiled LangGraph: START → 3 parallel nodes → decision_engine → END</td></tr>
+  <tr><td>Decision</td><td><code>agents/decision_engine.py</code></td><td>Requires all three PASS, builds the audit hash, mints the PayPal product</td></tr>
+  <tr><td>PayPal</td><td><code>services/paypal_catalog.py</code></td><td>OAuth on every call, <code>create_product</code>; any failure returns a fabricated ID</td></tr>
+</table>
+
+<h3>Blueprint diagram vs code</h3>
+<table>
+  <tr><th style="width:38%">Diagram step</th><th>Status in code</th></tr>
+  <tr><td>A: Perceptual hash + CLIP</td><td>⚠️ pHash computed, result thrown away; no CLIP</td></tr>
+  <tr><td>A: Compare with reference</td><td>❌ not used in the verdict</td></tr>
+  <tr><td>A: Gemini Vision check</td><td>⚠️ <code>gemini-1.5-flash</code> via deprecated SDK (blueprint says 2.5 Flash)</td></tr>
+  <tr><td>B: Extract address + claim</td><td>❌ only the structured <code>commute_claims</code> field is read</td></tr>
+  <tr><td>B: Mock DB or Maps API</td><td>⚠️ uses "now" not peak hour; mock invents numbers</td></tr>
+  <tr><td>B: Compare claim vs route</td><td>✅ <code>max(claimed×1.2, claimed+5)</code></td></tr>
+  <tr><td>C: RAG finds legal rules</td><td>❌ hard-coded dict; markdown acts never read</td></tr>
+  <tr><td>C: Python rule check</td><td>✅</td></tr>
+  <tr><td>C: Cite source + date</td><td>⚠️ source cited, no date or version</td></tr>
+  <tr><td>Decision engine: rules + evidence thresholds</td><td>⚠️ rules yes; <code>confidence_score</code> never used</td></tr>
+  <tr><td>Audit dashboard</td><td>❌ no frontend in the repo</td></tr>
+  <tr><td>No → "Fix or manual review"</td><td>❌ only VERIFIED / REJECTED</td></tr>
+  <tr><td>Yes → PayPal Catalog product</td><td>⚠️ happy path works, but fails over to a fake ID</td></tr>
+</table>
+
+<!-- ============ 4 ============ -->
+<h2 class="pb">4. Major issues (M1–M8)</h2>
+<p class="muted">Each issue was reproduced on a scratch copy of the backend with a fresh database and no API keys. Probe IDs (P1–P9) refer to the appendix.</p>
+
+<div class="issue">
+<h3><span class="tag major">M1</span> Broker claims are never compared with the owner's data</h3>
+<p><b>Where:</b> <code>agents/decision_engine.py</code> lines 32–36. <b>Evidence:</b> P1. A broker charging ₹55k (owner agreed ₹35k) and advertising "Fully Furnished" for an unfurnished flat is <b>VERIFIED</b>, and the inflated price is minted into PayPal.</p>
+<div class="lbl bad">Buggy code</div>
+<pre class="bad"><code class="language-python">all_passed = (
+    image_audit.verdict == "PASS" and
+    commute_audit.verdict == "PASS" and
+    compliance_audit.verdict == "PASS"
+)   # claimed_rent / deposit / furnishing never checked against owner_truth</code></pre>
+<div class="lbl good">Fix: add Check D</div>
+<pre class="good"><code class="language-python">FURNISH_RANK = {"Unfurnished": 0, "Semi-Furnished": 1, "Fully Furnished": 2}
+
+def check_ground_truth(sub, mandate, owner) -&gt; list[str]:
+    issues = []
+    if not (mandate.min_rent &lt;= sub.claimed_rent &lt;= mandate.max_rent):
+        issues.append(f"Rent {sub.claimed_rent} outside owner range {mandate.min_rent}-{mandate.max_rent}")
+    if sub.claimed_deposit &gt; mandate.max_deposit:
+        issues.append(f"Deposit {sub.claimed_deposit} &gt; owner-agreed {mandate.max_deposit}")
+    if FURNISH_RANK[sub.claimed_furnishing] &gt; FURNISH_RANK[owner.furnishing_status]:
+        issues.append(f"Claims {sub.claimed_furnishing}, owner registered {owner.furnishing_status}")
+    if sub.brokerage_fee &gt; mandate.max_brokerage_months * sub.claimed_rent:
+        issues.append("Brokerage above agreed cap")
+    return issues   # non-empty -&gt; FAIL</code></pre>
+</div>
+
+<div class="issue">
+<h3><span class="tag major">M2</span> Lies in the title or description skip the commute check</h3>
+<p><b>Where:</b> <code>agents/distance_calculator.py</code> lines 18–25. <b>Evidence:</b> P2. A title of "2 MIN WALK TO METRO" with an empty <code>commute_claims</code> list is <b>VERIFIED</b> with <code>claims_evaluated = 0</code>. Tenants read the title, not a hidden form field.</p>
+<div class="lbl bad">Buggy code</div>
+<pre class="bad"><code class="language-python">if not claims:
+    return CommuteAuditResult(verdict="PASS", claims_evaluated=0, ...)</code></pre>
+<div class="lbl good">Fix: extract claims from the ad text first</div>
+<pre class="good"><code class="language-python">class ExtractedClaims(BaseModel):
+    commute: list[CommuteClaim]
+
+resp = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=f"Extract every commute claim from this ad:\n{sub.title}\n{sub.description}",
+    config={"response_mime_type": "application/json", "response_schema": ExtractedClaims},
+)
+claims = sub.commute_claims + resp.parsed.commute</code></pre>
+</div>
+
+<div class="issue">
+<h3><span class="tag major">M3</span> The fallback commute check invents evidence</h3>
+<p><b>Where:</b> <code>services/maps_service.py</code> lines 70 and 75–77. <b>Evidence:</b> P3, P4. For any destination not in the hard-coded table, the "actual" time is <code>claimed + 12</code>, which always exceeds the tolerance. An honest 30-minute claim is reported as "actual 42 min, LIE DETECTED". The two-way substring match also lets destination <code>"a"</code> match "tech park".</p>
+<div class="lbl bad">Buggy code</div>
+<pre class="bad"><code class="language-python">if p_id == property_id and (kw in dest_clean or dest_clean in kw) and m == mode:
+    ...
+if not matched:
+    actual_minutes = max(claimed_minutes + 12, 18)   # always above tolerance</code></pre>
+<div class="lbl good">Fix: say "can't verify" and match exactly</div>
+<pre class="good"><code class="language-python">if (p_id, kw, m) == (property_id, dest_clean, mode):
+    ...
+if not matched:
+    return CommuteFinding(..., actual_peak_minutes=None, status="UNVERIFIABLE",
+                          summary="No route data; sent to manual review.")</code></pre>
+</div>
+
+<div class="issue">
+<h3><span class="tag major">M4</span> The audit hash doesn't lock the broker's photos</h3>
+<p><b>Purpose of the feature:</b> fingerprint the verified listing so that any later change (rent, photos, claims) is detected before checkout. This is what stops bait-and-switch after the badge is issued.</p>
+<p><b>Where:</b> <code>agents/orchestrator.py</code> lines 52–57, <code>services/paypal_catalog.py</code> line 37. <b>Evidence:</b> P6. Two submissions with different photos produce the <b>same</b> hash.</p>
+<div class="lbl bad">Buggy code</div>
+<pre class="bad"><code class="language-python">photo_hashes = list(owner.baseline_photo_hashes)        # OWNER photos, not the broker's
+commute_claim_str = f"{sub.commute_claims[0]...}"       # only the FIRST claim
+return hashlib.sha256(payload.encode("utf-8")).hexdigest()   # unsigned: anyone can recompute</code></pre>
+<div class="lbl good">Fix: fingerprint everything checked, signed with a server secret</div>
+<pre class="good"><code class="language-python">payload = json.dumps({
+    "submission": sub.model_dump(),                                   # all claims, rent, deposit
+    "photo_phashes": sorted(compute_phash(b) for _, b in photos),     # BROKER photos
+    "owner": owner.model_dump(), "audit_id": audit_id, "ruleset": "v3",
+}, sort_keys=True, separators=(",", ":"))
+signature = hmac.new(settings.AUDIT_SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()</code></pre>
+</div>
+
+<div class="issue">
+<h3><span class="tag major">M5</span> PayPal failures quietly become fake success</h3>
+<p><b>Where:</b> <code>services/paypal_catalog.py</code> lines 91, 100, 114–121. <b>Evidence:</b> P5. The description is 283 characters; Catalog Products v1 allows 256, so a real sandbox call is rejected and the code returns an invented <code>PROD-PL-…</code> ID. <code>category: "REAL_ESTATE"</code> should also be checked against PayPal's category list. Catalog products can be PATCHed, so immutability must come from your signed audit, not from PayPal.</p>
+<div class="lbl bad">Buggy code</div>
+<pre class="bad"><code class="language-python">description = f"PropLock Verified. {json.dumps(pricing_metadata)}"   # 283 chars
+...
+if resp.status_code in (200, 201):
+    return resp.json().get("id")
+return f"PROD-PL-{property_id}-{broker_id}-{short_hash}"              # FAKE id</code></pre>
+<div class="lbl good">Fix: short description, own product ID, raise on failure</div>
+<pre class="good"><code class="language-python">body = {
+    "id": f"PL-{submission_id}",                                      # deterministic, retry-safe
+    "name": f"PropLock - {title[:100]}",
+    "description": f"PropLock audit {audit_id} sig {signature[:16]}", # &lt; 256 chars
+    "type": "SERVICE",
+    "home_url": f"https://proplock.ai/audits/{audit_id}",
+}
+resp = await client.post(url, json=body, headers=headers)
+if resp.status_code not in (200, 201):
+    logger.error("PayPal %s debug_id=%s %s", resp.status_code,
+                 resp.headers.get("PayPal-Debug-Id"), resp.text)
+    raise PayPalMintError(resp.text)        # audit stays PENDING_MINT and is retried</code></pre>
+</div>
+
+<div class="issue">
+<h3><span class="tag major">M6</span> Anyone can write the "source of truth"</h3>
+<p><b>Where:</b> <code>api/v1/ground_truth.py</code> lines 18–21; <code>api/v1/listings.py</code> lines 76–85. <b>Evidence:</b> P7. A self-registered property with made-up owner data is <b>VERIFIED</b>. No endpoint has authentication; unknown brokers are auto-created with a fake licence; ground-truth writes go only to memory.</p>
+<div class="lbl bad">Buggy code</div>
+<pre class="bad"><code class="language-python">@router.post("")                                        # no auth
+async def register_owner_ground_truth(payload: OwnerGroundTruth):
+    return ground_truth_db.register_property(payload)   # in-memory only
+...
+broker = Broker(broker_id=submission.broker_id, license_number=f"LIC-{submission.broker_id}", ...)</code></pre>
+<div class="lbl good">Fix: roles, persisted writes, broker identity from the token</div>
+<pre class="good"><code class="language-python">@router.post("", dependencies=[Depends(require_role("MANAGER"))])
+async def register_owner_ground_truth(payload: OwnerGroundTruth, db: Session = Depends(get_db)):
+    db.merge(Property(**to_row(payload))); db.commit()
+
+@router.post("/audit")
+async def audit_listing(..., broker: Broker = Depends(current_broker)):
+    submission.broker_id = broker.broker_id             # never trust the request body</code></pre>
+</div>
+
+<div class="issue">
+<h3><span class="tag major">M7</span> Persistence fails silently and stored reports are fabricated</h3>
+<p><b>Where:</b> <code>api/v1/listings.py</code> lines 111–116 and 151–158. A DB failure is swallowed after PayPal has already created the product (an orphan). Photos, claims and findings are never written. Reading a report back returns invented values. The persistence test writes into the real dev database.</p>
+<div class="lbl bad">Buggy code</div>
+<pre class="bad"><code class="language-python">except Exception:
+    pass                                   # audit lost, PayPal product orphaned
+...
+compliance_audit=ComplianceAuditResult(
+    state="Verified Region", demanded_deposit_months=2.0,      # INVENTED
+    statutory_max_deposit_months=3.0, statute_citation="Statutory Compliance")</code></pre>
+<div class="lbl good">Fix: store the real report, save before minting, let errors raise</div>
+<pre class="good"><code class="language-python">report_json = Column(Text, nullable=False)                     # models.py
+
+audit_rec = ListingAudit(..., overall_verdict="PENDING_MINT",
+                         report_json=report.model_dump_json())
+db.add_all([sub_rec, audit_rec]); db.commit()                   # one transaction, BEFORE PayPal
+
+return AuditReport.model_validate_json(db_audit.report_json)   # read back exactly what was stored</code></pre>
+</div>
+
+<div class="issue">
+<h3><span class="tag major">M8</span> A fresh install crashes</h3>
+<p><b>Where:</b> <code>requirements.txt</code>. <code>sqlalchemy</code> and <code>langgraph</code> are imported but not listed, so a judge cloning the repo gets <code>ModuleNotFoundError</code>. The code also uses the deprecated <code>google-generativeai</code> SDK.</p>
+<div class="lbl good">Fix</div>
+<pre class="good"><code class="language-text">sqlalchemy&gt;=2.0
+langgraph&gt;=0.2
+google-genai&gt;=1.0
+# remove google-generativeai</code></pre>
+</div>
+
+<!-- ============ 5 ============ -->
+<h2 class="pb">5. Medium and minor issues</h2>
+<table>
+  <tr><th style="width:5%">#</th><th style="width:30%">Issue</th><th style="width:30%">Where</th><th>Fix</th></tr>
+  <tr><td>D1</td><td>Photo check falls back to the <b>filename</b>; silent on Gemini errors</td><td><code>gemini_vision.py:114</code> <code>any(w in fn_lower …)</code></td><td>No Gemini → <code>NEEDS_REVIEW</code>; heuristic only when <code>DEMO_MODE=true</code></td></tr>
+  <tr><td>D2</td><td>Baseline pHash result thrown away; seeded hashes are made up</td><td><code>gemini_vision.py:54-63</code></td><td>Use it; add embedding similarity and cross-property duplicate check</td></tr>
+  <tr><td>D3</td><td>Missing Gemini fields default to pass; free-text JSON parsing; confidence ignored</td><td><code>gemini_vision.py:97</code></td><td><code>response_schema</code>, default to fail, confidence threshold</td></tr>
+  <tr><td>D4</td><td>Sync Gemini and SQLAlchemy calls block the event loop</td><td>services, API handlers</td><td><code>client.aio</code>, <code>asyncio.gather</code>, <code>run_in_threadpool</code></td></tr>
+  <tr><td>D5</td><td>Commute uses "now", not peak hour; destination not city-scoped; element status unchecked</td><td><code>maps_service.py:54</code></td><td>Next weekday 08:30 IST epoch; geocode "{dest}, {city}"; Routes API</td></tr>
+  <tr><td>D6</td><td>Legal "RAG" is a hard-coded dict (3.0 months everywhere); some citations look inaccurate</td><td><code>rag_engine.py:19-32</code></td><td>Versioned rules file with section, source URL, effective date; verify against official texts</td></tr>
+  <tr><td>D7</td><td>No input validation: rent 0 + deposit 999999 passes (P9); zero photos pass at orchestrator level (P8)</td><td><code>broker_submission.py:15-16</code></td><td><code>Field(gt=0)</code>; 1–20 images, size and type limits</td></tr>
+  <tr><td>D8</td><td>One node exception fails the whole graph with a 500</td><td><code>orchestrator.py</code></td><td>Per-check timeout; error → <code>UNVERIFIABLE</code></td></tr>
+  <tr><td>D9</td><td>Public listing shows the badge for a rejected submission if the broker has another verified audit</td><td><code>listings.py:215-221</code></td><td>Resolve the badge from that submission's own audit</td></tr>
+</table>
+<h3>Minor</h3>
+<ul>
+  <li><code>allow_origins=["*"]</code> with <code>allow_credentials=True</code>: restrict CORS to the frontend origin.</li>
+  <li><code>DATABASE_URL</code> read via <code>os.getenv</code>, so the <code>.env</code> value is ignored; relative SQLite path depends on the working directory.</li>
+  <li><code>init_db()</code> swallows exceptions; <code>datetime.utcnow()</code> is deprecated.</li>
+  <li>In-memory and DB seeds disagree; <code>get_property</code> invents default hashes and URLs.</li>
+  <li><code>_audit_reports_cache</code> is an unbounded global, not shared across workers.</li>
+  <li>Tests mutate the class-level <code>KNOWN_COMMUTE_MATRIX</code>; no API-level or mocked-HTTP tests.</li>
+  <li>Karnataka 3–6 month advisory never reaches <code>proof_summary</code>, so tenants don't see the warning.</li>
+  <li><code>proplock_truth.db</code> and <code>.pytest_cache/</code> belong in <code>.gitignore</code>.</li>
+</ul>
+
+<!-- ============ 6 ============ -->
+<h2 class="pb">6. How rental brokers work in real life</h2>
+<p class="muted small">Based on common practice in Indian metros (Bengaluru, Chennai, Mumbai, Delhi). Fees and customs vary by city and over time.</p>
+<figure class="fig fig2_broker_workflow"><img src="figures/fig2_broker_workflow.svg" alt=""><figcaption><b>Figure 2.</b> Typical rental broker workflow.</figcaption></figure>
+<ol>
+  <li><b>Getting the flat.</b> A busy or non-resident owner hands keys to one or more brokers, or to an agency such as "XYZ Properties" that uses sub-brokers.</li>
+  <li><b>Advertising.</b> Ads on portals, WhatsApp and Facebook. Several brokers compete for the same flat, so ads get exaggerated.</li>
+  <li><b>Handling leads.</b> Dozens of calls a day about availability, deposit, pets, bachelors.</li>
+  <li><b>Site visits.</b> Time and fuel spent per visit; many tenants don't turn up.</li>
+  <li><b>Closing.</b> Token advance, rent agreement between owner and tenant, deposit to the owner.</li>
+  <li><b>Getting paid.</b> A separate brokerage fee, commonly one month's rent (sometimes 15 days), usually from the tenant and sometimes from the owner as well.</li>
+</ol>
+
+<!-- ============ 7 ============ -->
+<h2>7. Broker scams and how Feature 1 catches them</h2>
+<table>
+  <tr><th style="width:4%">#</th><th style="width:20%">Scam</th><th style="width:40%">How it works</th><th>Caught by</th></tr>
+  <tr><td>1</td><td>Fake or stolen photos</td><td>Photos of a nicer flat copied from another portal or brochure</td><td>Check A: live capture, same-room check, reverse image search</td></tr>
+  <tr><td>2</td><td>Bait listing</td><td>Cheap ad for a flat that doesn't exist or is rented; "that one's gone, but I have another…"</td><td>Mandate (only assigned flats can be listed); Feature 3 void on fake flat</td></tr>
+  <tr><td>3</td><td>Commute lies</td><td>"5 min to metro" measured as straight-line distance</td><td>Check B</td></tr>
+  <tr><td>4</td><td>Furnishing lies</td><td>"Fully furnished" is a bed and a fan</td><td>Check A furnishing + Check D</td></tr>
+  <tr><td>5</td><td>Rent markup</td><td>Lists ₹40k, owner gets ₹35k, broker keeps the difference</td><td>Check D (owner's rent range)</td></tr>
+  <tr><td>6</td><td>Inflated deposit</td><td>Asks 10 months, keeps part or delays passing it on</td><td>Check C (legal cap) + Check D (owner deposit)</td></tr>
+  <tr><td>7</td><td>Token advance scam</td><td>"Pay ₹10k to hold the flat", then disappears</td><td>Feature 3: PayPal authorization hold, auto-voided</td></tr>
+  <tr><td>8</td><td>Visit or registration fee</td><td>Charges before showing any flat</td><td>Feature 3: hold becomes payment only by agreed rules</td></tr>
+  <tr><td>9</td><td>Fake broker or owner</td><td>Someone unconnected collects advances from several tenants</td><td>Authentication + manager-only ground truth (M6)</td></tr>
+  <tr><td>10</td><td>Hidden charges</td><td>Extra fees revealed only at signing</td><td><code>brokerage_fee</code> field + "total move-in cost" card</td></tr>
+  <tr><td>11</td><td>Double-booking</td><td>Takes tokens from several tenants for one flat</td><td>Feature 2/3: one active escrow lock per property</td></tr>
+</table>
+<h3>Scams on the owner, and on the broker</h3>
+<table>
+  <tr><th style="width:30%">Against the owner</th><th>Against the broker</th></tr>
+  <tr><td>Unauthorised subletting<br>Rent skimming<br>Pushing unvetted tenants</td><td>Tenant no-shows (Feature 3: ₹500 hold captured on verified no-show)<br>Tenant bypasses broker to the owner (Feature 4: token tied to that broker's audited listing)<br>Owner pulls out after a tenant is found</td></tr>
+</table>
+<div class="box info"><p><b>Pitch line.</b> Today every party protects itself by distrusting everyone else. PropLock replaces "trust the person" with "trust the evidence": Feature 1 proves the listing is true, Feature 3 proves who showed up, and PayPal holds the money until the evidence decides.</p></div>
+
+<!-- ============ 8 ============ -->
+<h2 class="pb">8. Fake photo defenses</h2>
+<p>The audit hash only detects changes <i>after</i> verification. If a broker uploads a web photo <i>at</i> submission, the hash simply locks in the fake. Catching it is Check A's job, and today Check A misses it: no watermark, a harmless filename, a furnished-looking room, and the baseline comparison is discarded.</p>
+<table>
+  <tr><th style="width:28%">Layer</th><th style="width:48%">How</th><th>Stops a web photo?</th></tr>
+  <tr><td>0. Show only owner photos</td><td>The public listing displays XYZ Properties' baseline photos; the broker writes the text only</td><td>✅ fully; already half-built</td></tr>
+  <tr><td>1. Live in-app capture</td><td>Camera page records GPS and time; reject if &gt; 100 m from the property or older than 30 days</td><td>✅ strong</td></tr>
+  <tr><td>2. Same room as baseline</td><td>Gemini compares windows, doors, flooring, room shape; ignores furniture</td><td>✅ good</td></tr>
+  <tr><td>3. Reverse image search</td><td>Google Cloud Vision Web Detection or TinEye API</td><td>✅ if the photo is online</td></tr>
+  <tr><td>4. Own pHash database</td><td>Same photo already used for another property</td><td>✅ reuse across properties</td></tr>
+</table>
+<pre><code class="language-python">def check_live_capture(meta, owner):
+    dist = haversine_m(meta.lat, meta.lng, owner.coordinates.latitude, owner.coordinates.longitude)
+    if dist &gt; 100:
+        return "FAIL", f"Photo taken {dist:.0f} m from the property"
+    if meta.captured_at &lt; now() - timedelta(days=30):
+        return "FAIL", "Photo older than 30 days"
+    return "PASS", "Captured on-site"
+
+SAME_ROOM_PROMPT = """Image 1 is the owner's verified photo of the empty flat.
+Image 2 is the broker's listing photo. Ignore furniture. Compare windows, doors,
+flooring, walls, ceiling and room shape. Is this the SAME physical room?
+Return JSON: {"same_room": bool, "confidence": float, "mismatched_features": [str]}"""</code></pre>
+<div class="box ok"><p><b>For the demo:</b> show only owner photos, plus the Gemini same-room check on any extra broker photos. Those two close the hole with the least work.</p></div>
+
+<!-- ============ 9 ============ -->
+<h2>9. Commission vs rent markup</h2>
+<p>Brokers do need to earn commission, but in the normal Indian rental market commission is <b>not</b> added into the rent. The rent agreement is signed by owner and tenant, so a hidden markup surfaces at signing or pushes payments outside the lease.</p>
+<table>
+  <tr><th style="width:34%">Model</th><th style="width:26%">Who pays</th><th>Rent markup OK?</th></tr>
+  <tr><td>Normal brokerage (separate fee)</td><td>One-time fee</td><td>❌ No. Rent goes to the owner.</td></tr>
+  <tr><td>Asking price vs final price</td><td>Nobody extra</td><td>✅ Within the owner's range</td></tr>
+  <tr><td>Rent-to-rent / master lease / co-living</td><td>Built into the rent</td><td>✅ Only with the owner's written consent; operator is the landlord on the lease</td></tr>
+  <tr><td>Hidden markup</td><td>Hidden in rent</td><td>❌ This is the bait-and-switch PropLock exists to stop</td></tr>
+</table>
+<p>So Check D compares the listing against an <b>owner-approved range</b>, and commission is declared in its own <code>brokerage_fee</code> field. The tenant then sees the true move-in total: <code>rent + deposit + brokerage_fee</code>. Brokerage norms are market practice, not law; present them as agency policy in the app.</p>
+
+<h3>Commute: who is the referee?</h3>
+<p>Commute claims are checked with the Maps API, not against the owner. The owner supplies only the <b>origin</b> (verified coordinates); the broker supplies the claim; Maps is the referee. The weak spot is the origin itself: capture GPS at key handover, or geocode the registered address and reject a pin more than ~200 m away.</p>
+
+<!-- ============ 10 ============ -->
+<h2 class="pb">10. Target architecture (all fixes applied)</h2>
+<figure class="fig fig3_target_architecture"><img src="figures/fig3_target_architecture.svg" alt=""><figcaption><b>Figure 3.</b> Feature 1 with every fix applied. Labels show the issue each part fixes.</figcaption></figure>
+
+<h3>Key design decisions</h3>
+<ol>
+  <li><b>Three-state results.</b> Every check returns PASS, FAIL or UNVERIFIABLE with evidence and its source. A missing key or timeout never becomes PASS, and never an invented "LIE".</li>
+  <li><b>Check D.</b> Deterministic comparison with the owner mandate; cheapest check, most common scam.</li>
+  <li><b>Claim extraction first.</b> The LLM reads the ad; deterministic code judges it.</li>
+  <li><b>Human review</b> via LangGraph <code>interrupt()</code> with a checkpointer, implementing the blueprint's "Fix or manual review" branch.</li>
+  <li><b>Signed, versioned audit.</b> Canonical JSON → HMAC; <code>GET /audit/{id}</code> returns exactly what was signed and <code>/verify</code> recomputes it.</li>
+  <li><b>Outbox for PayPal.</b> Commit first, then mint with a deterministic product ID and <code>PayPal-Request-Id</code>; retries are safe and nothing is orphaned.</li>
+  <li><b>Rules as data.</b> Caps in a versioned file with <code>effective_date</code> and <code>source_url</code>; retrieval only shows the clause text.</li>
+  <li><b>Roles.</b> MANAGER writes ground truth and mandates, BROKER submits listings, PUBLIC reads verified listings.</li>
+</ol>
+
+<!-- ============ 11 ============ -->
+<h2 class="pb">11. Integrating the broker workflow</h2>
+<p>Feature 1 should follow the broker's real day (get the keys, visit the flat, post the ad, handle leads, mark it rented) instead of being a one-shot "submit and judge" endpoint.</p>
+<figure class="fig fig4_broker_journey"><img src="figures/fig4_broker_journey.svg" alt=""><figcaption><b>Figure 4.</b> Broker journey with verification built in.</figcaption></figure>
+
+<h3>The mandate table</h3>
+<pre><code class="language-python">class Mandate(Base):
+    __tablename__ = "mandates"
+    mandate_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    property_id = Column(String(50), ForeignKey("properties.property_id"), nullable=False)
+    broker_id = Column(String(50), ForeignKey("brokers.broker_id"), nullable=False)
+    min_rent = Column(Numeric(12, 2), nullable=False)
+    max_rent = Column(Numeric(12, 2), nullable=False)
+    max_deposit = Column(Numeric(12, 2), nullable=False)
+    max_brokerage_months = Column(Numeric(4, 2), default=1.0)
+    valid_until = Column(DateTime, nullable=False)
+    status = Column(String(20), default="ACTIVE")    # ACTIVE | REVOKED | EXPIRED
+
+# first thing in audit_listing
+mandate = db.query(Mandate).filter_by(property_id=submission.property_id,
+                                      broker_id=broker.broker_id, status="ACTIVE") \
+            .filter(Mandate.valid_until &gt; now()).first()
+if not mandate:
+    raise HTTPException(403, "You are not authorised to list this property.")</code></pre>
+
+<h3>The pre-check: help honest brokers</h3>
+<pre><code class="language-python">@router.post("/listings/precheck")
+async def precheck(draft: BrokerSubmissionMetadata, broker=Depends(current_broker)):
+    claims = await extract_claims(draft)
+    suggestions = []
+    for c in claims.commute:
+        f = await maps_service.calculate_commute(...)
+        if f.tolerance_exceeded:
+            suggestions.append({
+                "problem": f"'{c.claimed_time_minutes} min to {c.destination}': "
+                           f"Maps says {f.actual_peak_minutes} min at 8:30 AM",
+                "suggested_text": f"{f.actual_peak_minutes} min {c.mode} to {c.destination}",
+            })
+    return {"ok": not suggestions, "suggestions": suggestions}   # nothing saved or minted</code></pre>
+
+<h3>Listing lifecycle</h3>
+<figure class="fig fig5_lifecycle"><img src="figures/fig5_lifecycle.svg" alt=""><figcaption><b>Figure 5.</b> Listing states (replaces VERIFIED / REJECTED only).</figcaption></figure>
+
+<h3>Trust score and endpoints</h3>
+<table>
+  <tr><th style="width:50%">Trust event</th><th>Points</th></tr>
+  <tr><td>Verified on first try</td><td>+2</td></tr>
+  <tr><td>Needs fix</td><td>−1</td></tr>
+  <tr><td>Photo found online</td><td>−15</td></tr>
+  <tr><td>Listing expired while stale</td><td>−3</td></tr>
+  <tr><td>Visit completed (Feature 3)</td><td>+1</td></tr>
+  <tr><td>Broker no-show (Feature 3)</td><td>−10</td></tr>
+</table>
+<table>
+  <tr><th style="width:42%">Endpoint</th><th style="width:12%">Role</th><th>Purpose</th></tr>
+  <tr><td><code>POST /mandates</code></td><td>Manager</td><td>Assign broker to property with limits</td></tr>
+  <tr><td><code>POST /listings/drafts</code></td><td>Broker</td><td>Create a draft</td></tr>
+  <tr><td><code>POST /listings/drafts/{id}/photos</code></td><td>Broker</td><td>Upload GPS-checked captures</td></tr>
+  <tr><td><code>POST /listings/precheck</code></td><td>Broker</td><td>Instant feedback; nothing saved</td></tr>
+  <tr><td><code>POST /listings/{id}/submit</code></td><td>Broker</td><td>Full audit</td></tr>
+  <tr><td><code>POST /listings/{id}/confirm-availability</code></td><td>Broker</td><td>Keep the listing live</td></tr>
+  <tr><td><code>POST /reviews/{audit_id}</code></td><td>Manager</td><td>Approve or reject IN_REVIEW</td></tr>
+  <tr><td><code>GET /brokers/me/dashboard</code></td><td>Broker</td><td>Listings, fixes needed, trust score</td></tr>
+</table>
+
+<!-- ============ 12 ============ -->
+<h2 class="pb">12. Existing solutions in the market</h2>
+<p>Each part of Feature 1 exists somewhere, but no product found combines photo, commute and deposit verification into one verdict that gates a payment. That combination is PropLock's differentiator.</p>
+<table>
+  <tr><th style="width:20%">Feature 1 part</th><th style="width:40%">Real-world solution</th><th>How it compares</th></tr>
+  <tr><td>Photo audit</td><td><b>Restb.ai Photo Compliance</b> (Heartland MLS, MLS Now, CVR MLS): watermarks, logos, added text, people, contact info, duplicates, virtual staging</td><td>Enforces MLS photo rules; does not check the photos are of <i>this</i> property</td></tr>
+  <tr><td></td><td><b>Reverse image search</b> (TinEye API, Google Lens / Cloud Vision Web Detection)</td><td>Usable as Layer 3 of the photo check</td></tr>
+  <tr><td>Fake listing detection</td><td><b>Onerent Scamlord.ai</b> (2020); Google patent US9990639 (ML fraud probability); Zillow report tool</td><td>Look at scammer patterns, not claim truth</td></tr>
+  <tr><td>India verified badges</td><td><b>Housing.com Verified Homes</b> (100+ checks); <b>NoBroker</b> owner verification; 99acres / MagicBricks tags</td><td>Mostly process and people; verify the poster, not each claim</td></tr>
+  <tr><td>Commute</td><td><b>Zillow commute filter</b> (rush hour / off-peak); <b>Walk Score</b>, <b>TravelTime API</b></td><td>Display commute to buyers; don't check broker claims</td></tr>
+  <tr><td>Deposit compliance</td><td>US fair-housing wording checkers in MLS tools</td><td>No Indian state-deposit checker found</td></tr>
+  <tr><td>Audit hash + PayPal anchor</td><td>None found</td><td>Unique to PropLock</td></tr>
+</table>
+<div class="box info"><p><b>Pitch framing:</b> "Restb.ai proved photo compliance works for US MLSs; Zillow proved buyers want commute filters; we are the first to turn both into a verification gate for a payment."</p></div>
+<p class="muted small">Most market sources are company pages or press releases rather than independent evaluations; the NoBroker sources date from 2015–2016.</p>
+
+<!-- ============ 13 ============ -->
+<h2>13. Build plan for the demo</h2>
+<table>
+  <tr><th style="width:6%">Order</th><th style="width:34%">Work item</th><th style="width:12%">Effort</th><th>Demo impact</th></tr>
+  <tr><td>1</td><td>Fix <code>requirements.txt</code> (M8)</td><td>Minutes</td><td>Judges can run it</td></tr>
+  <tr><td>2</td><td>Mandate table + Check D (M1, M6 partial)</td><td>Low</td><td>Catches rent markup and bait listings</td></tr>
+  <tr><td>3</td><td>Claim extractor (M2)</td><td>Low</td><td>Catches lies in the title</td></tr>
+  <tr><td>4</td><td>Real PayPal mint with valid payload (M5)</td><td>Low</td><td>Real sandbox product, not a fake ID</td></tr>
+  <tr><td>5</td><td>UNVERIFIABLE + NEEDS_FIX / IN_REVIEW states (M3, D1)</td><td>Medium</td><td>Honest failure handling; fix-and-resubmit story</td></tr>
+  <tr><td>6</td><td>Pre-check endpoint</td><td>Low</td><td>"We help honest brokers" moment</td></tr>
+  <tr><td>7</td><td>Owner photos on listing + same-room check</td><td>Low</td><td>Closes the fake-photo hole</td></tr>
+  <tr><td>8</td><td>HMAC signed audit + <code>/verify</code> (M4)</td><td>Low</td><td>Real tamper-proof story</td></tr>
+  <tr><td>9</td><td>Store <code>report_json</code>, outbox (M7)</td><td>Medium</td><td>No orphans, no fabricated reports</td></tr>
+  <tr><td>10</td><td>Roles and auth (M6 full)</td><td>Medium</td><td>Closes the ground-truth hole</td></tr>
+</table>
+<p class="muted">Roadmap slide (post-hackathon): listing expiry and versioning, full broker dashboard, live in-app capture page, reverse image search, Routes API with caching.</p>
+
+<!-- ============ APPENDIX ============ -->
+<h2 class="pb">Appendix A. Probe results</h2>
+<p>Run against a scratch copy of <code>backend/</code> with a fresh database and no API keys.</p>
+<pre><code class="language-text">P1 rent 55k vs owner 35k + Fully Furnished on Unfurnished flat: VERIFIED
+P2 lie only in title/description, no structured claims:         VERIFIED  claims_evaluated=0
+P3 honest 30-min claim to unknown destination:                  tolerance_exceeded=True  fabricated actual=42
+P4 destination 'a' fuzzy-matches:                               35  (tech park's time)
+P5 PayPal description length:                                   283  (Catalog v1 limit 256)
+P6 different broker photos -&gt; same audit hash:                  True
+P7 self-registered ground truth -&gt; audit:                       VERIFIED
+P8 zero photos at orchestrator level:                           VERIFIED
+P9 rent=0, deposit=999999:                                      PASS  VERIFIED</code></pre>
+<p>Existing suite: <code>python -m pytest</code> → 9 passed. Add each probe as a regression test once fixed.</p>
+
+<h2>Appendix B. Caveats on legal figures</h2>
+<p>The legal figures in the current code and knowledge files should be verified against official gazette texts before the demo. The reviewer's understanding (not independently verified): the Karnataka Rent Act caps advance at 10 months (Section 11) rather than 2–3 months; the Model Tenancy Act 2021 caps residential deposits at 2 months; the 6-month Karnataka ceiling is a platform policy, not law. <code>tamil_nadu_tenancy_2019.md</code> contains a contradictory clause ("null, void, and enforceable"). Brokerage figures (1 month, 15 days) are market practice, not statute.</p>
+
+<h2>Appendix C. Sources</h2>
+<ul class="small">
+  <li>PropLock AI Product Blueprint (PDF, 5 pages) and Feature 1 flow diagram</li>
+  <li>Restb.ai Photo Compliance: https://www.restb.ai/solutions/photo-compliance/</li>
+  <li>Heartland MLS and Restb.ai: https://kcrar.com/heartland-mls-and-restb-ai-announce-mls-partnership-for-computer-vision-photo-compliance</li>
+  <li>Restb.ai, MLS Now: https://restb.ai/company/press-releases/mls-now/ · CVR MLS: https://restb.ai/company/press-releases/cvr-mls</li>
+  <li>Google Patent US9990639: https://patents.google.com/patent/US9990639</li>
+  <li>Onerent Scamlord AI: https://www.mannpublications.com/mannreportmanagement/2020/04/14/onerent-launches-scamlord-ai-fraud-detector/</li>
+  <li>NYU fake-listing study (via UChicago): https://voices.uchicago.edu/201702busn3910001/?p=868</li>
+  <li>Housing.com Verified Homes: https://housing.com/news/housing-verified-homes-our-assurance-of-trust/</li>
+  <li>NoBroker (MediaNama, 2015): https://www.medianama.com/2015/02/223-nobroker-saif-partners-fulcrum-ventures/</li>
+  <li>Business Today on NoBroker: https://www.businesstoday.in/magazine/features/taking-you-home/story/257816.html</li>
+  <li>Zillow commute time filter: https://zillowgroup.com/news/zillows-commute-time-filter</li>
+  <li>TravelTime case study: https://traveltime.com/case-study/realtor-commute-search-traveltime</li>
+  <li>Walk Score profile: https://app.dealroom.co/companies/walk_score</li>
+</ul>
+
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
+<script>
+  hljs.highlightAll();
+</script>
+</body>
+</html>

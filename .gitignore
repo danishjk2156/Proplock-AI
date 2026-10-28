@@ -1,0 +1,13 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local data and secrets
+*.db
+.env
+
+# Editors
+.vscode/
+.idea/
