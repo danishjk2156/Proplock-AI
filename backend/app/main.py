@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 
-from app.api import me
+from app.api import manager, me
 from app.config import get_settings
 
 
@@ -14,6 +14,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "env": get_settings().app_env}
 
     app.include_router(me.router)
+    app.include_router(manager.router)
     return app
 
 

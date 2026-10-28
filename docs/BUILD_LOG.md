@@ -149,3 +149,38 @@ cd backend
 Open http://localhost:8000/docs → **Authorize** → paste a key → try `GET /me`.
 
 **Verified:** 14 tests pass. Live server: Rajesh's key → `/me` returns Rajesh (BROKER); no key → 401. Seeding twice leaves the data unchanged.
+
+---
+
+## Step 1.3: Manager endpoints — flats and mandates (2026-10-28)
+
+**What changed**
+- `app/schemas/manager.py`: Pydantic shapes for requests and responses (`PropertyIn/Out`, `MandateIn/Out`, `BrokerOut`).
+- `app/api/manager.py`, all MANAGER-only:
+  - `POST /manager/properties`, `GET /manager/properties`
+  - `GET /manager/brokers`
+  - `POST /manager/mandates`, `GET /manager/mandates?property_id=…`, `POST /manager/mandates/{id}/revoke`
+- `tests/api/test_manager.py`: 14 tests.
+
+**Key idea: validation happens before your code runs**
+FastAPI reads the JSON body into `MandateIn`. Pydantic checks every rule declared on it — rent > 0, `max_rent ≥ min_rent`, brokerage between 0 and 3 months, `valid_until` in the future **and with a timezone** — and if any fails, returns **422** with the exact field and reason. The endpoint function only ever sees valid data. Rules that need the database (does this flat exist? is this user really a broker? is there already an active mandate?) are checked in the endpoint and return 404 / 422 / 409.
+
+**Status codes used**
+| Code | Meaning here |
+|---|---|
+| 201 | created |
+| 403 | a broker tried a manager action |
+| 404 | the flat doesn't exist |
+| 409 | conflict: flat id already used, or broker already has an active mandate for this flat |
+| 422 | the data itself is invalid |
+
+**Why money comes back as a string (`"35000.00"`)**
+JSON numbers are floats in most languages, and floats can't hold every decimal exactly. Sending Decimals as strings keeps them exact end to end. Clients convert them when displaying.
+
+**Why the mandate matters**
+It's the real-world "owner gave this broker the keys" step, written down with limits. From Phase 2 on, a broker without an active, unexpired mandate can't submit a listing for that flat (403), and Check D compares every listing with these limits.
+
+**How to see it**
+In `/docs`: Authorize with the manager key from `demo_keys.json` → `GET /manager/brokers` → copy Rajesh's id → `POST /manager/properties` to add a flat → `POST /manager/mandates` for Rajesh. Then Authorize with Rajesh's key and try the same call: 403.
+
+**Verified:** 28 tests pass. Live: manager lists both brokers; Rajesh calling `/manager/brokers` → 403; `PROP-BLR-001` shows its two seeded mandates (₹32,000–35,000).

@@ -246,7 +246,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 | Phase | Status |
 | --- | --- |
 | 0 Foundations | **done** — Groq verified: text `openai/gpt-oss-120b`, vision `qwen/qwen3.8-27b` (two images OK) |
-| 1 Data + auth | not started |
+| 1 Data + auth | **done** — 11 tables + migration, API-key roles, seed, manager endpoints; 28 tests |
 | 2 First slice (Check D) | not started |
 | 3 Claim extraction | not started |
 | 4 Check B | not started |
