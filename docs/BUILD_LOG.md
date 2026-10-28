@@ -66,3 +66,49 @@ The riskiest unknown in the whole plan is whether a Groq vision model accepts tw
 - Chosen and set in `backend/.env`: `GROQ_TEXT_MODEL=openai/gpt-oss-120b`, `GROQ_VISION_MODEL=qwen/qwen3.8-27b`.
 
 **What this changes in the plan:** nothing structural. The two-image same-room design for Check A works, so the fallback (comparing against a text description) is not needed. Accuracy on real flat photos is still to be measured in Phase 6.
+
+---
+
+## Step 1.1: Database tables and migrations (2026-10-28)
+
+**What changed**
+- `app/db/base.py`: the database engine, a session factory, `get_session()` for FastAPI, and `UTCDateTime`.
+- `app/db/models.py`: 11 tables — `users`, `properties`, `baseline_photos`, `mandates`, `listings`, `listing_versions`, `listing_photos`, `commute_claims`, `audits`, `outbox_jobs`, `trust_events`.
+- `alembic/` + `alembic.ini`: migrations. First migration `initial feature1 schema` creates all tables.
+- Tests: `tests/conftest.py` (fresh database per test), `tests/unit/test_models.py`, `tests/unit/test_migrations.py`.
+
+**How the tables fit together**
+```text
+users (MANAGER / BROKER)
+  └─ properties (the flat; owner facts; verified GPS) ── baseline_photos (manager's photos)
+       └─ mandates (this broker may list this flat: rent range, max deposit, brokerage cap, expiry)
+            └─ listings (one broker's ad; status DRAFT → … → LIVE)
+                 └─ listing_versions (every edit = new numbered version; old ones kept)
+                      ├─ listing_photos (check-in + extra photos, with GPS and pHash)
+                      ├─ commute_claims (from the form or EXTRACTED by the AI)
+                      └─ audits (one per version: status, report_json, signature, PayPal id)
+                           ├─ outbox_jobs (work after saving, e.g. create PayPal product)
+                           └─ trust_events (+/- points for the broker)
+```
+
+**Why it's built this way**
+- *ORM (SQLAlchemy):* each table is a Python class; a row is an object. `Mapped[Decimal]` etc. are type hints SQLAlchemy reads to create the right column types.
+- *Versions instead of editing in place:* a broker can't silently change a verified ad. An edit creates version 2, which needs its own audit, and version 1 stays as evidence for disputes.
+- *Money as `Numeric(12,2)` → `Decimal`:* floats can't store 0.10 exactly (`0.1 + 0.2 != 0.3`). For rent and deposits we need exact values.
+- *Enums with CHECK constraints:* statuses are a fixed list (`DRAFT`, `NEEDS_FIX`, …). The database itself rejects anything else, so a typo like `VERIFED` fails loudly instead of creating a listing stuck in a status no code understands.
+- *API keys stored as a hash:* the `users` table keeps only SHA-256 of each key. If the database leaks, the keys still can't be used.
+- *`UTCDateTime`:* SQLite throws away timezone information. Without this, a stored time comes back "naive" and comparing it with `datetime.now(UTC)` crashes. The custom type stores UTC and re-attaches the timezone when reading.
+- *SQLite foreign keys:* SQLite ignores foreign keys unless `PRAGMA foreign_keys=ON` is set for each connection. `make_engine` does that, otherwise a listing could point at a flat that doesn't exist.
+
+**Key idea: migrations**
+A migration is a versioned script that changes the database schema (`upgrade`) and can undo it (`downgrade`). Alembic compares the models with the database and *autogenerates* the script; we read and commit it. Later changes become new migrations stacked on top, so every database (yours, a teammate's, Render's) can be brought to the same schema with `alembic upgrade head`, and a bad change can be rolled back.
+
+**How to see it**
+```bash
+cd backend
+.venv/Scripts/alembic upgrade head      # creates proplock.db with all tables
+.venv/Scripts/alembic downgrade base    # removes them again
+.venv/Scripts/python -m pytest -q
+```
+
+**Verified:** migration up → down → up runs cleanly; 7 tests pass (exact money, timezone-aware dates, duplicate version rejected, foreign keys enforced, unknown status rejected by the database, migration up/down).
