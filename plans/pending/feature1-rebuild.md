@@ -3,7 +3,7 @@
 Source of truth for the design: `docs/PropLock_Feature1_Review.pdf`, section 10 ("Target architecture") and section 11 ("Integrating the broker workflow").
 Old implementation: deleted on 2026-10-28; backup at `D:\hackathon\_archive\proplock_feature1_old_2026-10-28.zip`.
 
-Status: **PROPOSED, waiting for approval.** Gate 1 answered 2026-10-28 (keys, photos, frontend, pace).
+Status: **APPROVED 2026-10-28, executing.** Gate 1 answered 2026-10-28 (keys, photos, frontend, pace).
 
 ---
 
@@ -245,7 +245,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 
 | Phase | Status |
 | --- | --- |
-| 0 Foundations | not started |
+| 0 Foundations | 0.1 done (e9cdecb); 0.2 script done (dc31f68), real Groq run waiting for key |
 | 1 Data + auth | not started |
 | 2 First slice (Check D) | not started |
 | 3 Claim extraction | not started |
