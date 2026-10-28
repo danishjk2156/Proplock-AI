@@ -36,7 +36,7 @@ Then open http://localhost:8000/health and http://localhost:8000/docs.
 
 ---
 
-## Step 0.2: Groq spike script (2026-10-28) — waiting for your key
+## Step 0.2: Groq spike script (2026-10-28)
 
 **What changed**
 - `backend/scripts/spike_groq.py`: a one-off probe that makes three real Groq calls:
@@ -59,4 +59,10 @@ The riskiest unknown in the whole plan is whether a Groq vision model accepts tw
 2. From `backend/`: `.venv/Scripts/python -m scripts.spike_groq`
 3. Paste the printed `GROQ_TEXT_MODEL` and `GROQ_VISION_MODEL` lines into `.env`.
 
-**Verified so far:** without a key the script stops cleanly with exit code 2. The real calls are not yet verified.
+**Verified (real calls, 2026-10-28):**
+- Key works. Models available to it include `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.8-27b` (no Llama 4 vision models on this account).
+- Text extraction with `openai/gpt-oss-120b`: PASS. From "2 MIN WALK TO INDIRANAGAR METRO ... 10 mins drive to Bagmane Tech Park ... Fully furnished" it returned both commute claims with the right modes plus the furnishing claim, all matching our schema.
+- Vision with `qwen/qwen3.8-27b`, two images in one request: PASS. Empty room vs same room with a sofa → `same_room: true` (it ignored the furniture as told). Extra check: window and door swapped → `same_room: false`, with the swap named as the reason.
+- Chosen and set in `backend/.env`: `GROQ_TEXT_MODEL=openai/gpt-oss-120b`, `GROQ_VISION_MODEL=qwen/qwen3.8-27b`.
+
+**What this changes in the plan:** nothing structural. The two-image same-room design for Check A works, so the fallback (comparing against a text description) is not needed. Accuracy on real flat photos is still to be measured in Phase 6.

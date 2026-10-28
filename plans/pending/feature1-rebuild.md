@@ -227,7 +227,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 
 ## Not yet specified
 
-- Phase 0: which Groq models to use. The spike must confirm (a) a text model that returns valid JSON for claim extraction, and (b) a vision model that accepts **two images in one request**. If (b) fails, Step 6.2 compares photos one at a time against a text description of the baseline, or returns UNVERIFIABLE → IN_REVIEW.
+- ~~Phase 0: which Groq models to use~~ **Resolved 2026-10-28:** text `openai/gpt-oss-120b`, vision `qwen/qwen3.8-27b`; two images per request works. Original question: the spike must confirm (a) a text model that returns valid JSON for claim extraction, and (b) a vision model that accepts **two images in one request**. If (b) fails, Step 6.2 compares photos one at a time against a text description of the baseline, or returns UNVERIFIABLE → IN_REVIEW.
 
 - Phase 0: keys available = **Groq only** (changed from Gemini on 2026-10-28). Maps runs on the demo route table (`commute_matrix.yaml`, unknown routes → UNVERIFIABLE). PayPal runs on the Fake adapter until a sandbox app exists; the real adapter is still built and unit-tested against recorded responses.
 - Phase 6: exact GPS source for the check-in photo when there is no frontend (proposal: lat/lng sent in the upload request, EXIF as backup). Fog until a UI exists.
@@ -245,7 +245,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 
 | Phase | Status |
 | --- | --- |
-| 0 Foundations | 0.1 done (e9cdecb); 0.2 script done (dc31f68), real Groq run waiting for key |
+| 0 Foundations | **done** — Groq verified: text `openai/gpt-oss-120b`, vision `qwen/qwen3.8-27b` (two images OK) |
 | 1 Data + auth | not started |
 | 2 First slice (Check D) | not started |
 | 3 Claim extraction | not started |
