@@ -112,3 +112,40 @@ cd backend
 ```
 
 **Verified:** migration up → down → up runs cleanly; 7 tests pass (exact money, timezone-aware dates, duplicate version rejected, foreign keys enforced, unknown status rejected by the database, migration up/down).
+
+---
+
+## Step 1.2: API-key login with roles + demo seed (2026-10-28)
+
+**What changed**
+- `app/auth.py`: `current_user` (reads the `X-API-Key` header, finds the user), `require_role(...)` (blocks the wrong role), `hash_key`, `generate_key`.
+- `app/api/me.py`: `GET /me` returns who you are, handy for checking which key Swagger is using.
+- `app/db/seed.py`: demo data — manager "XYZ Properties Desk", brokers **Rajesh** (honest) and **QuickCash Rentals** (our future liar), flats `PROP-BLR-001` (Bengaluru, Unfurnished) and `PROP-CHN-002` (Chennai, Semi-Furnished), and three mandates with rent ranges and deposit caps.
+- `demo_keys.json` (git-ignored) stores the generated keys. Tests: `tests/api/test_auth.py`, `tests/unit/test_seed.py`; `tests/conftest.py` gained a `client` and `make_user` fixture.
+
+**Key idea: FastAPI dependencies**
+`def me(user: User = Depends(current_user))` tells FastAPI: "before calling `me`, run `current_user` and pass me its result." `current_user` itself depends on the header and a database session. FastAPI builds that chain for every request. If any link raises `HTTPException`, the endpoint never runs. That's why auth lives in one place: every protected endpoint just adds `Depends(require_role(Role.MANAGER))`.
+
+**401 vs 403**
+- **401 Unauthorized**: "I don't know who you are" (no key, or a key that matches nobody).
+- **403 Forbidden**: "I know who you are, and you're not allowed" (a broker calling a manager endpoint).
+
+**Why the broker id comes from the key, never the request body**
+In the old code anyone could send `"broker_id": "someone-else"` (issue M6). Now the server decides who you are from your key, so a broker can only ever act as themselves.
+
+**Why hash the keys**
+Like passwords: the database keeps `sha256(key)`, not the key. When a request arrives we hash its key and look for that hash. A stolen database gives an attacker nothing they can log in with. (A random 32-character key doesn't need slow password hashing like bcrypt; SHA-256 is enough because keys can't be guessed.)
+
+**Key idea: dependency overrides in tests**
+`app.dependency_overrides[get_session] = lambda: db_session` swaps the real database for the test's throwaway one. The endpoints don't know or care; they just ask for "a session".
+
+**How to see it**
+```bash
+cd backend
+.venv/Scripts/alembic upgrade head
+.venv/Scripts/python -m app.db.seed          # prints 3 keys, saves demo_keys.json
+.venv/Scripts/python -m uvicorn app.main:app --reload
+```
+Open http://localhost:8000/docs → **Authorize** → paste a key → try `GET /me`.
+
+**Verified:** 14 tests pass. Live server: Rajesh's key → `/me` returns Rajesh (BROKER); no key → 401. Seeding twice leaves the data unchanged.

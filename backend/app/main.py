@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 
+from app.api import me
 from app.config import get_settings
 
 
@@ -12,6 +13,7 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok", "env": get_settings().app_env}
 
+    app.include_router(me.router)
     return app
 
 
