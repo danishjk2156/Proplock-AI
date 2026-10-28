@@ -33,3 +33,30 @@ cd backend
 Then open http://localhost:8000/health and http://localhost:8000/docs.
 
 **Verified:** `pytest` → 1 passed; `/health` → `{"status":"ok","env":"development"}`; `/docs` → 200.
+
+---
+
+## Step 0.2: Groq spike script (2026-10-28) — waiting for your key
+
+**What changed**
+- `backend/scripts/spike_groq.py`: a one-off probe that makes three real Groq calls:
+  1. list the models your key can use (proves the key works),
+  2. claim extraction with a text model in **JSON mode**, validated against a Pydantic schema,
+  3. a vision model given **two images in one request** (an empty room and the same room with a sofa), answering in JSON.
+- It prints the model ids that passed, ready to paste into `backend/.env`.
+
+**Why a spike before building**
+The riskiest unknown in the whole plan is whether a Groq vision model accepts two images at once (Check A's same-room comparison depends on it). Finding out now costs one script; finding out in Phase 6 would mean redesigning a finished feature. That's "risk first": prove the dependency, then build on it.
+
+**Key ideas**
+- *JSON mode* (`response_format={"type": "json_object"}`) makes the model reply with JSON, but not necessarily **our** JSON shape. That's why every reply is passed through a Pydantic model (`ExtractedClaims`, `SameRoom`). If validation fails, we know the model can't be trusted for that job.
+- *Images over an API*: the image bytes are base64-encoded into a `data:image/jpeg;base64,...` URL inside the chat message. Each image is just another item in the message's `content` list next to the text.
+- The drawn test rooms only prove the **plumbing** (two images accepted, JSON returned). Whether the model is *accurate* on real flat photos is tested in Phase 6 with real images.
+- *Exit codes* (0 pass, 1 a check failed, 2 no key) let scripts and CI read the result without parsing text.
+
+**How to run it**
+1. Copy `backend/.env.example` to `backend/.env` and set `GROQ_API_KEY=...`.
+2. From `backend/`: `.venv/Scripts/python -m scripts.spike_groq`
+3. Paste the printed `GROQ_TEXT_MODEL` and `GROQ_VISION_MODEL` lines into `.env`.
+
+**Verified so far:** without a key the script stops cleanly with exit code 2. The real calls are not yet verified.
