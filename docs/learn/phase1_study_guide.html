@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PropLock Phase 0–1 Study Guide</title>
+<style>
+  :root {
+    --ink:#1f2328; --muted:#5f6368; --line:#e2e0d8; --bg:#ffffff; --panel:#fafaf7;
+    --pur:#534AB7; --pur-bg:#EEEDFE; --pur-ink:#3C3489;
+    --teal:#0F6E56; --teal-bg:#E1F5EE; --red:#A32D2D; --red-bg:#FCEBEB;
+    --amb:#854F0B; --amb-bg:#FAEEDA; --code:#f6f8fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink:#e6e4dc; --muted:#a8a69e; --line:#3a3a36; --bg:#1c1c1a; --panel:#242422;
+      --pur:#AFA9EC; --pur-bg:#2b2850; --pur-ink:#CECBF6;
+      --teal:#5DCAA5; --teal-bg:#0f3a30; --red:#F09595; --red-bg:#3d1c1c;
+      --amb:#EF9F27; --amb-bg:#3a2a10; --code:#2a2a27;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink:#e6e4dc; --muted:#a8a69e; --line:#3a3a36; --bg:#1c1c1a; --panel:#242422;
+    --pur:#AFA9EC; --pur-bg:#2b2850; --pur-ink:#CECBF6;
+    --teal:#5DCAA5; --teal-bg:#0f3a30; --red:#F09595; --red-bg:#3d1c1c;
+    --amb:#EF9F27; --amb-bg:#3a2a10; --code:#2a2a27;
+  }
+  :root[data-theme="dark"] .c { color:#8b949e; }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  .layout { display:grid; grid-template-columns:260px minmax(0,1fr); max-width:1240px; margin:0 auto; }
+  nav { position:sticky; top:0; height:100vh; overflow:auto; padding:24px 16px 24px 20px; border-right:1px solid var(--line); background:var(--panel); font-size:14px; }
+  nav h2 { font-size:13px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin:0 0 10px; }
+  nav ol { padding-left:18px; margin:0; }
+  nav li { margin:3px 0; }
+  nav a { color:var(--ink); text-decoration:none; }
+  nav a:hover { color:var(--pur); }
+  nav ul { padding-left:14px; margin:2px 0 6px; list-style:none; font-size:13px; }
+  nav ul a { color:var(--muted); }
+  main { padding:32px 40px 80px; min-width:0; }
+  header.hero { border-radius:14px; padding:26px 28px; background:var(--pur-bg); margin-bottom:28px; }
+  header.hero h1 { margin:0 0 6px; font-size:30px; color:var(--pur-ink); line-height:1.2; }
+  header.hero p { margin:0; color:var(--muted); }
+  h2 { font-size:24px; margin:48px 0 10px; padding-top:8px; border-top:1px solid var(--line); }
+  h3 { font-size:19px; margin:30px 0 8px; }
+  h4 { font-size:16px; margin:22px 0 6px; color:var(--muted); }
+  p, li { max-width:78ch; }
+  code { font-family:Consolas, "Cascadia Code", monospace; font-size:.9em; background:var(--code); padding:1px 5px; border-radius:4px; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; font-size:13.5px; line-height:1.55; }
+  pre code { background:none; padding:0; font-size:inherit; }
+  .c { color:#6a737d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .c { color:#8b949e; } }
+  table { border-collapse:collapse; width:100%; margin:10px 0 18px; font-size:14.5px; display:block; overflow-x:auto; }
+  th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+  th { background:var(--panel); font-weight:600; }
+  .box { border-radius:10px; padding:12px 16px; margin:14px 0; border:1px solid var(--line); }
+  .box p:first-child { margin-top:0; } .box p:last-child { margin-bottom:0; }
+  .info { background:var(--pur-bg); border-color:transparent; }
+  .ok { background:var(--teal-bg); border-color:transparent; }
+  .warn { background:var(--amb-bg); border-color:transparent; }
+  .bad { background:var(--red-bg); border-color:transparent; }
+  .tag { display:inline-block; font-size:12px; font-weight:700; padding:1px 8px; border-radius:10px; }
+  .t-r { background:var(--pur-bg); color:var(--pur-ink); }
+  .t-w { background:var(--teal-bg); color:var(--teal); }
+  figure { margin:16px 0 22px; text-align:center; }
+  figure img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:10px; background:#fff; }
+  figcaption { font-size:13px; color:var(--muted); margin-top:6px; }
+  details { border:1px solid var(--line); border-radius:10px; padding:10px 14px; margin:10px 0; background:var(--panel); }
+  summary { cursor:pointer; font-weight:600; }
+  details[open] summary { margin-bottom:8px; }
+  .step { display:inline-block; min-width:26px; height:26px; line-height:26px; text-align:center; border-radius:13px; background:var(--pur); color:#fff; font-weight:700; font-size:13px; margin-right:6px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .theme-btn { float:right; border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:8px; padding:4px 10px; cursor:pointer; font-size:13px; }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns:minmax(0,1fr); }
+    nav { position:static; height:auto; border-right:none; border-bottom:1px solid var(--line); }
+    main { padding:20px 16px 60px; }
+    .grid2 { grid-template-columns:1fr; }
+  }
+  @media print { nav, .theme-btn { display:none; } .layout { display:block; } main { padding:0; } pre, table, figure, details { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav aria-label="Contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#how">How to use this guide</a></li>
+    <li><a href="#picture">The big picture</a></li>
+    <li><a href="#python">Python refresher</a></li>
+    <li><a href="#phase0">Phase 0 recap</a></li>
+    <li><a href="#journey">A request's journey</a></li>
+    <li><a href="#files">Each file, line by line</a>
+      <ul>
+        <li><a href="#f-config">config.py</a></li>
+        <li><a href="#f-main">main.py</a></li>
+        <li><a href="#f-base">db/base.py</a></li>
+        <li><a href="#f-migrations">migrations</a></li>
+        <li><a href="#f-auth">auth.py</a></li>
+        <li><a href="#f-schemas">schemas</a></li>
+        <li><a href="#f-api">api/manager.py</a></li>
+        <li><a href="#f-seed">db/seed.py</a></li>
+        <li><a href="#f-tests">tests</a></li>
+      </ul>
+    </li>
+    <li><a href="#models">The 11 tables</a></li>
+    <li><a href="#together">How tables work together</a></li>
+    <li><a href="#cheat">Cheat sheets</a></li>
+    <li><a href="#quiz">Self-check questions</a></li>
+  </ol>
+</nav>
+
+<main>
+<button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle light or dark theme">Light / dark</button>
+<header class="hero">
+  <h1>PropLock Feature 1: Phase 0–1 Study Guide</h1>
+  <p>Everything explained so far: the Python basics, how a request flows, every file in Phase 1, the 11 database tables, and how they work together through a manager's day.</p>
+</header>
+
+<!-- ===================================================== -->
+<h2 id="how">1. How to use this guide</h2>
+<ul>
+  <li><b>First read:</b> sections 2 → 5 give the mental model. Don't skip the big picture.</li>
+  <li><b>When reading code:</b> keep section 6 open next to the file it explains. Paths are relative to <code>D:\hackathon\paypal\backend\</code>.</li>
+  <li><b>When confused about data:</b> sections 7 and 8 explain every table and how rows link.</li>
+  <li><b>Revision after a few days:</b> try the questions in section 10 before opening the answers.</li>
+</ul>
+<div class="box info">
+  <p><b>Try it live while reading:</b></p>
+<pre><code>cd D:/hackathon/paypal/backend
+.venv/Scripts/python -m uvicorn app.main:app --reload</code></pre>
+  <p>Open <code>http://localhost:8000/docs</code>, click <b>Authorize</b>, and paste a key from <code>backend/demo_keys.json</code>.</p>
+</div>
+
+<!-- ===================================================== -->
+<h2 id="picture">2. The big picture: a restaurant</h2>
+<table>
+  <tr><th>Restaurant</th><th>Our app</th></tr>
+  <tr><td>A customer places an order</td><td>A manager or broker sends a <b>request</b> over the internet</td></tr>
+  <tr><td>The waiter takes the order to the right place</td><td><b>uvicorn + FastAPI</b> receive it and pick the right function</td></tr>
+  <tr><td>The bouncer checks your ID card</td><td><b>Login (API key)</b>: who are you, and are you allowed?</td></tr>
+  <tr><td>The order form is checked</td><td><b>Pydantic</b>: is the data valid?</td></tr>
+  <tr><td>The kitchen cooks</td><td><b>Your function</b>, e.g. <code>create_mandate</code></td></tr>
+  <tr><td>The ledger book</td><td><b>The database</b>: tables of rows</td></tr>
+  <tr><td>The plate is served</td><td>The <b>response</b>, sent back as JSON</td></tr>
+</table>
+<ul>
+  <li><b>HTTP request:</b> a message to a server, e.g. <code>POST /manager/mandates</code>. <code>POST</code> = create, <code>GET</code> = read. <code>/manager/mandates</code> is the address.</li>
+  <li><b>JSON:</b> the text format data travels in. Looks like a Python dict: <code>{"min_rent": "32000", "status": "ACTIVE"}</code>.</li>
+  <li><b>Database:</b> like an Excel workbook. A <b>table</b> is a sheet, a <b>column</b> is a header, a <b>row</b> is one line of data. <b>SQL</b> is the language to talk to it. <b>SQLite</b> keeps the whole database in one file, <code>proplock.db</code>.</li>
+</ul>
+
+<!-- ===================================================== -->
+<h2 id="python">3. Python refresher (only what Phase 1 uses)</h2>
+
+<h3>Variables, functions, type hints</h3>
+<pre><code>rent = 35000            <span class="c"># a number (int)</span>
+name = "Rajesh"         <span class="c"># text (str)</span>
+nothing = None          <span class="c"># "no value"</span>
+
+def add_gst(price: float) -> float:   <span class="c"># "price is a float, returns a float"</span>
+    return price * 1.18</code></pre>
+<p>Type hints like <code>price: float</code> are labels. Python doesn't enforce them, but <b>FastAPI, Pydantic and SQLAlchemy read them and act on them</b>. <code>str | None</code> means "text or nothing".</p>
+
+<h3>Classes, objects, inheritance</h3>
+<pre><code>class Dog:                        <span class="c"># the blueprint</span>
+    def __init__(self, name):     <span class="c"># runs when you build one</span>
+        self.name = name          <span class="c"># self = "this particular dog"</span>
+
+rex = Dog("Rex")                  <span class="c"># an object built from the blueprint</span>
+
+class Mandate(Base): ...          <span class="c"># inheritance: Mandate gets everything Base has → it's a DB table</span></code></pre>
+
+<h3>Imports, dicts and <code>**</code></h3>
+<pre><code>from decimal import Decimal           <span class="c"># borrow Decimal from the decimal library</span>
+from app.config import get_settings   <span class="c"># borrow from our own file app/config.py</span>
+
+person = {"name": "Rajesh", "age": 30}
+greet(**person)                        <span class="c"># same as greet(name="Rajesh", age=30)</span></code></pre>
+
+<h3>Decorators: the <code>@</code> line</h3>
+<pre><code>@app.get("/health")      <span class="c"># sticky note: "call the function below when someone visits /health"</span>
+def health(): ...</code></pre>
+
+<h3><code>try / finally</code>, <code>yield</code>, <code>raise</code>, <code>with</code></h3>
+<pre><code>try:
+    use_the_thing()
+finally:
+    close_the_thing()          <span class="c"># always runs, even after an error</span>
+
+def borrow_book():
+    print("take book")
+    yield "the book"           <span class="c"># hand it over and PAUSE</span>
+    print("put book back")     <span class="c"># resumes later to clean up</span>
+
+if age &lt; 0:
+    raise ValueError("bad")    <span class="c"># stop right here with an error</span>
+
+with open("f.txt") as f:       <span class="c"># opens, and closes automatically at the end of the block</span>
+    ...</code></pre>
+
+<h3>f-strings and lambdas</h3>
+<pre><code>f"pl_{role}_{key}"             <span class="c"># text with values filled into {}</span>
+lambda e: [m.value for m in e] <span class="c"># a tiny unnamed function: "list each item's value"</span></code></pre>
+
+<!-- ===================================================== -->
+<h2 id="phase0">4. Phase 0 recap: foundations</h2>
+<table>
+  <tr><th>What</th><th>Why</th></tr>
+  <tr><td><code>git init</code> in <code>paypal/</code>, one commit per step</td><td>See exactly what each step changed; undo if needed</td></tr>
+  <tr><td><code>.gitignore</code> excludes <code>.venv</code>, <code>*.db</code>, <code>.env</code>, <code>demo_keys.json</code></td><td>Secrets and generated files never get committed</td></tr>
+  <tr><td>Virtual environment <code>backend/.venv</code></td><td>This project's libraries can't clash with other projects</td></tr>
+  <tr><td>Exact pins in <code>pyproject.toml</code> (<code>fastapi==0.162.0</code>)</td><td>Everyone installs identical versions (the old project used <code>&gt;=</code> and missed two libraries: issue M8)</td></tr>
+  <tr><td>One <code>Settings</code> class</td><td>All keys and flags in one place; an empty model name means "not configured" → UNVERIFIABLE, never a guess</td></tr>
+  <tr><td>App factory <code>create_app()</code></td><td>Tests get a fresh, independent app each time</td></tr>
+</table>
+
+<h3>The Groq spike (risk first)</h3>
+<p>Before building anything that depends on AI, one script proved the riskiest dependency works:</p>
+<table>
+  <tr><th>Check</th><th>Result</th></tr>
+  <tr><td>Key valid</td><td>✅</td></tr>
+  <tr><td>Claim extraction, text model <code>openai/gpt-oss-120b</code>, JSON mode</td><td>✅ found "2 min walk to metro", "10 min drive to Bagmane", "Fully Furnished"</td></tr>
+  <tr><td>Two images in one request, vision model <code>qwen/qwen3.8-27b</code></td><td>✅ same room + sofa → <i>same room</i>; window and door swapped → <i>different room</i></td></tr>
+</table>
+<ul>
+  <li><b>JSON mode</b> guarantees JSON, but not <i>our</i> shape. Every reply is checked against a Pydantic model.</li>
+  <li><b>Images travel as text:</b> the bytes are base64-encoded into <code>data:image/jpeg;base64,…</code> and sent as one more item in the chat message.</li>
+  <li>The test rooms were drawings, so accuracy on real flat photos is still to be measured in Phase 6.</li>
+</ul>
+
+<!-- ===================================================== -->
+<h2 id="journey">5. A request's journey</h2>
+<p>Following one real request through every layer: a manager creating a mandate.</p>
+<pre><code>POST /manager/mandates
+X-API-Key: pl_manager_abc123...
+{"property_id": "PROP-BLR-001", "broker_id": "818f...", "min_rent": "32000",
+ "max_rent": "35000", "max_deposit": "70000", "valid_until": "2026-12-31T23:59:00+05:30"}</code></pre>
+<figure>
+  <img src="../figures/fig6_request_flow.svg" alt="Flowchart: uvicorn, FastAPI routing, dependencies, Pydantic validation, endpoint database checks, SQLAlchemy insert, JSON response; with 401/403, 422 and 404/422/409 exits.">
+  <figcaption>Left: the path a successful request takes. Right: where a bad request is stopped.</figcaption>
+</figure>
+<div class="box ok">
+<p><b>In one paragraph:</b> uvicorn receives the request and hands it to FastAPI, which finds <code>create_mandate</code>. Before running it, FastAPI runs its <b>dependencies</b>: read the key header, open a database session, fingerprint the key and look up the user (401 if not found), check they're a manager (403 if not). Then <b>Pydantic</b> checks the JSON (422 if invalid). Only then does the function run: flat exists? (404) real broker? (422) duplicate? (409). It builds a <code>Mandate</code> object, SQLAlchemy turns it into an <code>INSERT</code> and commits, and FastAPI sends the result as JSON with <b>201</b>.</p>
+</div>
+<p><b>Why this order:</b> cheap checks (key, input shape) run before expensive ones (database queries). A request with no key never reaches your code; invalid JSON never reaches the database.</p>
+
+<!-- ===================================================== -->
+<h2 id="files">6. Each file, line by line</h2>
+
+<!-- config -->
+<h3 id="f-config">6.1 <code>app/config.py</code>: the settings</h3>
+<pre><code>class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    database_url: str = "sqlite:///./proplock.db"
+    groq_api_key: str | None = None
+    groq_text_model: str = ""
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()</code></pre>
+<ul>
+  <li><code>BaseSettings</code> fills each field from an environment variable with the same name (case doesn't matter), then <code>.env</code>, then the default.</li>
+  <li><code>extra="ignore"</code>: unknown lines in <code>.env</code> don't crash anything.</li>
+  <li><code>groq_text_model: str = ""</code>: empty means "not set up". Later the app says "can't verify" instead of pretending.</li>
+  <li><code>@lru_cache</code>: "remember the answer". <code>.env</code> is read once; later calls reuse the same object.</li>
+</ul>
+
+<!-- main -->
+<h3 id="f-main">6.2 <code>app/main.py</code>: the front door</h3>
+<pre><code>def create_app() -> FastAPI:
+    app = FastAPI(title="PropLock AI - Feature 1: Listing Audit", version="0.1.0")
+
+    @app.get("/health", tags=["health"])
+    def health() -> dict[str, str]:
+        return {"status": "ok", "env": get_settings().app_env}
+
+    app.include_router(me.router)        <span class="c"># plugs in /me</span>
+    app.include_router(manager.router)   <span class="c"># plugs in every /manager/... address</span>
+    return app
+
+app = create_app()                       <span class="c"># uvicorn looks for this variable</span></code></pre>
+<ul>
+  <li><code>@app.get("/health")</code>: "on GET /health, run this." The returned dict becomes JSON.</li>
+  <li>A <b>router</b> is a group of related addresses kept in another file.</li>
+  <li><b>Why a function?</b> Tests call <code>create_app()</code> for a fresh app each time, so tests never affect each other.</li>
+</ul>
+
+<!-- base -->
+<h3 id="f-base">6.3 <code>app/db/base.py</code>: connecting to the database</h3>
+<h4>The engine (the phone line to the ledger room)</h4>
+<pre><code>def make_engine(url: str) -> Engine:
+    connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
+    engine = create_engine(url, connect_args=connect_args)
+    if url.startswith("sqlite"):
+        @event.listens_for(engine, "connect")
+        def _enable_foreign_keys(dbapi_connection, _record):
+            dbapi_connection.execute("PRAGMA foreign_keys=ON")
+    return engine</code></pre>
+<ul>
+  <li><code>check_same_thread=False</code>: SQLite normally refuses use from another <i>thread</i> (worker). The web server uses several, so we switch that off. Sessions are still never shared between requests.</li>
+  <li><code>@event.listens_for(engine, "connect")</code>: "run this every time a connection opens."</li>
+  <li><b>Foreign key</b> = "this column must point to a real row in another table". <b>SQLite ignores foreign keys unless <code>PRAGMA foreign_keys=ON</code></b>. Without it, a mandate could point at a flat that doesn't exist.</li>
+</ul>
+<h4>Sessions (a shopping basket)</h4>
+<pre><code>SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+def get_session() -> Iterator[Session]:
+    session = SessionLocal()       <span class="c"># make a new basket</span>
+    try:
+        yield session              <span class="c"># hand it to the endpoint, PAUSE</span>
+    finally:
+        session.close()            <span class="c"># always close it afterwards</span></code></pre>
+<ul>
+  <li>A <b>session</b> collects changes; <code>commit()</code> saves them all together. If anything fails before that, nothing is saved.</li>
+  <li><code>expire_on_commit=False</code>: after saving, objects keep their values, so we can return them without another query.</li>
+  <li>The <code>yield</code> pattern: open, let the endpoint use it, always close. Connections never pile up.</li>
+</ul>
+<h4>UTCDateTime (fixing time zones)</h4>
+<div class="box warn"><p><b>The problem:</b> <b>UTC</b> is the world reference clock (India = UTC+5:30). A time <i>with</i> a zone is <b>aware</b>; without one it's <b>naive</b>. SQLite throws the zone away, so an aware time goes in and a naive one comes out, and Python crashes when comparing naive with aware.</p></div>
+<pre><code>class UTCDateTime(TypeDecorator):
+    impl = DateTime
+
+    def process_bind_param(self, value, dialect):      <span class="c"># runs when SAVING</span>
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            raise ValueError("naive datetime; use datetime.now(UTC)")
+        return value.astimezone(UTC).replace(tzinfo=None)
+
+    def process_result_value(self, value, dialect):    <span class="c"># runs when READING</span>
+        return value.replace(tzinfo=UTC) if value is not None else None
+
+class Base(DeclarativeBase):
+    type_annotation_map = {datetime: UTCDateTime}</code></pre>
+<ul>
+  <li>Saving: refuse naive times (a bug), convert to UTC (<code>23:59 +05:30</code> → <code>18:29 UTC</code>), strip the label.</li>
+  <li>Reading: put the UTC label back, so every time that comes out is aware.</li>
+  <li><code>type_annotation_map</code>: "every column labelled <code>datetime</code> uses <code>UTCDateTime</code>". Set once, works everywhere.</li>
+</ul>
+
+<!-- migrations -->
+<h3 id="f-migrations">6.4 Migrations (Alembic)</h3>
+<p>The models say what tables <i>should</i> exist; the database file starts empty. A <b>migration</b> is a recipe to change the database, with an undo.</p>
+<pre><code>def upgrade() -> None:              <span class="c"># do it</span>
+    op.create_table('users',
+        sa.Column('id', sa.String(length=36), nullable=False),
+        ...
+    )
+
+def downgrade() -> None:            <span class="c"># undo it</span>
+    op.drop_table('users')</code></pre>
+<pre><code>alembic revision --autogenerate -m "..."   <span class="c"># compare models with DB, write a new recipe</span>
+alembic upgrade head                       <span class="c"># run every recipe not yet run</span>
+alembic downgrade base                     <span class="c"># undo them all</span></code></pre>
+<ul>
+  <li>Alembic records which recipes ran in a table called <code>alembic_version</code>.</li>
+  <li><code>nullable=False</code> came from <code>Mapped[str]</code> without <code>| None</code>.</li>
+  <li>In <code>alembic/env.py</code>: <code>from app.db import models</code> loads the tables; <code>target_metadata = Base.metadata</code> is what to compare against; the URL comes from app settings unless a test sets its own.</li>
+  <li><code>render_as_batch=True</code>: SQLite can't do most <code>ALTER TABLE</code>, so Alembic copies the table instead. Future migrations just work.</li>
+</ul>
+
+<!-- auth -->
+<h3 id="f-auth">6.5 <code>app/auth.py</code>: the bouncer</h3>
+<h4>Making and hashing keys</h4>
+<pre><code>def generate_key(role: Role) -> str:
+    return f"pl_{role.value.lower()}_{secrets.token_urlsafe(24)}"   <span class="c"># "pl_broker_Xq3…"</span>
+
+def hash_key(key: str) -> str:
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()           <span class="c"># 64-char fingerprint</span></code></pre>
+<ul>
+  <li><code>secrets</code> uses the computer's secure randomness. Never use <code>random</code> for keys.</li>
+  <li>A <b>hash</b> is a one-way fingerprint: same input → same output, but you can't go back. The database stores only fingerprints, so a stolen database contains no working keys.</li>
+  <li>Why plain SHA-256 is enough (passwords need slow bcrypt): passwords are short and guessable; a 192-bit random key isn't.</li>
+</ul>
+<h4>Who is this person?</h4>
+<pre><code>api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)   <span class="c"># also creates the Authorize button</span>
+
+def current_user(
+    api_key: str | None = Depends(api_key_header),
+    session: Session = Depends(get_session),
+) -> User:
+    if not api_key:
+        raise HTTPException(401, "Missing X-API-Key header")
+    user = session.scalar(select(User).where(User.api_key_hash == hash_key(api_key)))
+    if user is None:
+        raise HTTPException(401, "Invalid API key")
+    return user</code></pre>
+<ul>
+  <li><code>Depends(...)</code> = "before running me, get me these things."</li>
+  <li><code>select(User).where(...)</code> builds SQL: <code>SELECT * FROM users WHERE api_key_hash = '…'</code>. <code>session.scalar</code> returns one user or <code>None</code>.</li>
+  <li><code>==</code> inside <code>where(...)</code> doesn't compare in Python; SQLAlchemy turns it into SQL.</li>
+</ul>
+<h4>Is this person allowed?</h4>
+<pre><code>def require_role(*roles: Role):
+    def dependency(user: User = Depends(current_user)) -> User:
+        if user.role not in roles:
+            raise HTTPException(403, "Requires role: ...")
+        return user
+    return dependency
+
+manager_only = require_role(Role.MANAGER)</code></pre>
+<p>A <b>function that makes functions</b> (a <b>closure</b>): the inner function remembers <code>roles</code>. <b>401</b> = "show me your ID". <b>403</b> = "I saw your ID, and you can't come in."</p>
+<p>FastAPI <b>caches dependencies per request</b>: the endpoint and <code>current_user</code> get the same session, not two connections.</p>
+
+<!-- schemas -->
+<h3 id="f-schemas">6.6 <code>app/schemas/manager.py</code>: the order-form checker</h3>
+<pre><code>Money = Field(gt=0, max_digits=12, decimal_places=2)
+
+class MandateIn(BaseModel):
+    property_id: str
+    broker_id: str
+    min_rent: Decimal = Money
+    max_rent: Decimal = Money
+    max_brokerage_months: Decimal = Field(default=Decimal("1.00"), ge=0, le=3, decimal_places=2)
+    valid_until: AwareDatetime                <span class="c"># must include a timezone</span>
+
+    @field_validator("valid_until")
+    @classmethod
+    def must_be_in_future(cls, value):
+        if value &lt;= datetime.now(UTC):
+            raise ValueError("valid_until must be in the future")
+        return value
+
+    @model_validator(mode="after")
+    def rent_range_is_ordered(self):
+        if self.max_rent &lt; self.min_rent:
+            raise ValueError("max_rent must be greater than or equal to min_rent")
+        return self</code></pre>
+<p>Pydantic validates in three layers. If any fails, FastAPI returns <b>422</b> and your function never runs:</p>
+<ol>
+  <li><b>Types and conversion:</b> <code>"32000"</code> → <code>Decimal("32000")</code>; a date without a timezone is rejected.</li>
+  <li><b>Field rules:</b> <code>gt</code> (&gt;), <code>ge</code> (≥), <code>le</code> (≤), <code>decimal_places</code>, and <code>field_validator</code> for one-field custom rules.</li>
+  <li><b>Whole-object rules:</b> <code>model_validator(mode="after")</code> compares fields, like max ≥ min.</li>
+</ol>
+<pre><code>class MandateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)   <span class="c"># can be filled from a DB object</span>
+    id: str
+    min_rent: Decimal
+    status: MandateStatus</code></pre>
+<p>Output schemas are a <b>whitelist</b>: only listed fields are sent. That's why <code>/me</code> never leaks <code>api_key_hash</code>.</p>
+
+<!-- api -->
+<h3 id="f-api">6.7 <code>app/api/manager.py</code>: the kitchen</h3>
+<pre><code>router = APIRouter(prefix="/manager", tags=["manager"])
+manager_only = require_role(Role.MANAGER)
+
+@router.post("/mandates", response_model=MandateOut, status_code=201)
+def create_mandate(
+    body: MandateIn,                                   <span class="c"># already validated</span>
+    manager: User = Depends(manager_only),             <span class="c"># already authenticated</span>
+    session: Session = Depends(get_session),
+) -> Mandate:
+    if session.get(Property, body.property_id) is None:            <span class="c"># ① flat exists?</span>
+        raise HTTPException(404, ...)
+    broker = session.get(User, body.broker_id)                     <span class="c"># ② really a broker?</span>
+    if broker is None or broker.role is not Role.BROKER:
+        raise HTTPException(422, ...)
+    duplicate = session.scalar(select(Mandate).where(              <span class="c"># ③ no active duplicate</span>
+        Mandate.property_id == body.property_id,
+        Mandate.broker_id == body.broker_id,
+        Mandate.status == MandateStatus.ACTIVE))
+    if duplicate:
+        raise HTTPException(409, ...)
+
+    mandate = Mandate(**body.model_dump(), created_by=manager.id)  <span class="c"># ④ build</span>
+    session.add(mandate)
+    session.commit()                                               <span class="c"># ⑤ INSERT + save</span>
+    return mandate                                                 <span class="c"># ⑥ → MandateOut → JSON 201</span></code></pre>
+<ul>
+  <li><code>session.get(Table, id)</code>: the fastest lookup by primary key.</li>
+  <li>Several conditions in <code>where</code> = all must be true (AND).</li>
+  <li><code>body.model_dump()</code> → dict; <code>**</code> spreads it; <code>created_by</code> comes from the <b>key</b>, never the body.</li>
+  <li>Sent <code>23:59+05:30</code>, returned <code>18:29Z</code>: same instant, stored in UTC. Money returns as strings (<code>"35000.00"</code>) to stay exact.</li>
+</ul>
+
+<!-- seed -->
+<h3 id="f-seed">6.8 <code>app/db/seed.py</code>: demo data</h3>
+<pre><code>def seed(session):
+    if session.scalar(select(User).where(User.email == MANAGER_EMAIL)):
+        return None                    <span class="c"># already seeded → do nothing (idempotent)</span>
+    manager = _user(session, keys, "manager", ...)
+    ...
+    session.flush()                    <span class="c"># send INSERTs, get ids, NOT final yet</span>
+    blr = Property(..., created_by=manager.id)
+    ...
+    session.commit()                   <span class="c"># make everything permanent at once</span></code></pre>
+<ul>
+  <li><b>Idempotent:</b> running twice = running once.</li>
+  <li><b><code>flush()</code> vs <code>commit()</code>:</b> flush sends SQL inside the open transaction (so ids exist); commit makes it permanent. A failure in between saves nothing: no half-seeded database.</li>
+  <li><code>if __name__ == "__main__":</code> runs <code>main()</code> only when the file is run directly, not when tests import it.</li>
+  <li>Seeds: manager <b>XYZ Properties Desk</b>; brokers <b>Rajesh</b> (honest) and <b>QuickCash Rentals</b> (future liar); flats <b>PROP-BLR-001</b> (Bengaluru, Unfurnished) and <b>PROP-CHN-002</b> (Chennai, Semi-Furnished); three mandates.</li>
+</ul>
+
+<!-- tests -->
+<h3 id="f-tests">6.9 Tests</h3>
+<pre><code>@pytest.fixture
+def db_session(tmp_path) -> Session:
+    engine = make_engine(f"sqlite:///{tmp_path / 'test.db'}")   <span class="c"># brand-new DB per test</span>
+    Base.metadata.create_all(engine)
+    with Session(engine, expire_on_commit=False) as session:
+        yield session
+    engine.dispose()
+
+@pytest.fixture
+def client(db_session) -> TestClient:
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: db_session  <span class="c"># the key trick</span>
+    return TestClient(app)</code></pre>
+<ul>
+  <li>A <b>fixture</b> prepares something tests ask for by naming it as a parameter.</li>
+  <li><code>dependency_overrides</code>: "whenever anything asks for <code>get_session</code>, give it the test database." The real code runs unchanged.</li>
+  <li>Tests follow <b>arrange → act → assert</b>.</li>
+  <li><code>@pytest.mark.parametrize</code> runs one test once per case (5 bad mandates → 5 runs).</li>
+  <li><code>with pytest.raises(IntegrityError):</code> proves the database itself refuses bad data.</li>
+</ul>
+
+<!-- ===================================================== -->
+<h2 id="models">7. The 11 tables (<code>app/db/models.py</code>)</h2>
+<p>Each class is a table, each attribute a column, each object a row. Four groups follow the real-world story:</p>
+<pre><code>WHO &amp; WHAT          PERMISSION        THE AD                            RESULTS &amp; FOLLOW-UP
+users ─────┐
+properties ┼──────► mandates ───────► listings ──► listing_versions ──► audits ──► outbox_jobs
+baseline_photos ┘                                    ├─ listing_photos       └───► trust_events
+                                                     └─ commute_claims</code></pre>
+
+<h3>Building blocks</h3>
+<table>
+  <tr><th>Piece</th><th>What it does</th><th>Why</th></tr>
+  <tr><td><code>new_id()</code></td><td>random UUID</td><td>unguessable, no collisions (counting ids reveal totals)</td></tr>
+  <tr><td><code>utcnow()</code></td><td>now, in UTC</td><td>one clock everywhere</td></tr>
+  <tr><td><code>Numeric(12,2)</code> → <code>Decimal</code></td><td>money</td><td><code>0.1 + 0.2 = 0.30000000000000004</code> with floats</td></tr>
+  <tr><td><code>Numeric(10,7)</code></td><td>GPS</td><td>~1 cm precision, exact</td></tr>
+  <tr><td><code>enum_column(...)</code></td><td>VARCHAR + CHECK constraint</td><td>the database refuses typos like <code>VERIFED</code></td></tr>
+  <tr><td><code>Mapped[str | None]</code></td><td>optional column</td><td>everything else must be filled</td></tr>
+  <tr><td><code>ForeignKey(...)</code></td><td>link to another table</td><td>no row points at something that doesn't exist</td></tr>
+</table>
+
+<h3>The enums (menus)</h3>
+<table>
+  <tr><th>Enum</th><th>Values</th></tr>
+  <tr><td>Role</td><td>MANAGER, BROKER</td></tr>
+  <tr><td>Furnishing</td><td>Unfurnished, Semi-Furnished, Fully Furnished</td></tr>
+  <tr><td>MandateStatus</td><td>ACTIVE, REVOKED, EXPIRED</td></tr>
+  <tr><td>ListingStatus</td><td>DRAFT, SUBMITTED, NEEDS_FIX, IN_REVIEW, VERIFIED, LIVE, EXPIRED, RENTED</td></tr>
+  <tr><td>AuditStatus</td><td>NEEDS_FIX, IN_REVIEW, PENDING_MINT, VERIFIED, REJECTED</td></tr>
+  <tr><td>PhotoKind</td><td>CHECKIN, EXTRA</td></tr>
+  <tr><td>CommuteMode</td><td>walking, transit, driving</td></tr>
+  <tr><td>ClaimSource</td><td>FORM (typed by broker), EXTRACTED (found by AI in ad text)</td></tr>
+  <tr><td>JobStatus</td><td>PENDING, DONE, FAILED</td></tr>
+</table>
+
+<h3>Who and what</h3>
+<table>
+  <tr><th>Table</th><th>Key columns</th><th>Meaning</th></tr>
+  <tr><td><b>users</b></td><td>name, email (unique), role, api_key_hash, agency, licence_number, trust_score</td><td>Everyone who can log in. Managers and brokers share one table; <code>role</code> separates them.</td></tr>
+  <tr><td><b>properties</b></td><td>id (e.g. PROP-BLR-001), owner_name, address, <b>state</b>, <b>latitude/longitude</b>, <b>furnishing</b>, created_by</td><td>The <b>ground truth</b>. <code>state</code> → Check C; GPS → Checks A and B; furnishing → Check D.</td></tr>
+  <tr><td><b>baseline_photos</b></td><td>property_id, url, phash, room_type</td><td>The manager's photos: shown on the listing and used as Check A's answer key. <code>phash</code> = look-alike fingerprint.</td></tr>
+</table>
+
+<h3>Permission</h3>
+<table>
+  <tr><th>Table</th><th>Key columns</th><th>Meaning</th></tr>
+  <tr><td><b>mandates</b></td><td>property_id, broker_id, min_rent, max_rent, max_deposit, max_brokerage_months, valid_until, status, created_by</td><td>"This broker may list this flat, within these limits." The written version of handing over the keys. Check D compares every listing with it.</td></tr>
+</table>
+
+<h3>The ad</h3>
+<table>
+  <tr><th>Table</th><th>Key columns</th><th>Meaning</th></tr>
+  <tr><td><b>listings</b></td><td>property_id, broker_id, mandate_id, status, last_confirmed_at</td><td>The container for one broker's ad. No title or rent here: those live in versions.</td></tr>
+  <tr><td><b>listing_versions</b></td><td>version_no (unique per listing), title, description, rent, deposit, <b>brokerage_fee</b>, furnishing</td><td>The ad's content. Every edit = a new version; nothing is overwritten (bait-and-switch defence).</td></tr>
+  <tr><td><b>listing_photos</b></td><td>kind, storage_path, phash, latitude/longitude, captured_at</td><td>Check-in and extra photos, attached to a version.</td></tr>
+  <tr><td><b>commute_claims</b></td><td>destination, minutes, mode, <b>source</b></td><td>"X minutes to Y". <code>source=EXTRACTED</code> shows lies hidden in the ad text (fix M2).</td></tr>
+</table>
+<pre><code>listing L1 (Rajesh, PROP-BLR-001)
+ ├─ version 1: rent ₹40,000, "2 min to metro"     → audit: NEEDS_FIX
+ └─ version 2: rent ₹35,000, "22 min to metro"    → audit: VERIFIED</code></pre>
+
+<h3>Results and follow-up</h3>
+<table>
+  <tr><th>Table</th><th>Key columns</th><th>Meaning</th></tr>
+  <tr><td><b>audits</b></td><td>version_id (unique), status, <b>report_json</b>, ruleset_version, <b>signature</b>, paypal_product_id, reviewed_by, review_note</td><td>One audit per version. <code>report_json</code> is the exact report shown (fix M7); <code>signature</code> is the HMAC seal (fix M4).</td></tr>
+  <tr><td><b>outbox_jobs</b></td><td>audit_id, kind, status, attempts, last_error, next_run_at</td><td>Work to do <i>after</i> saving (e.g. create the PayPal product), retried until done. Solves the dual-write problem.</td></tr>
+  <tr><td><b>trust_events</b></td><td>broker_id, kind, points, audit_id</td><td>A ledger of score changes with reasons, like a bank statement instead of just a balance.</td></tr>
+</table>
+<pre><code>1. In ONE transaction: save audit (PENDING_MINT) + outbox job (PENDING)
+2. A worker picks up the job → calls PayPal
+   ├─ success → job DONE, audit VERIFIED, paypal_product_id filled
+   └─ failure → attempts += 1, last_error saved, next_run_at = later → retry</code></pre>
+
+<!-- ===================================================== -->
+<h2 id="together">8. How the tables work together: a manager's day</h2>
+<p>Short ids like <code>m-111</code> stand in for real UUIDs. <span class="tag t-r">🔍 read</span> <span class="tag t-w">✏️ write</span></p>
+<pre><code>Step 0  Account created (seed)         ✏️ users
+Step 1  Log in (every request)          🔍 users
+Step 2  Register a flat                 🔍 properties  ✏️ properties
+Step 3  Find brokers                    🔍 users
+Step 4  Give Rajesh a mandate           🔍 properties, users, mandates  ✏️ mandates
+Step 5  Revoke a mandate                🔍 mandates  ✏️ mandates
+──────────────── later phases ────────────────
+Step 6  Rajesh submits a listing        uses everything the manager created
+Step 7  Manager reviews an audit        ✏️ audits.reviewed_by</code></pre>
+
+<h3><span class="step">0</span>The manager account exists</h3>
+<table>
+  <tr><th>id</th><th>name</th><th>role</th><th>api_key_hash</th></tr>
+  <tr><td><b>m-111</b></td><td>XYZ Properties Desk</td><td>MANAGER</td><td>9f2c41…</td></tr>
+</table>
+<p>This row is the root: every flat and mandate the manager creates points back to <code>m-111</code>.</p>
+
+<h3><span class="step">1</span>Log in (every request)</h3>
+<pre><code>SELECT * FROM users WHERE api_key_hash = '9f2c41…';   → m-111, role MANAGER ✅</code></pre>
+<p>No cookie, nothing remembered: each request proves who it is from scratch (<b>stateless</b>).</p>
+
+<h3><span class="step">2</span>Register a flat</h3>
+<pre><code>POST /manager/properties  {"id": "PROP-BLR-003", "owner_name": "Anita Rao", "state": "Karnataka",
+                           "latitude": "12.9352000", "longitude": "77.6245000", "furnishing": "Semi-Furnished", ...}</code></pre>
+<table>
+  <tr><th>id</th><th>owner_name</th><th>state</th><th>lat / lng</th><th>furnishing</th><th>created_by</th></tr>
+  <tr><td><b>PROP-BLR-003</b></td><td>Anita Rao</td><td>Karnataka</td><td>12.9352, 77.6245</td><td>Semi-Furnished</td><td><b>m-111</b> → users</td></tr>
+</table>
+<pre><code>users (m-111) ◄──── created_by ──── properties (PROP-BLR-003)</code></pre>
+
+<h3><span class="step">3</span>Find brokers</h3>
+<pre><code>SELECT * FROM users WHERE role = 'BROKER' ORDER BY name;   → b-222 QuickCash, b-333 Rajesh</code></pre>
+
+<h3><span class="step">4</span>Give Rajesh a mandate (the most connected step)</h3>
+<pre><code>POST /manager/mandates  {"property_id": "PROP-BLR-003", "broker_id": "b-333",
+                         "min_rent": "28000", "max_rent": "30000", "max_deposit": "60000",
+                         "valid_until": "2026-12-31T23:59:00+05:30"}</code></pre>
+<p>Reads <b>properties</b> (exists?), <b>users</b> (broker?), <b>mandates</b> (duplicate?), then writes <b>mandates</b>:</p>
+<table>
+  <tr><th>id</th><th>property_id</th><th>broker_id</th><th>rent range</th><th>max_deposit</th><th>valid_until</th><th>status</th><th>created_by</th></tr>
+  <tr><td><b>md-444</b></td><td>PROP-BLR-003</td><td>b-333</td><td>28,000–30,000</td><td>60,000</td><td>2026-12-31 18:29 UTC</td><td>ACTIVE</td><td>m-111</td></tr>
+</table>
+<pre><code>                        ┌──── created_by ────► users (m-111, MANAGER)    "who allowed it"
+mandates (md-444) ──────┼──── broker_id ─────► users (b-333, BROKER)     "who may list"
+                        └──── property_id ───► properties (PROP-BLR-003) "which flat"</code></pre>
+<p>The mandate is the <b>bridge row</b>. <code>users</code> is linked twice with different meanings; that's normal.</p>
+
+<h3><span class="step">5</span>Revoke a mandate</h3>
+<pre><code>UPDATE mandates SET status = 'REVOKED' WHERE id = 'md-444';</code></pre>
+<ul>
+  <li><b>Not deleted:</b> it stays as history, and listings pointing at it keep a valid link.</li>
+  <li><b>Slot freed:</b> the duplicate check only looks at ACTIVE mandates.</li>
+</ul>
+
+<h3><span class="step">6</span>Later: a broker's listing uses the manager's rows</h3>
+<pre><code>listings (L1)
+ ├─ property_id ─► properties (PROP-BLR-003)   ← manager's flat
+ ├─ broker_id ───► users (b-333)               ← from Rajesh's key
+ └─ mandate_id ──► mandates (md-555)           ← manager's permission
+      └─ listing_versions (v1: rent ₹32,000, Fully Furnished, "5 min to metro")
+           ├─ commute_claims (Koramangala Metro, 5, walking, EXTRACTED)
+           ├─ listing_photos (CHECKIN, 12.93521, 77.62451)
+           └─ audits (v1)</code></pre>
+<table>
+  <tr><th>Check</th><th>Reads (manager's truth)</th><th>Compares with (broker's claim)</th><th>Result</th></tr>
+  <tr><td>D</td><td>mandates.max_rent = 30000</td><td>rent = 32000</td><td>❌ over range</td></tr>
+  <tr><td>D</td><td>properties.furnishing = Semi-Furnished</td><td>furnishing = Fully Furnished</td><td>❌ claims more</td></tr>
+  <tr><td>C</td><td>properties.state = Karnataka</td><td>deposit / rent</td><td>rule applied</td></tr>
+  <tr><td>B</td><td>properties.latitude/longitude</td><td>commute_claims (5 min)</td><td>route measured from the flat</td></tr>
+  <tr><td>A</td><td>properties GPS + baseline_photos</td><td>listing_photos GPS + image</td><td>within 100 m? same room?</td></tr>
+</table>
+
+<h3><span class="step">7</span>Later: the manager reviews an uncertain audit</h3>
+<table>
+  <tr><th>audits column</th><th>Before</th><th>After</th></tr>
+  <tr><td>status</td><td>IN_REVIEW</td><td>PENDING_MINT → VERIFIED</td></tr>
+  <tr><td>reviewed_by</td><td>—</td><td>m-111</td></tr>
+  <tr><td>review_note</td><td>—</td><td>"Walked it myself: 9 minutes."</td></tr>
+</table>
+
+<div class="box info"><p><b>The rule behind it all:</b> the <b>manager writes the truth</b> (properties, mandates, baseline photos), the <b>broker writes claims</b> (listings, versions, photos, commute claims), and the <b>audit compares the two</b>. No broker request can change a property or mandate, because those endpoints require <code>Role.MANAGER</code>.</p></div>
+
+<!-- ===================================================== -->
+<h2 id="cheat">9. Cheat sheets</h2>
+
+<h3>Which layer stops what</h3>
+<table>
+  <tr><th>Bad input</th><th>Stopped by</th><th>Code</th></tr>
+  <tr><td>No key / unknown key</td><td><code>current_user</code></td><td>401</td></tr>
+  <tr><td>Broker calls a manager endpoint</td><td><code>require_role</code></td><td>403</td></tr>
+  <tr><td>max &lt; min, negative rent, date without timezone</td><td>Pydantic</td><td>422</td></tr>
+  <tr><td>Flat doesn't exist</td><td>endpoint check</td><td>404</td></tr>
+  <tr><td>broker_id isn't a broker</td><td>endpoint check</td><td>422</td></tr>
+  <tr><td>Duplicate active mandate / flat id taken</td><td>endpoint check</td><td>409</td></tr>
+  <tr><td>Code bug writes <code>'VERIFED'</code> or an orphan foreign key</td><td>database CHECK / FOREIGN KEY</td><td>crash (caught by tests)</td></tr>
+</table>
+
+<h3>Status codes</h3>
+<div class="grid2">
+<table>
+  <tr><th>Code</th><th>Meaning</th></tr>
+  <tr><td>200</td><td>OK</td></tr>
+  <tr><td>201</td><td>Created</td></tr>
+  <tr><td>401</td><td>Who are you?</td></tr>
+  <tr><td>403</td><td>Not allowed</td></tr>
+</table>
+<table>
+  <tr><th>Code</th><th>Meaning</th></tr>
+  <tr><td>404</td><td>Doesn't exist</td></tr>
+  <tr><td>409</td><td>Conflict / duplicate</td></tr>
+  <tr><td>422</td><td>Invalid data</td></tr>
+  <tr><td>500</td><td>Server bug</td></tr>
+</table>
+</div>
+
+<h3>Design rules</h3>
+<table>
+  <tr><th>Rule</th><th>Why</th></tr>
+  <tr><td>Money is Decimal, sent as strings</td><td>exact, no float rounding</td></tr>
+  <tr><td>All times stored as UTC, always aware</td><td>one clock, no naive/aware crashes</td></tr>
+  <tr><td>Enums with CHECK constraints</td><td>the database refuses typos</td></tr>
+  <tr><td>Foreign keys switched on</td><td>no links to things that don't exist</td></tr>
+  <tr><td>Keys stored only as hashes</td><td>a leaked database leaks no working keys</td></tr>
+  <tr><td>Identity from the key, never the body</td><td>no impersonation (fix M6)</td></tr>
+  <tr><td>Nothing important is overwritten</td><td>versions, audits and trust events form an audit trail</td></tr>
+  <tr><td>Missing service → UNVERIFIABLE</td><td>never invent data (fixes M3, M5, D1)</td></tr>
+</table>
+
+<h3>Commands</h3>
+<pre><code>cd D:/hackathon/paypal/backend
+.venv/Scripts/python -m pytest -q                      <span class="c"># run all tests</span>
+.venv/Scripts/alembic upgrade head                     <span class="c"># create / update tables</span>
+.venv/Scripts/alembic downgrade base                   <span class="c"># remove all tables</span>
+.venv/Scripts/python -m app.db.seed                    <span class="c"># demo data + keys → demo_keys.json</span>
+.venv/Scripts/python -m uvicorn app.main:app --reload  <span class="c"># run the server → /docs</span>
+.venv/Scripts/python -m scripts.spike_groq             <span class="c"># re-test Groq models</span></code></pre>
+
+<!-- ===================================================== -->
+<h2 id="quiz">10. Self-check questions</h2>
+<p>Answer in your head first, then open.</p>
+
+<details><summary>1. Why does <code>create_app()</code> exist instead of just <code>app = FastAPI()</code>?</summary>
+<p>So tests can build a fresh, independent app each time, and swap dependencies (like the database) without touching global state.</p></details>
+
+<details><summary>2. What's the difference between 401 and 403?</summary>
+<p>401: the server doesn't know who you are (no key or a key that matches nobody). 403: it knows who you are, but your role isn't allowed.</p></details>
+
+<details><summary>3. Why do we store <code>sha256(key)</code> instead of the key?</summary>
+<p>A hash can't be reversed. If the database leaks, the fingerprints can't be used to log in. Plain SHA-256 is enough because the keys are long and random, not guessable passwords.</p></details>
+
+<details><summary>4. Why is money a <code>Decimal</code> and sent as a string?</summary>
+<p>Floats can't store many decimals exactly (<code>0.1 + 0.2 ≠ 0.3</code>). Strings keep the exact value across JSON, which most languages read as floats.</p></details>
+
+<details><summary>5. What does <code>PRAGMA foreign_keys=ON</code> prevent?</summary>
+<p>Rows pointing at things that don't exist, e.g. a mandate for flat <code>PROP-NOPE</code>. SQLite ignores foreign keys unless this is set on every connection.</p></details>
+
+<details><summary>6. What problem does <code>UTCDateTime</code> solve?</summary>
+<p>SQLite drops timezones, so stored times come back naive and crash when compared with aware times. It stores UTC and re-attaches UTC on reading, and refuses naive times on saving.</p></details>
+
+<details><summary>7. <code>flush()</code> vs <code>commit()</code>?</summary>
+<p><code>flush()</code> sends SQL inside the open transaction (ids now exist) but isn't permanent. <code>commit()</code> makes everything permanent at once. A failure in between saves nothing.</p></details>
+
+<details><summary>8. Where does a "max_rent below min_rent" error get caught, and with which code?</summary>
+<p>In Pydantic's <code>model_validator</code> on <code>MandateIn</code>, before the endpoint runs: 422.</p></details>
+
+<details><summary>9. Why is "is broker_id really a broker?" checked in the endpoint, not in Pydantic?</summary>
+<p>Pydantic only sees the request data. Only the database knows whether that id exists and has role BROKER.</p></details>
+
+<details><summary>10. Why are listings split into <code>listings</code> and <code>listing_versions</code>?</summary>
+<p>So edits never overwrite a verified ad. Every edit is a new version needing its own audit, and old versions stay as evidence for disputes.</p></details>
+
+<details><summary>11. What does the mandate table add, and which check uses it?</summary>
+<p>The owner's permission for one broker to list one flat, with limits (rent range, max deposit, brokerage cap, expiry). Submitting needs an active one (else 403), and Check D compares every listing with it.</p></details>
+
+<details><summary>12. Why does revoking a mandate change its status instead of deleting the row?</summary>
+<p>To keep history, and so listings that point at it keep a valid foreign key. The duplicate check only counts ACTIVE mandates, so the slot is freed anyway.</p></details>
+
+<details><summary>13. What is the outbox for?</summary>
+<p>The dual-write problem: save the audit and a "mint PayPal product" job in one transaction, then a worker does the external call and retries until done. No orphaned PayPal products, no lost audits.</p></details>
+
+<details><summary>14. What does <code>app.dependency_overrides[get_session] = …</code> do in tests?</summary>
+<p>Whenever any code asks for <code>get_session</code>, it gets the test's throwaway database instead. The real endpoints run unchanged.</p></details>
+
+<details><summary>15. Which Groq models were chosen, and why did we test two images first?</summary>
+<p>Text: <code>openai/gpt-oss-120b</code>; vision: <code>qwen/qwen3.8-27b</code>. Check A's same-room comparison needs two images in one request; testing it first ("risk first") avoids redesigning a finished feature later.</p></details>
+
+<p style="margin-top:40px;color:var(--muted);font-size:14px">Source of truth for the plan: <code>plans/pending/feature1-rebuild.md</code>. Step-by-step history: <code>docs/BUILD_LOG.md</code>. Written 2026-10-29, covering Phases 0–1.</p>
+</main>
+</div>
+<script>
+  function toggleTheme() {
+    var r = document.documentElement;
+    var dark = r.getAttribute('data-theme') === 'dark' ||
+      (!r.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+    r.setAttribute('data-theme', dark ? 'light' : 'dark');
+  }
+</script>
+</body>
+</html>

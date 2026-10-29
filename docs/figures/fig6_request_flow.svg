@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 760" width="680" height="760" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#73726c"/>
+    </marker>
+    <marker id="r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9z" fill="#A32D2D"/>
+    </marker>
+    <style>
+      .ln{stroke:#73726c;stroke-width:1.4;fill:none}
+      .er{stroke:#A32D2D;stroke-width:1.3;fill:none;stroke-dasharray:4 3}
+      .t{font-size:14px;font-weight:600}
+      .s{font-size:12px}
+      .c{font-size:11.5px;font-weight:600}
+      .k{font-size:10.5px;font-weight:700;letter-spacing:.8px;fill:#8a8880}
+      .code{font-family:Consolas, 'Cascadia Code', monospace;font-size:11.5px}
+    </style>
+  </defs>
+
+  <text x="40" y="16" class="k">REQUEST PATH</text>
+  <text x="520" y="16" class="k">STOPPED HERE IF…</text>
+
+  <!-- 1 uvicorn -->
+  <rect x="40" y="26" width="440" height="62" rx="10" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="260" y="50" text-anchor="middle" class="t" fill="#2C2C2A">uvicorn receives the HTTP request</text>
+  <text x="260" y="72" text-anchor="middle" class="code" fill="#5F5E5A">POST /manager/mandates · X-API-Key · JSON body</text>
+  <line x1="260" y1="88" x2="260" y2="110" class="ln" marker-end="url(#a)"/>
+
+  <!-- 2 routing -->
+  <rect x="40" y="114" width="440" height="62" rx="10" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="260" y="138" text-anchor="middle" class="t" fill="#2C2C2A">FastAPI routing</text>
+  <text x="260" y="160" text-anchor="middle" class="s" fill="#5F5E5A">matches the path → <tspan class="code">create_mandate()</tspan></text>
+  <line x1="260" y1="176" x2="260" y2="198" class="ln" marker-end="url(#a)"/>
+
+  <!-- 3 dependencies -->
+  <rect x="40" y="202" width="440" height="112" rx="10" fill="#EEEDFE" stroke="#534AB7"/>
+  <text x="260" y="226" text-anchor="middle" class="t" fill="#3C3489">Dependencies run first</text>
+  <text x="260" y="245" text-anchor="middle" class="s" fill="#534AB7">app/auth.py · app/db/base.py</text>
+  <g>
+    <rect x="54" y="262" width="96" height="36" rx="8" fill="#fff" stroke="#534AB7"/>
+    <text x="102" y="279" text-anchor="middle" class="c" fill="#3C3489">api_key_</text>
+    <text x="102" y="292" text-anchor="middle" class="c" fill="#3C3489">header</text>
+    <line x1="150" y1="280" x2="160" y2="280" class="ln" marker-end="url(#a)"/>
+    <rect x="164" y="262" width="96" height="36" rx="8" fill="#fff" stroke="#534AB7"/>
+    <text x="212" y="285" text-anchor="middle" class="c" fill="#3C3489">get_session</text>
+    <line x1="260" y1="280" x2="270" y2="280" class="ln" marker-end="url(#a)"/>
+    <rect x="274" y="262" width="96" height="36" rx="8" fill="#fff" stroke="#534AB7"/>
+    <text x="322" y="285" text-anchor="middle" class="c" fill="#3C3489">current_user</text>
+    <line x1="370" y1="280" x2="380" y2="280" class="ln" marker-end="url(#a)"/>
+    <rect x="384" y="262" width="84" height="36" rx="8" fill="#fff" stroke="#534AB7"/>
+    <text x="426" y="285" text-anchor="middle" class="c" fill="#3C3489">require_role</text>
+  </g>
+  <line x1="480" y1="258" x2="516" y2="258" class="er" marker-end="url(#r)"/>
+  <rect x="520" y="226" width="140" height="64" rx="10" fill="#FCEBEB" stroke="#A32D2D"/>
+  <text x="590" y="250" text-anchor="middle" class="t" fill="#791F1F">401 / 403</text>
+  <text x="590" y="268" text-anchor="middle" class="s" fill="#A32D2D">no or bad key /</text>
+  <text x="590" y="282" text-anchor="middle" class="s" fill="#A32D2D">wrong role</text>
+  <line x1="260" y1="314" x2="260" y2="336" class="ln" marker-end="url(#a)"/>
+
+  <!-- 4 pydantic -->
+  <rect x="40" y="340" width="440" height="62" rx="10" fill="#EEEDFE" stroke="#534AB7"/>
+  <text x="260" y="364" text-anchor="middle" class="t" fill="#3C3489">Pydantic validates the JSON → <tspan class="code">MandateIn</tspan></text>
+  <text x="260" y="386" text-anchor="middle" class="s" fill="#534AB7">rent &gt; 0 · max ≥ min · date in future with timezone</text>
+  <line x1="480" y1="371" x2="516" y2="371" class="er" marker-end="url(#r)"/>
+  <rect x="520" y="345" width="140" height="52" rx="10" fill="#FCEBEB" stroke="#A32D2D"/>
+  <text x="590" y="367" text-anchor="middle" class="t" fill="#791F1F">422</text>
+  <text x="590" y="385" text-anchor="middle" class="s" fill="#A32D2D">invalid data</text>
+  <line x1="260" y1="402" x2="260" y2="424" class="ln" marker-end="url(#a)"/>
+
+  <!-- 5 endpoint checks -->
+  <rect x="40" y="428" width="440" height="104" rx="10" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="260" y="452" text-anchor="middle" class="t" fill="#2C2C2A"><tspan class="code" font-size="13">create_mandate()</tspan> checks the database</text>
+  <text x="60" y="478" class="s" fill="#2C2C2A">① flat exists?</text>
+  <text x="300" y="478" class="s" fill="#A32D2D">no → 404</text>
+  <text x="60" y="498" class="s" fill="#2C2C2A">② broker_id is really a broker?</text>
+  <text x="300" y="498" class="s" fill="#A32D2D">no → 422</text>
+  <text x="60" y="518" class="s" fill="#2C2C2A">③ no active mandate already?</text>
+  <text x="300" y="518" class="s" fill="#A32D2D">duplicate → 409</text>
+  <line x1="480" y1="480" x2="516" y2="480" class="er" marker-end="url(#r)"/>
+  <rect x="520" y="452" width="140" height="56" rx="10" fill="#FCEBEB" stroke="#A32D2D"/>
+  <text x="590" y="476" text-anchor="middle" class="t" fill="#791F1F">404 · 422 · 409</text>
+  <text x="590" y="494" text-anchor="middle" class="s" fill="#A32D2D">rule needs the DB</text>
+  <line x1="260" y1="532" x2="260" y2="554" class="ln" marker-end="url(#a)"/>
+
+  <!-- 6 sqlalchemy -->
+  <rect x="40" y="558" width="440" height="62" rx="10" fill="#E1F5EE" stroke="#0F6E56"/>
+  <text x="260" y="582" text-anchor="middle" class="t" fill="#085041">SQLAlchemy writes the row</text>
+  <text x="260" y="604" text-anchor="middle" class="code" fill="#0F6E56">session.add(mandate) → INSERT … → commit()</text>
+  <line x1="260" y1="620" x2="260" y2="642" class="ln" marker-end="url(#a)"/>
+
+  <!-- 7 response -->
+  <rect x="40" y="646" width="440" height="62" rx="10" fill="#0F6E56" stroke="#0F6E56"/>
+  <text x="260" y="670" text-anchor="middle" class="t" fill="#fff">response_model=MandateOut → JSON</text>
+  <text x="260" y="692" text-anchor="middle" class="s" fill="#E1F5EE">201 Created · money as exact strings · time in UTC</text>
+
+  <!-- legend -->
+  <rect x="40" y="730" width="14" height="14" rx="3" fill="#EEEDFE" stroke="#534AB7"/>
+  <text x="60" y="742" class="s" fill="#5F5E5A">checks before your code</text>
+  <rect x="220" y="730" width="14" height="14" rx="3" fill="#F1EFE8" stroke="#5F5E5A"/>
+  <text x="240" y="742" class="s" fill="#5F5E5A">your code / framework</text>
+  <rect x="390" y="730" width="14" height="14" rx="3" fill="#E1F5EE" stroke="#0F6E56"/>
+  <text x="410" y="742" class="s" fill="#5F5E5A">success</text>
+  <rect x="490" y="730" width="14" height="14" rx="3" fill="#FCEBEB" stroke="#A32D2D"/>
+  <text x="510" y="742" class="s" fill="#5F5E5A">request stops</text>
+</svg>
