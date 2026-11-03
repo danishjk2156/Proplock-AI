@@ -184,3 +184,46 @@ It's the real-world "owner gave this broker the keys" step, written down with li
 In `/docs`: Authorize with the manager key from `demo_keys.json` → `GET /manager/brokers` → copy Rajesh's id → `POST /manager/properties` to add a flat → `POST /manager/mandates` for Rajesh. Then Authorize with Rajesh's key and try the same call: 403.
 
 **Verified:** 28 tests pass. Live: manager lists both brokers; Rajesh calling `/manager/brokers` → 403; `PROP-BLR-001` shows its two seeded mandates (₹32,000–35,000).
+
+---
+
+## Step 2.1: CheckResult, Check D and the decision (2026-11-03)
+
+**What changed**
+- `app/domain/` (new): pure business rules, no database and no network.
+  - `check_result.py`: `Verdict` (PASS / FAIL / UNVERIFIABLE), `Evidence` (field, claimed, allowed, ok, note) and `CheckResult` (check, verdict, evidence, source). Every check A–D will return this shape.
+  - `ground_truth.py`: **Check D** (fixes M1). Compares the ad's rent, deposit, furnishing and brokerage fee with the owner's mandate.
+  - `decision.py`: `decide(results, required)` turns the verdicts into NEEDS_FIX / IN_REVIEW / VERIFIED.
+- Tests: `tests/unit/test_ground_truth.py` (10), `tests/unit/test_decision.py` (8).
+
+**Check D's four rules**
+| Field | Rule | Catches |
+|---|---|---|
+| rent | `min_rent ≤ rent ≤ max_rent` | rent markup (broker pockets the difference) |
+| deposit | `deposit ≤ max_deposit` | inflated deposit |
+| furnishing | ad's rank ≤ owner's rank (Unfurnished < Semi < Fully) | "fully furnished" lies; under-promising is allowed |
+| brokerage_fee | `fee ≤ max_brokerage_months × rent` | hidden or oversized commission |
+
+Every rule produces an `Evidence` row, passed or not, so the report shows what was compared, not just what failed. The `source` is `mandate:<id>`, so you can always trace which agreement the listing was judged against.
+
+**How the decision works**
+- Any FAIL → **NEEDS_FIX**. FAIL beats UNVERIFIABLE: the broker has to fix the lie anyway.
+- Otherwise any UNVERIFIABLE → **IN_REVIEW** (a manager decides).
+- All PASS → **VERIFIED**.
+- A *required* check with no result counts as UNVERIFIABLE. If a node crashes or is never wired in, the listing goes to review instead of slipping through. A duplicate PASS can't hide a FAIL either.
+
+**Key idea: "unknown" is not "pass"**
+The old code turned "couldn't check" into a guess: an invented commute time (M3) or a filename heuristic (D1). A third verdict, UNVERIFIABLE, gives "we don't know" its own lane that ends with a human, never with a badge.
+
+**Key idea: why pure functions**
+`check_ground_truth` takes two small frozen dataclasses (`ListingTerms`, `OwnerTerms`) instead of ORM rows. It needs no database, so 18 tests run in a third of a second, and Step 2.2 just copies the mandate's numbers into `OwnerTerms`.
+
+**Detail worth knowing:** `1.00 × 35000.00` is `35000.0000` as a Decimal. The brokerage cap is rounded to paise (`quantize(Decimal("0.01"))`) so the evidence reads `35000.00`.
+
+**How to see it**
+```bash
+cd backend
+.venv/Scripts/python -m pytest -q tests/unit/test_ground_truth.py tests/unit/test_decision.py
+```
+
+**Verified:** 46 tests pass (18 new). The review's bait-and-switch example (₹40k rent, ₹1.4L deposit, "Fully Furnished" for an unfurnished ₹32–35k flat) fails on rent, deposit and furnishing; the honest listing passes.
