@@ -21,6 +21,7 @@ class ListingTerms:
     deposit: Decimal
     brokerage_fee: Decimal  # one-time fee in rupees
     furnishing: Furnishing
+    text_furnishing: Furnishing | None = None  # what the title/description claims, if anything
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,17 @@ def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
             note="Brokerage is capped in months of rent, counting rent only up to the owner's maximum.",
         ),
     )
+    if listing.text_furnishing is not None:
+        # "Fully furnished!" in the description must not slip past because the form says Unfurnished.
+        evidence += (
+            Evidence(
+                field="furnishing_in_text",
+                claimed=listing.text_furnishing.value,
+                allowed=f"<= {owner.furnishing.value}",
+                ok=FURNISHING_RANK[listing.text_furnishing] <= FURNISHING_RANK[owner.furnishing],
+                note="Furnishing claimed in the title or description, read by the claim extractor.",
+            ),
+        )
     verdict = Verdict.PASS if all(e.ok for e in evidence) else Verdict.FAIL
     return CheckResult(
         check=Check.GROUND_TRUTH, verdict=verdict, evidence=evidence, source=f"mandate:{owner.mandate_id}"

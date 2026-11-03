@@ -11,6 +11,7 @@ dependencies = [
     "SQLAlchemy==2.1.6",
     "alembic==1.20.1",
     "langgraph==1.2.18",
+    "langchain-core==1.7.0",  # imported directly (RunnableConfig); pinned so it cannot drift
     "groq==1.7.0",
     "httpx==0.28.1",
     "pillow==13.0.0",

@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.adapters.llm import LLM, get_llm
 from app.auth import require_role
 from app.db.base import get_session
 from app.db.models import Listing, Role, User
@@ -34,12 +35,13 @@ def submit_listing(
     body: ListingSubmit,
     broker: User = Depends(broker_only),
     session: Session = Depends(get_session),
+    llm: LLM = Depends(get_llm),
 ) -> SubmitOut:
     listing = session.get(Listing, listing_id)
     if listing is None or listing.broker_id != broker.id:  # someone else's listing looks the same as none
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Listing not found")
     try:
-        audit, report = audit_service.submit_listing(session, listing, body)
+        audit, report = audit_service.submit_listing(session, listing, body, llm)
     except NoMandate as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e)) from e
     except ListingConflict as e:

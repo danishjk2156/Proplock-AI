@@ -11,10 +11,12 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.adapters.llm import LLM
 from app.agents.graph import run_checks
 from app.db.models import (
     Audit,
     AuditStatus,
+    CommuteClaim,
     Listing,
     ListingStatus,
     ListingVersion,
@@ -29,7 +31,7 @@ from app.schemas.audit import AuditReport
 from app.schemas.listing import ListingSubmit
 
 # Bump whenever any check's rules change, so every stored report says which rules judged it.
-RULESET_VERSION = "1"
+RULESET_VERSION = "2"  # 2: claims read from the ad text; furnishing in text checked by D
 
 SUBMITTABLE = {ListingStatus.DRAFT, ListingStatus.NEEDS_FIX}
 STATUS_FOR = {
@@ -72,7 +74,9 @@ def open_listing(session: Session, broker: User, property_id: str) -> Listing:
     return listing
 
 
-def submit_listing(session: Session, listing: Listing, content: ListingSubmit) -> tuple[Audit, AuditReport]:
+def submit_listing(
+    session: Session, listing: Listing, content: ListingSubmit, llm: LLM
+) -> tuple[Audit, AuditReport]:
     mandate = session.get(Mandate, listing.mandate_id)
     if not _is_usable(mandate):
         raise NoMandate("Your mandate for this flat was revoked or has expired")
@@ -95,25 +99,39 @@ def submit_listing(session: Session, listing: Listing, content: ListingSubmit) -
         furnishing=content.furnishing,
     )
     # Checks run before any write, so the transaction stays short once they call real APIs.
-    results, decision = run_checks(terms, owner)
+    run = run_checks(
+        title=content.title,
+        description=content.description,
+        listing=terms,
+        owner=owner,
+        form_commute=content.commute_claims,
+        llm=llm,
+    )
 
     try:
         last_no = session.scalar(
             select(func.max(ListingVersion.version_no)).where(ListingVersion.listing_id == listing.id)
         )
-        version = ListingVersion(listing_id=listing.id, version_no=(last_no or 0) + 1, **content.model_dump())
+        version = ListingVersion(
+            listing_id=listing.id,
+            version_no=(last_no or 0) + 1,
+            **content.model_dump(exclude={"commute_claims"}),
+        )
         session.add(version)
         session.flush()  # gives the version its id without committing yet
+        session.add_all(CommuteClaim(version_id=version.id, **c.model_dump()) for c in run.commute)
 
         report = AuditReport(
             listing_id=listing.id,
             property_id=listing.property_id,
             version_no=version.version_no,
-            decision=decision,
+            decision=run.decision,
             ruleset_version=RULESET_VERSION,
-            checks=results,
+            checks=run.results,
+            commute_claims=run.commute,
+            text_furnishing=run.text_furnishing,
         )
-        audit_status, listing.status = STATUS_FOR[decision]
+        audit_status, listing.status = STATUS_FOR[run.decision]
         audit = Audit(
             version_id=version.id,
             status=audit_status,

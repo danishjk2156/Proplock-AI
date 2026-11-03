@@ -1,24 +1,37 @@
 """START -> extract -> fan-out to every check -> decide -> END.
 
-Phase 2 wires in Check D only. Later phases add a node to CHECK_NODES and nothing else
-changes: the fan-out, the fan-in and the list of required checks all follow from it.
+Adding a check is one entry in CHECK_NODES: the fan-out, the fan-in and the list of
+required checks all follow from it.
 """
 
 from collections.abc import Callable
 from functools import lru_cache
+from typing import NamedTuple
 
 from langgraph.graph import END, START, StateGraph
 
+from app.adapters.llm import LLM
 from app.agents import nodes
 from app.agents.nodes import AuditState
+from app.db.models import Furnishing
 from app.domain.check_result import Check, CheckResult
+from app.domain.claims import ClaimedCommute, CommuteClaimIn
 from app.domain.decision import Decision, decide
 from app.domain.ground_truth import ListingTerms, OwnerTerms
 
 CHECK_NODES: dict[Check, Callable[[AuditState], dict]] = {
+    Check.COMMUTE: nodes.commute,
     Check.GROUND_TRUTH: nodes.ground_truth,
 }
-REQUIRED_CHECKS = tuple(CHECK_NODES)
+# Reading the ad text is required too: if it failed, hidden claims could slip through.
+REQUIRED_CHECKS = (Check.CLAIMS, *CHECK_NODES)
+
+
+class AuditRun(NamedTuple):
+    results: list[CheckResult]
+    decision: Decision
+    commute: list[ClaimedCommute]
+    text_furnishing: Furnishing | None
 
 
 def _decide(state: AuditState) -> dict:
@@ -40,6 +53,25 @@ def audit_graph():
     return graph.compile()
 
 
-def run_checks(listing: ListingTerms, owner: OwnerTerms) -> tuple[list[CheckResult], Decision]:
-    final = audit_graph().invoke({"listing": listing, "owner": owner, "results": []})
-    return final["results"], final["decision"]
+def run_checks(
+    *,
+    title: str,
+    description: str,
+    listing: ListingTerms,
+    owner: OwnerTerms,
+    form_commute: list[CommuteClaimIn],
+    llm: LLM,
+) -> AuditRun:
+    final = audit_graph().invoke(
+        {
+            "title": title,
+            "description": description,
+            "listing": listing,
+            "owner": owner,
+            "form_commute": form_commute,
+            "results": [],
+        },
+        # Services go in the run config, not the state: the state is data, these are tools.
+        config={"configurable": {"llm": llm}},
+    )
+    return AuditRun(final["results"], final["decision"], final["commute"], final["text_furnishing"])

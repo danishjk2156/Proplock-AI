@@ -224,6 +224,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 | D10 | Rent rule | Rent must be within mandate `[min_rent, max_rent]`; commission only via `brokerage_fee` ≤ cap | Real-world brokerage is a separate fee |
 | D11 | Frontend | **Chosen:** out of this plan; Swagger UI + demo script for now | Backend correctness first; UI gets its own plan |
 | D12 | Pace and explanations | **Chosen:** pause after each phase with an explainer; BUILD_LOG entry per step | You asked to understand what happens while I code |
+| D15 | Extraction failure | Missing key / API error / invalid JSON twice → `claims` check UNVERIFIABLE → IN_REVIEW (not just a flag); commute claims → UNVERIFIABLE until Check B exists | Unread text could hide claims; matches "missing key gives UNVERIFIABLE, never a guess" |
 
 ## Not yet specified
 
@@ -248,7 +249,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 | 0 Foundations | **done** — Groq verified: text `openai/gpt-oss-120b`, vision `qwen/qwen3.8-27b` (two images OK) |
 | 1 Data + auth | **done** — 11 tables + migration, API-key roles, seed, manager endpoints; 28 tests |
 | 2 First slice (Check D) | **done** — Check D, decision, LangGraph pipeline, open + submit listing, stored audits; 60 tests |
-| 3 Claim extraction | not started |
+| 3 Claim extraction | **done** — Groq extractor (JSON mode + Pydantic, one retry), merged form/text claims, text furnishing → Check D, commute placeholder; 78 tests |
 | 4 Check B | not started |
 | 5 Check C | not started |
 | 6 Check A | not started |

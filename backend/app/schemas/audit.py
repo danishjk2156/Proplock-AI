@@ -4,8 +4,9 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.db.models import AuditStatus
+from app.db.models import AuditStatus, Furnishing
 from app.domain.check_result import CheckResult
+from app.domain.claims import ClaimedCommute
 from app.domain.decision import Decision
 
 
@@ -16,6 +17,9 @@ class AuditReport(BaseModel):
     decision: Decision
     ruleset_version: str
     checks: list[CheckResult]
+    # The claims that were judged: form + extracted from the text (defaults keep ruleset-1 reports readable).
+    commute_claims: list[ClaimedCommute] = []
+    text_furnishing: Furnishing | None = None
 
 
 class AuditOut(BaseModel):

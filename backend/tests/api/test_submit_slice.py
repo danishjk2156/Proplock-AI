@@ -37,9 +37,13 @@ def _submit(client, headers, listing_id, body):
     return client.post(f"/broker/listings/{listing_id}/submit", json=body, headers=headers)
 
 
+def _check(report, name):
+    [check] = [c for c in report["checks"] if c["check"] == name]
+    return check
+
+
 def _failed(report):
-    [check] = report["checks"]
-    return [e["field"] for e in check["evidence"] if not e["ok"]]
+    return [e["field"] for e in _check(report, "ground_truth")["evidence"] if not e["ok"]]
 
 
 def test_honest_listing_is_verified_and_read_back_exactly(client, keys):
@@ -51,7 +55,7 @@ def test_honest_listing_is_verified_and_read_back_exactly(client, keys):
     body = submitted.json()
     assert body["listing_status"] == "VERIFIED"
     assert body["report"]["decision"] == "VERIFIED"
-    assert body["report"]["checks"][0]["check"] == "ground_truth"
+    assert sorted(c["check"] for c in body["report"]["checks"]) == ["claims", "commute", "ground_truth"]
     stored = client.get(f"/audits/{body['audit_id']}", headers=keys["broker_rajesh"]).json()
     assert stored["status"] == "VERIFIED"
     assert stored["report"] == body["report"]

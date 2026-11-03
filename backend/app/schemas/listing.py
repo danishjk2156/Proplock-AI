@@ -6,6 +6,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.db.models import Furnishing, ListingStatus
+from app.domain.claims import CommuteClaimIn
 from app.schemas.audit import AuditReport
 
 
@@ -27,11 +28,12 @@ class ListingSubmit(BaseModel):
     """The ad's content. Every submit saves it as a new numbered version."""
 
     title: str = Field(min_length=5, max_length=255)
-    description: str = Field(min_length=10)
+    description: str = Field(min_length=10, max_length=5000)  # bounds what we send to the LLM
     rent: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     deposit: Decimal = Field(ge=0, max_digits=12, decimal_places=2)
     brokerage_fee: Decimal = Field(default=Decimal("0"), ge=0, max_digits=12, decimal_places=2)
     furnishing: Furnishing
+    commute_claims: list[CommuteClaimIn] = Field(default=[], max_length=10)
 
 
 class SubmitOut(BaseModel):

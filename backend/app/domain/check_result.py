@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class Check(StrEnum):
+    CLAIMS = "claims"  # the ad text was read and its claims extracted (runs before A-D)
     PHOTOS = "photos"  # A
     COMMUTE = "commute"  # B
     COMPLIANCE = "compliance"  # C
@@ -38,3 +39,4 @@ class CheckResult(BaseModel):
     verdict: Verdict
     evidence: tuple[Evidence, ...] = ()
     source: str  # where the "truth" came from, e.g. "mandate:<id>"
+    summary: str = ""  # one line for people, e.g. why a check was UNVERIFIABLE
