@@ -89,6 +89,22 @@ def test_brokerage_cap_scales_with_rent_and_months():
     assert check_ground_truth(replace(listing, brokerage_fee=Decimal("16501")), half_month).verdict is Verdict.FAIL
 
 
+def test_inflated_rent_does_not_raise_the_brokerage_cap():
+    # 40k rent is already a FAIL; it must not also make a 40k brokerage fee look acceptable.
+    listing = replace(HONEST, rent=Decimal("40000"), brokerage_fee=Decimal("40000"))
+
+    result = check_ground_truth(listing, OWNER)
+
+    assert _failed_fields(result) == ["rent", "brokerage_fee"]
+    assert result.evidence[3].allowed == "<= 35000.00 (1.00 x rent)"
+
+
+def test_evidence_shows_money_with_two_decimals():
+    result = check_ground_truth(replace(HONEST, rent=Decimal("40000")), OWNER)
+
+    assert (result.evidence[0].claimed, result.evidence[0].allowed) == ("40000.00", "32000.00-35000.00")
+
+
 def test_result_serialises_to_json_with_exact_money():
     shady = replace(HONEST, rent=Decimal("40000.50"))
 

@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 
-from app.api import manager, me
+from app.api import audits, broker, manager, me
 from app.config import get_settings
 
 
@@ -15,6 +15,8 @@ def create_app() -> FastAPI:
 
     app.include_router(me.router)
     app.include_router(manager.router)
+    app.include_router(broker.router)
+    app.include_router(audits.router)
     return app
 
 

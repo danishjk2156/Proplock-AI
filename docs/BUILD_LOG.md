@@ -227,3 +227,61 @@ cd backend
 ```
 
 **Verified:** 46 tests pass (18 new). The review's bait-and-switch example (₹40k rent, ₹1.4L deposit, "Fully Furnished" for an unfurnished ₹32–35k flat) fails on rent, deposit and furnishing; the honest listing passes.
+
+---
+
+## Step 2.2: LangGraph pipeline (Check D only) + submit endpoint (2026-11-04)
+
+**What changed**
+- `app/agents/nodes.py`: the graph's state (`AuditState`) and its nodes: `extract_claims` (a stub until Phase 3) and `ground_truth` (Check D).
+- `app/agents/graph.py`: `START → extract → [checks in parallel] → decide → END`, plus `run_checks(listing, owner)`.
+- `app/services/audit_service.py`: `open_listing` and `submit_listing`: mandate checks, run the graph, save everything in one commit.
+- `app/api/broker.py`: `POST /broker/listings` (open a listing for a flat) and `POST /broker/listings/{id}/submit` (send the ad's content for audit).
+- `app/api/audits.py`: `GET /audits/{id}` returns the stored report.
+- `app/schemas/listing.py`, `app/schemas/audit.py`: request and response shapes, including `AuditReport`.
+- `tests/api/test_submit_slice.py`: 12 tests. Two more in `test_ground_truth.py` (see "Check D fixes" below).
+
+**The broker's flow**
+1. `POST /broker/listings {"property_id": "PROP-BLR-001"}`: allowed only with an ACTIVE, unexpired mandate (else **403**). One open listing per mandate (else **409**). The listing starts as DRAFT.
+2. `POST /broker/listings/{id}/submit {title, description, rent, deposit, brokerage_fee, furnishing}`: the content becomes version 1, 2, 3… Each version gets exactly one audit. The listing becomes NEEDS_FIX, IN_REVIEW or VERIFIED.
+3. NEEDS_FIX → fix the ad → submit again → a new version and a new audit. The failed one stays as evidence.
+4. `GET /audits/{id}`: the report exactly as saved. A broker sees only their own audits; a manager sees all of them.
+
+Re-checked on every submit: the mandate must still be ACTIVE and unexpired. If the manager revokes it after the listing was opened, submit returns **403** and nothing is saved.
+
+**Key idea: LangGraph state, fan-out and fan-in**
+- *State* is a dict that every node can read. A node returns only the keys it changes, and LangGraph merges them in.
+- `results` is declared as `Annotated[list[CheckResult], operator.add]`. That *reducer* tells LangGraph to **join** the lists when several check nodes finish, instead of the last one overwriting the others.
+- *Fan-out:* one edge from `extract` to each check node, so they all start together.
+- *Fan-in:* `add_edge([...all checks...], "decide")` with a **list** means "decide" waits until every check has finished.
+- Adding Check B later is one line in `CHECK_NODES`. The edges and the list of required checks follow from it, so a check can't be wired in without also being required.
+
+**Key idea: one transaction (fixes M7)**
+The old code saved bits separately and swallowed errors, so audits got lost and reports were made up later. Now:
+1. Run the checks first, before any write. They will call real APIs later, and a database transaction shouldn't stay open while we wait on the network.
+2. Write the version, `flush()` to get its id, build the report, write the audit with `report_json`, set the listing status → **one `commit()`**.
+3. Any error → `rollback()`. There is no version without an audit, and no status without a report.
+
+`GET /audits/{id}` parses `report_json` back (`AuditReport.model_validate_json`); it never rebuilds the report from other tables. What the broker was shown is exactly what is stored.
+
+The test `test_a_crash_after_the_version_is_written_saves_nothing` crashes the service after the version row has been flushed. With the `rollback()` removed, that test fails, which proves the test really guards the transaction.
+
+**Check D fixes found during the live run**
+- An inflated rent also raised the brokerage cap: a ₹40k rent made a ₹40k fee look fine. The cap now counts rent only up to the owner's `max_rent`.
+- Money in the evidence is always shown with two decimals (`40000.00`, not `40000`).
+
+**Choices to know about**
+- *Sync nodes, not async (the plan said async).* LangGraph already runs parallel branches in threads when you call `.invoke()`, the Groq SDK and httpx both have sync clients, and the whole app (SQLAlchemy sessions, endpoints) is sync. Mixing in async now would add complexity with nothing to show for it.
+- *VERIFIED is final for now.* Signing the audit and creating the PayPal product (`PENDING_MINT` + outbox) come in Phase 7. A VERIFIED listing can't be resubmitted yet (**409**); editing live ads arrives with Phase 8.
+- *Someone else's listing or audit returns 404, not 403,* so a broker can't probe which ids exist.
+
+**How to see it**
+```bash
+cd backend
+.venv/Scripts/alembic upgrade head
+.venv/Scripts/python -m app.db.seed
+.venv/Scripts/python -m uvicorn app.main:app --reload
+```
+In `/docs`, Authorize with `broker_quickcash` from `demo_keys.json` → `POST /broker/listings` with `PROP-BLR-001` → submit with rent 40000, deposit 140000, "Fully Furnished" → NEEDS_FIX with three failed rows → submit again with rent 35000, deposit 70000, "Unfurnished" → VERIFIED, version 2.
+
+**Verified:** 60 tests pass. Live server on a scratch database: QuickCash's inflated listing → NEEDS_FIX with rent, deposit and furnishing evidence, sourced to its mandate.

@@ -35,20 +35,26 @@ class OwnerTerms:
     furnishing: Furnishing
 
 
+def _money(value: Decimal) -> str:
+    """Always two decimals, so "40000" and "40000.00" read the same in the evidence."""
+    return str(value.quantize(Decimal("0.01")))
+
+
 def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
-    brokerage_cap = (owner.max_brokerage_months * listing.rent).quantize(Decimal("0.01"))
+    # An inflated rent must not raise the brokerage cap too, so the cap uses at most max_rent.
+    brokerage_cap = owner.max_brokerage_months * min(listing.rent, owner.max_rent)
     evidence = (
         Evidence(
             field="rent",
-            claimed=str(listing.rent),
-            allowed=f"{owner.min_rent}-{owner.max_rent}",
+            claimed=_money(listing.rent),
+            allowed=f"{_money(owner.min_rent)}-{_money(owner.max_rent)}",
             ok=owner.min_rent <= listing.rent <= owner.max_rent,
             note="Rent must be inside the owner's range; commission goes in brokerage_fee, not the rent.",
         ),
         Evidence(
             field="deposit",
-            claimed=str(listing.deposit),
-            allowed=f"<= {owner.max_deposit}",
+            claimed=_money(listing.deposit),
+            allowed=f"<= {_money(owner.max_deposit)}",
             ok=listing.deposit <= owner.max_deposit,
             note="Deposit cannot exceed what the owner agreed.",
         ),
@@ -61,10 +67,10 @@ def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
         ),
         Evidence(
             field="brokerage_fee",
-            claimed=str(listing.brokerage_fee),
-            allowed=f"<= {brokerage_cap} ({owner.max_brokerage_months} x rent)",
+            claimed=_money(listing.brokerage_fee),
+            allowed=f"<= {_money(brokerage_cap)} ({owner.max_brokerage_months} x rent)",
             ok=listing.brokerage_fee <= brokerage_cap,
-            note="Brokerage is capped in months of the advertised rent.",
+            note="Brokerage is capped in months of rent, counting rent only up to the owner's maximum.",
         ),
     )
     verdict = Verdict.PASS if all(e.ok for e in evidence) else Verdict.FAIL
