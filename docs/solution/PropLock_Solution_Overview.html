@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PropLock AI — Problem, Solution and Architecture</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm 15mm; }
+  :root {
+    --ink: #1d2733; --muted: #5b6673; --line: #d9dee5; --soft: #f4f6f9;
+    --blue: #0b5cad; --navy: #0b2a4a; --pass: #1a7f37; --fail: #b42318; --warn: #a15c00;
+    --pass-bg: #e8f5ec; --fail-bg: #fdecea; --warn-bg: #fff4e0; --blue-bg: #e9f1fb;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); font-size: 10.4pt; line-height: 1.5; margin: 0; background: #fff; }
+  h1, h2, h3, h4 { color: var(--navy); line-height: 1.25; margin: 0; }
+  h2 { font-size: 17pt; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 2px solid var(--navy); break-after: avoid; }
+  h2 .num { color: var(--blue); margin-right: 6px; }
+  h3 { font-size: 12.2pt; margin: 6mm 0 2mm; break-after: avoid; }
+  h4 { font-size: 10.6pt; margin: 3mm 0 1mm; break-after: avoid; }
+  p { margin: 0 0 2.6mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1mm; }
+  code { font-family: Consolas, "Courier New", monospace; font-size: 9.2pt; background: var(--soft); padding: 0 3px; border-radius: 3px; }
+  strong { color: #101820; }
+  .section { break-before: page; }
+  .lead { font-size: 11.4pt; color: #2b3542; }
+  .muted { color: var(--muted); }
+  .small { font-size: 9pt; }
+
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.3pt; break-inside: auto; }
+  th { background: var(--navy); color: #fff; text-align: left; font-weight: 600; padding: 5px 7px; }
+  td { padding: 5px 7px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .section:last-child td { padding: 3.5px 7px; }
+  tr { break-inside: avoid; }
+  tbody tr:nth-child(even) td { background: #fafbfc; }
+
+  .box { border: 1px solid var(--line); border-radius: 6px; padding: 3.5mm 4.5mm; margin: 3mm 0 4mm; break-inside: avoid; }
+  .plain { background: #fffbea; border-color: #f0dc9a; }
+  .plain .tag { background: #8a6d00; }
+  .note { background: var(--blue-bg); border-color: #c5d9f2; }
+  .note .tag { background: var(--blue); }
+  .risk { background: var(--warn-bg); border-color: #f1d29a; }
+  .risk .tag { background: var(--warn); }
+  .tag { display: inline-block; color: #fff; font-size: 8pt; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; padding: 1px 7px; border-radius: 3px; margin-bottom: 1.5mm; }
+  .box p:last-child, .box ul:last-child { margin-bottom: 0; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5mm; }
+  .card { border: 1px solid var(--line); border-top: 4px solid var(--blue); border-radius: 6px; padding: 3mm 4mm; break-inside: avoid; }
+  .card h4 { margin-top: 0; }
+  .card .who { font-size: 8.4pt; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  .card p { margin-bottom: 1.5mm; }
+
+  figure { margin: 3mm 0 4mm; text-align: center; break-inside: avoid; }
+  figure svg, figure img { max-width: 100%; height: auto; }
+  figcaption { font-size: 8.8pt; color: var(--muted); margin-top: 1.5mm; }
+
+  .pill { display: inline-block; font-size: 8.2pt; font-weight: 700; padding: 0 6px; border-radius: 9px; }
+  .p-pass { background: var(--pass-bg); color: var(--pass); }
+  .p-fail { background: var(--fail-bg); color: var(--fail); }
+  .p-warn { background: var(--warn-bg); color: var(--warn); }
+  .p-blue { background: var(--blue-bg); color: var(--blue); }
+  .p-grey { background: #eceff3; color: #4a5562; }
+
+  /* cover */
+  .cover { height: 263mm; display: flex; flex-direction: column; }
+  .cover .band { background: var(--navy); color: #fff; border-radius: 8px; padding: 14mm 12mm 12mm; }
+  .cover .kicker { font-size: 9.5pt; letter-spacing: 1.6px; text-transform: uppercase; color: #a9c6ea; font-weight: 600; }
+  .cover h1 { color: #fff; font-size: 34pt; margin: 4mm 0 2mm; }
+  .cover .sub { font-size: 14pt; color: #dbe7f6; max-width: 150mm; }
+  .cover .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; margin-top: 10mm; }
+  .cover .meta div { border-top: 1px solid #3c5f86; padding-top: 2mm; font-size: 9pt; color: #c3d6ee; }
+  .cover .meta b { display: block; color: #fff; font-size: 10.5pt; }
+  .cover .oneliner { margin: 9mm 0 0; font-size: 12.5pt; line-height: 1.55; }
+  .toc { margin-top: auto; border-top: 1px solid var(--line); padding-top: 5mm; columns: 2; column-gap: 10mm; font-size: 10pt; }
+  .toc div { break-inside: avoid; margin-bottom: 1.6mm; }
+  .toc span { color: var(--blue); font-weight: 700; margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ============================ COVER ============================ -->
+<div class="cover">
+  <div class="band">
+    <div class="kicker">PayPal AI Hackathon · “Build What’s Next with PayPal and AI”</div>
+    <h1>PropLock AI</h1>
+    <div class="sub">Problem, solution, architecture and workflow, explained for judges, teammates and beginners</div>
+    <div class="meta">
+      <div><b>Domain</b>Rentals and real estate, India first</div>
+      <div><b>Users</b>Brokers, agency managers, tenants, owners</div>
+      <div><b>Core engine</b>PayPal Catalog, Orders v2 (AUTHORIZE), Payments, Invoicing</div>
+    </div>
+  </div>
+  <p class="oneliner">
+    <strong>In one sentence:</strong> PropLock AI checks a broker’s rental ad against facts the broker
+    can’t fake, then backs every property visit with a small, refundable PayPal hold. Tenants stop
+    paying for fake listings, and brokers stop driving across town for people who never show up.
+  </p>
+  <div class="toc">
+    <div><span>1</span>PropLock in plain words (beginner guide)</div>
+    <div><span>2</span>The problem</div>
+    <div><span>3</span>The solution</div>
+    <div><span>4</span>Solution architecture</div>
+    <div><span>5</span>Feature 1 in depth: the trust layer</div>
+    <div><span>6</span>User workflow, end to end</div>
+    <div><span>7</span>How it fits a broker’s real day</div>
+    <div><span>8</span>How it fits a manager’s real day</div>
+    <div><span>9</span>Build status, risks and roadmap</div>
+    <div><span>10</span>Glossary</div>
+  </div>
+</div>
+
+<!-- ============================ 1. PLAIN WORDS ============================ -->
+<div class="section">
+<h2><span class="num">1</span>PropLock in plain words</h2>
+<p class="lead">If you have never worked with real estate, payments or AI agents, start here. Everything later in
+the document builds on these few ideas.</p>
+
+<h3>The situation today</h3>
+<p>Imagine you’re looking for a flat to rent in Bengaluru. You see an ad: <em>“Luxury 2BHK, 2 min walk to metro,
+fully furnished, ₹30,000.”</em> You call the broker and travel across the city. The flat is empty, the metro is a
+20-minute walk, and the rent is suddenly ₹40,000. Then the broker asks for ₹10,000 in cash “to hold the flat”.</p>
+<p>Now look at it from the broker’s side. They get dozens of calls a day. They book a visit, drive 45 minutes in
+traffic, wait at the door, and the tenant never comes. Saying “yes, I’ll come on Saturday” costs the tenant nothing,
+so many people say it to several brokers.</p>
+<p><strong>Both sides have good reasons to distrust each other</strong>, so everyone protects themselves, and the
+whole process becomes slow, expensive and full of scams.</p>
+
+<h3>What PropLock does, as two simple ideas</h3>
+<div class="grid2">
+  <div class="card" style="border-top-color: var(--pass)">
+    <h4>Idea 1: a fact-checker for ads</h4>
+    <p>Before an ad goes live, PropLock compares it with things the broker can’t change:</p>
+    <ul class="small">
+      <li>the <strong>owner’s agreed rent and deposit</strong> (written down by the agency),</li>
+      <li><strong>real travel times</strong> from a maps service at rush hour,</li>
+      <li>the <strong>law</strong> on how big a deposit can be,</li>
+      <li>the <strong>owner’s own photos</strong> and the GPS location where each photo was taken.</li>
+    </ul>
+    <p>Only ads that pass get a <strong>“Verified”</strong> badge.</p>
+  </div>
+  <div class="card" style="border-top-color: var(--blue)">
+    <h4>Idea 2: a referee who holds a small deposit</h4>
+    <p>To book a visit, the tenant approves a <strong>₹500 hold</strong> on their PayPal account. The money doesn’t
+      move yet; PayPal just reserves it. After the visit:</p>
+    <ul class="small">
+      <li>tenant came but didn’t like the flat → hold <strong>cancelled</strong>, no fee;</li>
+      <li>tenant wants the flat → the ₹500 becomes the <strong>token</strong> and is subtracted from the first bill;</li>
+      <li>tenant never came → the ₹500 <strong>compensates the broker</strong> for the wasted trip.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="box plain">
+  <span class="tag">Analogy</span>
+  <p>Think of a hotel. When you check in, the hotel puts a hold on your card. If nothing goes wrong, the hold
+    disappears and you’re never charged. If you damage the room, they charge it. PropLock uses the same PayPal
+    feature, called an <strong>authorization hold</strong>, for property visits. The rules for releasing or keeping
+    the money are enforced by software, using proof such as a door PIN and GPS, instead of one side’s word against
+    the other’s.</p>
+</div>
+
+<h3>Five words you’ll see everywhere</h3>
+<table>
+  <thead><tr><th style="width:24%">Word</th><th>What it means here</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Mandate</strong></td><td>The owner’s written permission for <em>one</em> broker to advertise <em>one</em> flat, with limits: rent range, maximum deposit, maximum brokerage fee and an end date. No mandate, no listing.</td></tr>
+    <tr><td><strong>Audit</strong></td><td>The automatic check of an ad, stored as a report that shows every comparison made and its result.</td></tr>
+    <tr><td><strong>PASS / FAIL / UNVERIFIABLE</strong></td><td>Every check gives one of three answers. <em>Unverifiable</em> means “we couldn’t check this”. It is never quietly turned into a pass; a human manager decides.</td></tr>
+    <tr><td><strong>Authorization hold</strong></td><td>PayPal reserves money on the tenant’s account without sending it. Later the hold is either <strong>voided</strong> (released, no fee) or <strong>captured</strong> (actually paid).</td></tr>
+    <tr><td><strong>AI agent</strong></td><td>A program that uses an AI model for one narrow job, like reading an ad and listing its claims, and then hands the result to strict, testable rules. In PropLock, the AI never decides alone whether money moves.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============================ 2. PROBLEM ============================ -->
+<div class="section">
+<h2><span class="num">2</span>The problem</h2>
+<p class="lead">Getting leads is easy for brokers now: portals, WhatsApp groups and chatbots bring plenty. What’s broken
+is the middle of the funnel, turning an inquiry into a real visit and a closed deal, because neither side can
+trust the other.</p>
+
+<h3>2.1 The commitment–trust deadlock</h3>
+<div class="grid2">
+  <div class="box">
+    <h4 style="margin-top:0">Brokers get no commitment</h4>
+    <p>A broker’s stock in trade is their time: driving across town, collecting keys from the owner, giving a tour of
+      up to an hour. A verbal “I’ll come Saturday at 4” carries no penalty if the tenant doesn’t turn up. The
+      PropLock blueprint estimates that up to 70% of free scheduled visits end in no-shows or last-minute
+      cancellations. Brokers are paid only when a deal closes, so every no-show is unpaid work.</p>
+  </div>
+  <div class="box">
+    <h4 style="margin-top:0">Tenants get no trust</h4>
+    <p>Many listings are clickbait: photos of a nicer flat, a “5 min to metro” that is really a straight-line
+      distance, a rent that goes up after the visit, or a flat that was never available. So tenants won’t send
+      token money through a raw payment link to an unknown broker. It looks exactly like an advance-fee scam,
+      and there’s no referee to get it back.</p>
+  </div>
+</div>
+
+<h3>2.2 How each failure causes the next</h3>
+<figure>
+<svg viewBox="0 0 680 210" width="680" height="210" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs><marker id="ar1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1L9 5L1 9z" fill="#5b6673"/></marker></defs>
+  <g font-size="11">
+    <g transform="translate(4,20)">
+      <rect width="118" height="150" rx="8" fill="#fdecea" stroke="#e7b4ae"/>
+      <text x="59" y="24" text-anchor="middle" font-weight="700" fill="#b42318" font-size="12">1 · Clickbait ads</text>
+      <text x="59" y="50" text-anchor="middle" fill="#1d2733">Fake photos,</text>
+      <text x="59" y="65" text-anchor="middle" fill="#1d2733">false commute,</text>
+      <text x="59" y="80" text-anchor="middle" fill="#1d2733">hidden markup</text>
+      <text x="59" y="128" text-anchor="middle" fill="#5b6673" font-style="italic">tenants stop</text>
+      <text x="59" y="142" text-anchor="middle" fill="#5b6673" font-style="italic">trusting ads</text>
+    </g>
+    <g transform="translate(140,20)">
+      <rect width="118" height="150" rx="8" fill="#fdecea" stroke="#e7b4ae"/>
+      <text x="59" y="24" text-anchor="middle" font-weight="700" fill="#b42318" font-size="12">2 · Inquiry flood</text>
+      <text x="59" y="50" text-anchor="middle" fill="#1d2733">Tenants hedge by</text>
+      <text x="59" y="65" text-anchor="middle" fill="#1d2733">messaging many</text>
+      <text x="59" y="80" text-anchor="middle" fill="#1d2733">brokers at once</text>
+      <text x="59" y="128" text-anchor="middle" fill="#5b6673" font-style="italic">slow manual</text>
+      <text x="59" y="142" text-anchor="middle" fill="#5b6673" font-style="italic">screening</text>
+    </g>
+    <g transform="translate(276,20)">
+      <rect width="118" height="150" rx="8" fill="#fdecea" stroke="#e7b4ae"/>
+      <text x="59" y="24" text-anchor="middle" font-weight="700" fill="#b42318" font-size="12">3 · Free booking</text>
+      <text x="59" y="50" text-anchor="middle" fill="#1d2733">Booking a visit</text>
+      <text x="59" y="65" text-anchor="middle" fill="#1d2733">costs nothing,</text>
+      <text x="59" y="80" text-anchor="middle" fill="#1d2733">so does skipping it</text>
+      <text x="59" y="128" text-anchor="middle" fill="#5b6673" font-style="italic">no-shows,</text>
+      <text x="59" y="142" text-anchor="middle" fill="#5b6673" font-style="italic">wasted trips</text>
+    </g>
+    <g transform="translate(412,20)">
+      <rect width="118" height="150" rx="8" fill="#fdecea" stroke="#e7b4ae"/>
+      <text x="59" y="24" text-anchor="middle" font-weight="700" fill="#b42318" font-size="12">4 · Payment standoff</text>
+      <text x="59" y="50" text-anchor="middle" fill="#1d2733">Broker asks for</text>
+      <text x="59" y="65" text-anchor="middle" fill="#1d2733">a token; tenant</text>
+      <text x="59" y="80" text-anchor="middle" fill="#1d2733">fears a scam</text>
+      <text x="59" y="128" text-anchor="middle" fill="#5b6673" font-style="italic">no neutral</text>
+      <text x="59" y="142" text-anchor="middle" fill="#5b6673" font-style="italic">referee</text>
+    </g>
+    <g transform="translate(548,20)">
+      <rect width="128" height="150" rx="8" fill="#e9f1fb" stroke="#0b5cad" stroke-width="1.5"/>
+      <text x="64" y="24" text-anchor="middle" font-weight="700" fill="#0b5cad" font-size="12">PropLock fix</text>
+      <text x="64" y="50" text-anchor="middle" fill="#1d2733">① Verified ads</text>
+      <text x="64" y="66" text-anchor="middle" fill="#1d2733">② AI screening</text>
+      <text x="64" y="82" text-anchor="middle" fill="#1d2733">③ ₹500 PayPal hold</text>
+      <text x="64" y="98" text-anchor="middle" fill="#1d2733">④ Void or capture</text>
+      <text x="64" y="114" text-anchor="middle" fill="#1d2733">by proof, not word</text>
+      <text x="64" y="142" text-anchor="middle" fill="#5b6673" font-style="italic">breaks every link</text>
+    </g>
+    <path d="M122 95 H138" stroke="#5b6673" stroke-width="1.6" marker-end="url(#ar1)"/>
+    <path d="M258 95 H274" stroke="#5b6673" stroke-width="1.6" marker-end="url(#ar1)"/>
+    <path d="M394 95 H410" stroke="#5b6673" stroke-width="1.6" marker-end="url(#ar1)"/>
+    <path d="M530 95 H546" stroke="#0b5cad" stroke-width="1.6" marker-end="url(#ar1)"/>
+  </g>
+  <text x="340" y="198" text-anchor="middle" font-size="10" fill="#5b6673">Each failure feeds the next. Fixing only one link (say, a chatbot) leaves the others in place.</text>
+</svg>
+<figcaption>Figure 1. The vicious cycle of mutual distrust, and where PropLock steps in.</figcaption>
+</figure>
+
+<h3>2.3 The scams people actually run</h3>
+<table>
+  <thead><tr><th style="width:4%">#</th><th style="width:21%">Scam</th><th>How it works</th><th style="width:28%">Who loses</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Fake or stolen photos</td><td>Photos of a nicer flat copied from another portal or a builder’s brochure.</td><td>Tenant: wasted visit, broken trust</td></tr>
+    <tr><td>2</td><td>Bait listing</td><td>A cheap ad for a flat that doesn’t exist or is already rented: “that one’s gone, but I have another…”</td><td>Tenant; honest brokers lose leads</td></tr>
+    <tr><td>3</td><td>Commute lies</td><td>“5 min to metro” measured as a straight line, not the real walk at rush hour.</td><td>Tenant: daily commute is far worse</td></tr>
+    <tr><td>4</td><td>Furnishing lies</td><td>“Fully furnished” turns out to be a bed and a fan.</td><td>Tenant</td></tr>
+    <tr><td>5</td><td>Rent markup</td><td>Listed at ₹40k; the owner gets ₹35k and the broker quietly keeps the difference.</td><td>Tenant overpays every month; owner is misrepresented</td></tr>
+    <tr><td>6</td><td>Inflated deposit</td><td>Asks for 6–10 months of deposit, keeps part of it or passes it on late.</td><td>Tenant; it may also break state rules</td></tr>
+    <tr><td>7</td><td>Token-advance scam</td><td>“Pay ₹10k to hold the flat”, then the broker disappears.</td><td>Tenant loses the money</td></tr>
+    <tr><td>8</td><td>Visit / registration fee</td><td>Charges a fee before showing any flat.</td><td>Tenant</td></tr>
+    <tr><td>9</td><td>Fake broker or owner</td><td>Someone with no link to the flat collects advances from several tenants.</td><td>Tenants; the real owner’s reputation</td></tr>
+    <tr><td>10</td><td>Hidden charges</td><td>Extra fees revealed only at signing.</td><td>Tenant</td></tr>
+    <tr><td>11</td><td>Double-booking</td><td>Takes tokens from several tenants for the same flat.</td><td>All but one tenant</td></tr>
+    <tr><td>—</td><td>Tenant no-show</td><td>Says “I’ll come” to many brokers and turns up for one.</td><td>Broker: unpaid time and fuel</td></tr>
+  </tbody>
+</table>
+
+<h3>2.4 Why the tools that exist today don’t fix it</h3>
+<table>
+  <thead><tr><th style="width:26%">Existing approach</th><th>What it does</th><th style="width:36%">What’s missing</th></tr></thead>
+  <tbody>
+    <tr><td>AI lead chatbots</td><td>Answer questions on WhatsApp or the web, collect budget, book callbacks.</td><td>Booking is still free, so no-shows stay; they don’t check whether the ad is true.</td></tr>
+    <tr><td>AI real-estate agents</td><td>Qualify leads, schedule tours, update a CRM, send payment links.</td><td>A raw payment link has no refund guarantee, no proof of attendance and no referee.</td></tr>
+    <tr><td>Portal “verified” badges</td><td>Verify the person posting (ID, phone, owner documents).</td><td>They verify the <em>poster</em>, not each <em>claim</em> in each ad.</td></tr>
+    <tr><td>Photo-compliance tools (e.g. US MLS photo checks)</td><td>Detect watermarks, logos, duplicates and staging in photos.</td><td>They don’t check that the photo shows <em>this</em> flat, and they’re not tied to any payment.</td></tr>
+  </tbody>
+</table>
+<div class="box note"><span class="tag">Gap PropLock fills</span>
+  <p>Each part exists somewhere, but nothing combines <strong>claim-by-claim ad verification</strong> with a
+  <strong>refundable payment hold that releases or pays out based on proof</strong>. That combination is
+  PropLock’s core idea.</p></div>
+</div>
+
+<!-- ============================ 3. SOLUTION ============================ -->
+<div class="section">
+<h2><span class="num">3</span>The solution</h2>
+<p class="lead">PropLock AI is a trust and commitment layer between brokers, their agency and tenants. Four AI agents
+each handle one stage of the deal, and PayPal acts as the neutral referee that holds the money.</p>
+
+<div class="box note"><span class="tag">Core idea</span>
+<p>Money is never sent to the broker at booking time. PayPal <strong>holds</strong> it (an authorization), and
+the hold is <strong>voided</strong> (released) or <strong>captured</strong> (paid) based on proof: a door PIN,
+GPS presence and both sides’ consent. A small payment becomes a <strong>verifiable signal of intent</strong> that
+carries no risk for an honest tenant.</p></div>
+
+<h3>3.1 The four agents</h3>
+<div class="grid4">
+  <div class="card" style="border-top-color: var(--pass)">
+    <div class="who">Feature 1 · Trust layer</div>
+    <h4>Listing Audit & Commute-Truth Agent</h4>
+    <p class="small">Checks every ad before it goes live: photos (A), commute times (B), deposit law (C) and the
+      owner’s agreed terms (D). Ads that pass become a signed, verified listing published as a
+      <strong>PayPal Catalog product</strong>.</p>
+    <p class="small"><span class="pill p-pass">Being built: phases 0–3 done</span></p>
+  </div>
+  <div class="card">
+    <div class="who">Feature 2 · Screening layer</div>
+    <h4>Qualification & Slot-Locking Agent</h4>
+    <p class="small">Chats with the tenant and answers deposit, brokerage and availability questions from the
+      <em>verified</em> listing data. It checks budget, move-in date and profile, then puts a 15-minute soft hold on
+      a visit slot, with travel buffers between visits.</p>
+    <p class="small"><span class="pill p-grey">Designed</span></p>
+  </div>
+  <div class="card">
+    <div class="who">Feature 3 · Escrow engine</div>
+    <h4>PayPal Auth-Escrow & Check-In Referee</h4>
+    <p class="small">Turns the soft hold into a confirmed visit with a ₹500 / $15 <strong>Orders v2
+      AUTHORIZE</strong> hold. At the door it checks a 4-digit PIN and GPS, then <strong>voids</strong> or
+      <strong>captures</strong> the hold according to fixed rules.</p>
+    <p class="small"><span class="pill p-grey">Designed</span></p>
+  </div>
+  <div class="card">
+    <div class="who">Feature 4 · Closing & ledger</div>
+    <h4>Token-to-Invoice Ledger & Dispute Copilot</h4>
+    <p class="small">When a tenant locks a flat, it sends a <strong>PayPal Invoice</strong> for deposit and
+      brokerage with the ₹500 already deducted. The broker’s dashboard tracks every hold, capture, void and
+      invoice, and answers plain-English questions about them.</p>
+    <p class="small"><span class="pill p-grey">Designed</span></p>
+  </div>
+</div>
+
+<h3>3.2 Every stage of the deal, before and after</h3>
+<table>
+  <thead><tr><th style="width:15%">Stage</th><th style="width:28%">What goes wrong today</th><th>How PropLock solves it</th><th style="width:10%">Feature</th></tr></thead>
+  <tbody>
+    <tr><td>Listing</td><td>Fake photos, false commute, hidden markup</td><td>Four checks against owner terms, maps, law and photos; only verified ads get published</td><td>F1</td></tr>
+    <tr><td>Inquiry</td><td>Window-shoppers look the same as serious tenants</td><td>A refundable hold is needed to lock a visit slot</td><td>F2, F3</td></tr>
+    <tr><td>Qualification</td><td>Budget and intent checked by hand in chats</td><td>The agent checks budget, timeline and profile automatically</td><td>F2</td></tr>
+    <tr><td>Repeat FAQs</td><td>Same questions about deposit, brokerage and availability</td><td>Answered instantly from the verified listing, not from memory</td><td>F1 → F2</td></tr>
+    <tr><td>Scheduling</td><td>Slot conflicts, no-shows</td><td>15-minute soft holds that become hard bookings once the PayPal hold is approved</td><td>F2</td></tr>
+    <tr><td>Commitment</td><td>Token collected informally, if at all</td><td><code>intent=AUTHORIZE</code> hold, later voided or captured</td><td>F3</td></tr>
+    <tr><td>Trust</td><td>Neither side can prove anything</td><td>Verified listing + PIN/GPS proof + PayPal as referee</td><td>F1, F3</td></tr>
+    <tr><td>Follow-up</td><td>Warm leads go cold</td><td>Invoice reminders and slot-expiry alerts</td><td>F4</td></tr>
+    <tr><td>Tracking</td><td>Payments scattered across notebooks and screenshots</td><td>One ledger of holds, captures, voids and invoices</td><td>F4</td></tr>
+    <tr><td>Compliance</td><td>Deposit and refund rules differ by state</td><td>Deposit caps checked before publishing, with the rule cited</td><td>F1</td></tr>
+  </tbody>
+</table>
+
+<h3>3.3 Which scam each part stops</h3>
+<table>
+  <thead><tr><th style="width:30%">Scam (from §2.3)</th><th>Stopped by</th></tr></thead>
+  <tbody>
+    <tr><td>1 Fake photos</td><td>F1 Check A: owner’s baseline photos shown publicly, GPS check-in photo, AI same-room comparison</td></tr>
+    <tr><td>2 Bait listing · 9 Fake broker</td><td>Mandates: only a broker the agency assigned to a flat can list it. Logins with roles.</td></tr>
+    <tr><td>3 Commute lies</td><td>F1 Check B: rush-hour route from the owner’s verified location. Claims hidden in the ad text are found by AI.</td></tr>
+    <tr><td>4 Furnishing lies</td><td>F1 Check D (owner’s registered furnishing) + Check A (photos)</td></tr>
+    <tr><td>5 Rent markup · 10 Hidden charges</td><td>F1 Check D: rent must be inside the owner’s range; commission only as a declared, capped brokerage fee</td></tr>
+    <tr><td>6 Inflated deposit</td><td>F1 Check C (state rule) + Check D (owner’s maximum)</td></tr>
+    <tr><td>7 Token scam · 8 Visit fee</td><td>F3: the token stays held by PayPal and is released automatically by the rules</td></tr>
+    <tr><td>11 Double-booking</td><td>F2/F3: one active lock per flat, enforced by the system</td></tr>
+    <tr><td>Tenant no-show</td><td>F3: capture after a grace period, only if the broker’s GPS proves they were at the flat</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============================ 4. ARCHITECTURE ============================ -->
+<div class="section">
+<h2><span class="num">4</span>Solution architecture</h2>
+<p class="lead">Two web apps (the tenant’s chat and the broker/manager cockpit) talk to one backend. The backend runs the
+AI agents, keeps every decision in a database, and is the only part that talks to PayPal.</p>
+
+<figure>
+<svg viewBox="0 0 680 640" width="680" height="640" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1L9 5L1 9z" fill="#5b6673"/></marker></defs>
+  <style>
+    .lab{font-size:9.5px;font-weight:700;letter-spacing:1px;fill:#5b6673}
+    .t{font-size:11.5px;font-weight:600;fill:#1d2733}
+    .s{font-size:9.8px;fill:#5b6673}
+  </style>
+  <!-- layer 1 users -->
+  <text x="8" y="16" class="lab">PEOPLE</text>
+  <g transform="translate(8,24)">
+    <rect width="208" height="44" rx="22" fill="#fff" stroke="#0b2a4a"/>
+    <text x="104" y="19" text-anchor="middle" class="t">Manager (agency desk)</text>
+    <text x="104" y="34" text-anchor="middle" class="s">registers flats · mandates · reviews</text>
+  </g>
+  <g transform="translate(236,24)">
+    <rect width="208" height="44" rx="22" fill="#fff" stroke="#0b2a4a"/>
+    <text x="104" y="19" text-anchor="middle" class="t">Broker</text>
+    <text x="104" y="34" text-anchor="middle" class="s">lists flats · runs visits · closes</text>
+  </g>
+  <g transform="translate(464,24)">
+    <rect width="208" height="44" rx="22" fill="#fff" stroke="#0b2a4a"/>
+    <text x="104" y="19" text-anchor="middle" class="t">Tenant / buyer</text>
+    <text x="104" y="34" text-anchor="middle" class="s">browses · books · visits · pays</text>
+  </g>
+  <path d="M112 68 V92" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <path d="M340 68 V92" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <path d="M568 68 V92" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+
+  <!-- layer 2 frontends -->
+  <text x="8" y="106" class="lab" opacity="0">.</text>
+  <g transform="translate(8,96)">
+    <rect width="436" height="62" rx="8" fill="#f4f6f9" stroke="#c9d1db"/>
+    <text x="12" y="20" class="t">Broker & manager cockpit (Next.js)</text>
+    <text x="12" y="37" class="s">Listing drafts + pre-check · audit reports · review queue</text>
+    <text x="12" y="52" class="s">AG Grid money ledger · Bryntum visit scheduler</text>
+  </g>
+  <g transform="translate(464,96)">
+    <rect width="208" height="62" rx="8" fill="#f4f6f9" stroke="#c9d1db"/>
+    <text x="12" y="20" class="t">Tenant app (Next.js)</text>
+    <text x="12" y="37" class="s">Verified listing page · AI chat</text>
+    <text x="12" y="52" class="s">PayPal JS SDK · GPS + PIN check-in</text>
+  </g>
+  <path d="M226 158 V182" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <path d="M568 158 V182" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+
+  <!-- layer 3 API -->
+  <g transform="translate(8,186)">
+    <rect width="664" height="40" rx="8" fill="#0b2a4a"/>
+    <text x="332" y="17" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">FastAPI backend: one API for everyone</text>
+    <text x="332" y="32" text-anchor="middle" font-size="9.8" fill="#c3d6ee">login + roles (MANAGER · BROKER · PUBLIC) · input validation · broker identity always taken from the login, never the request body</text>
+  </g>
+  <path d="M340 226 V246" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+
+  <!-- layer 4 agents -->
+  <text x="8" y="262" class="lab">AI AGENT HARNESS (LANGGRAPH)</text>
+  <g transform="translate(8,270)">
+    <rect width="158" height="96" rx="8" fill="#e8f5ec" stroke="#1a7f37" stroke-width="1.5"/>
+    <text x="10" y="18" class="t">F1 Listing audit</text>
+    <text x="10" y="35" class="s">claim extractor (LLM)</text>
+    <text x="10" y="49" class="s">checks A · B · C · D</text>
+    <text x="10" y="63" class="s">decide → sign → mint</text>
+    <rect x="10" y="73" width="88" height="15" rx="7" fill="#1a7f37"/><text x="54" y="84" text-anchor="middle" font-size="8.6" font-weight="700" fill="#fff">BEING BUILT</text>
+  </g>
+  <g transform="translate(176,270)">
+    <rect width="158" height="96" rx="8" fill="#fff" stroke="#9aa6b4" stroke-dasharray="4 3"/>
+    <text x="10" y="18" class="t">F2 Qualify + slot</text>
+    <text x="10" y="35" class="s">chat from verified data</text>
+    <text x="10" y="49" class="s">budget · date · profile</text>
+    <text x="10" y="63" class="s">15-min soft hold</text>
+    <rect x="10" y="73" width="70" height="15" rx="7" fill="#9aa6b4"/><text x="45" y="84" text-anchor="middle" font-size="8.6" font-weight="700" fill="#fff">DESIGNED</text>
+  </g>
+  <g transform="translate(344,270)">
+    <rect width="158" height="96" rx="8" fill="#fff" stroke="#9aa6b4" stroke-dasharray="4 3"/>
+    <text x="10" y="18" class="t">F3 Escrow referee</text>
+    <text x="10" y="35" class="s">AUTHORIZE ₹500 hold</text>
+    <text x="10" y="49" class="s">PIN + GPS check-in</text>
+    <text x="10" y="63" class="s">void / capture rules</text>
+    <rect x="10" y="73" width="70" height="15" rx="7" fill="#9aa6b4"/><text x="45" y="84" text-anchor="middle" font-size="8.6" font-weight="700" fill="#fff">DESIGNED</text>
+  </g>
+  <g transform="translate(512,270)">
+    <rect width="160" height="96" rx="8" fill="#fff" stroke="#9aa6b4" stroke-dasharray="4 3"/>
+    <text x="10" y="18" class="t">F4 Invoice ledger</text>
+    <text x="10" y="35" class="s">invoice − ₹500 token</text>
+    <text x="10" y="49" class="s">reminders · disputes</text>
+    <text x="10" y="63" class="s">plain-English queries</text>
+    <rect x="10" y="73" width="70" height="15" rx="7" fill="#9aa6b4"/><text x="45" y="84" text-anchor="middle" font-size="8.6" font-weight="700" fill="#fff">DESIGNED</text>
+  </g>
+  <path d="M166 318 H176" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <path d="M334 318 H344" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <path d="M502 318 H512" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <path d="M340 366 V390" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar2)"/>
+
+  <!-- layer 5 adapters + data -->
+  <text x="8" y="404" class="lab">ADAPTERS (EACH HAS A FAKE TWIN FOR TESTS)</text>
+  <g font-size="10">
+    <g transform="translate(8,412)"><rect width="124" height="52" rx="7" fill="#f4f6f9" stroke="#c9d1db"/><text x="62" y="21" text-anchor="middle" class="t">LLM</text><text x="62" y="38" text-anchor="middle" class="s">Groq text + vision</text></g>
+    <g transform="translate(142,412)"><rect width="124" height="52" rx="7" fill="#f4f6f9" stroke="#c9d1db"/><text x="62" y="21" text-anchor="middle" class="t">Maps</text><text x="62" y="38" text-anchor="middle" class="s">Google Routes / demo</text></g>
+    <g transform="translate(276,412)"><rect width="124" height="52" rx="7" fill="#f4f6f9" stroke="#c9d1db"/><text x="62" y="21" text-anchor="middle" class="t">Images</text><text x="62" y="38" text-anchor="middle" class="s">pHash · EXIF GPS</text></g>
+    <g transform="translate(410,412)"><rect width="262" height="52" rx="7" fill="#e9f1fb" stroke="#0b5cad"/><text x="131" y="21" text-anchor="middle" class="t">PayPal</text><text x="131" y="38" text-anchor="middle" class="s">Agent Toolkit (MCP) / Server SDK · idempotency keys</text></g>
+  </g>
+  <g transform="translate(8,476)">
+    <rect width="392" height="58" rx="7" fill="#fff" stroke="#c9d1db"/>
+    <text x="12" y="20" class="t">Database (SQLite now → Postgres)</text>
+    <text x="12" y="36" class="s">users · flats · mandates · listing versions · audits + report</text>
+    <text x="12" y="50" class="s">outbox jobs (work to do after saving) · trust events</text>
+  </g>
+  <path d="M541 464 V556" stroke="#0b5cad" stroke-width="1.6" marker-end="url(#ar2)"/>
+
+  <!-- layer 6 paypal -->
+  <text x="8" y="562" class="lab">PAYPAL SANDBOX APIS</text>
+  <g transform="translate(8,570)">
+    <rect width="664" height="64" rx="8" fill="#0b5cad"/>
+    <g font-size="10.5" fill="#fff" font-weight="600">
+      <text x="16" y="24">Catalog Products v1</text><text x="16" y="44" font-weight="400" fill="#d6e6fa" font-size="9.5">verified listing (F1)</text>
+      <text x="176" y="24">Orders v2 · AUTHORIZE</text><text x="176" y="44" font-weight="400" fill="#d6e6fa" font-size="9.5">₹500 visit hold (F3)</text>
+      <text x="340" y="24">Payments v2 · void / capture</text><text x="340" y="44" font-weight="400" fill="#d6e6fa" font-size="9.5">release or pay (F3)</text>
+      <text x="520" y="24">Invoicing v2 · Webhooks</text><text x="520" y="44" font-weight="400" fill="#d6e6fa" font-size="9.5">closing + events (F4)</text>
+    </g>
+  </g>
+</svg>
+<figcaption>Figure 2. Full-system architecture. Solid green = being built now; dashed = designed, not yet built.</figcaption>
+</figure>
+</div>
+
+<div>
+<h3>4.1 What each layer does</h3>
+<table>
+  <thead><tr><th style="width:20%">Layer</th><th>Responsibility</th><th style="width:28%">Technology</th></tr></thead>
+  <tbody>
+    <tr><td>Frontends</td><td>The tenant’s app shows only verified listings, runs the chat, collects PayPal approval and does the GPS/PIN check-in. The cockpit lets brokers draft and pre-check ads and lets managers review, schedule and reconcile.</td><td>Next.js, PayPal JS SDK, AG Grid, Bryntum Scheduler</td></tr>
+    <tr><td>API</td><td>One entry point. Checks who is calling and what role they have, validates every input, and returns clear errors (401 not logged in, 403 not allowed, 422 bad data).</td><td>FastAPI, Pydantic</td></tr>
+    <tr><td>Agent harness</td><td>Runs each agent as a small graph of steps. Independent checks run in parallel and their results are combined in one decision step.</td><td>LangGraph</td></tr>
+    <tr><td>Domain rules</td><td>Plain Python with no network or database: rent-range comparisons, commute tolerance, deposit caps, the final decision. Fast to test and easy to explain.</td><td>Python</td></tr>
+    <tr><td>Adapters</td><td>The only code that talks to outside services. Each one has a fake version for tests. A missing key gives “unverifiable”, never a guess.</td><td>Groq SDK, httpx, Pillow/ImageHash, PayPal SDK / MCP</td></tr>
+    <tr><td>Database</td><td>The source of truth: who may list what, every version of every ad, every audit report exactly as it was shown, and pending PayPal work.</td><td>SQLAlchemy 2, Alembic; SQLite → Postgres</td></tr>
+    <tr><td>PayPal</td><td>Holds and moves the money, publishes verified listings, sends invoices, and reports events back by webhook.</td><td>Catalog, Orders v2, Payments v2, Invoicing v2</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2 Design rules that make it trustworthy</h3>
+<div class="grid2">
+  <div class="box">
+    <h4 style="margin-top:0">“Unknown” is never “pass”</h4>
+    <p class="small">Every check answers PASS, FAIL or UNVERIFIABLE. A missing API key, a timeout or no map data
+      sends the listing to a human (IN_REVIEW). It never produces a made-up result or a quiet pass.</p>
+  </div>
+  <div class="box">
+    <h4 style="margin-top:0">The AI reads; code judges</h4>
+    <p class="small">The AI model only turns messy text and photos into structured claims, like
+      “2 min walk to Indiranagar Metro”. Whether a claim is true is decided by strict rules. A fooled AI can at worst
+      miss a claim; it can’t award a badge or move money by itself.</p>
+  </div>
+  <div class="box">
+    <h4 style="margin-top:0">Save first, then call PayPal</h4>
+    <p class="small">The signed audit is saved before PayPal is called. A background worker (the “outbox”) then
+      creates the PayPal product, retrying safely with a fixed request ID. A PayPal outage delays the listing; it
+      can’t lose the audit or invent a fake product ID.</p>
+  </div>
+  <div class="box">
+    <h4 style="margin-top:0">Roles and mandates</h4>
+    <p class="small">Only a manager can register flats and give mandates. A broker can list only flats they hold an
+      active mandate for, and their identity comes from their login, so they can’t act as someone else.</p>
+  </div>
+</div>
+
+<div class="box plain"><span class="tag">In plain words: what is an “API”?</span>
+<p>An API is a list of requests one program can send to another, such as “create this listing” or “hold ₹500 on this
+account”. The PropLock frontends send requests to the PropLock backend, and the backend sends requests to PayPal.
+PayPal never trusts the frontend directly: only the backend, with its secret keys, can hold, release or capture
+money.</p></div>
+</div>
+
+<!-- ============================ 5. FEATURE 1 DEEP DIVE ============================ -->
+<div class="section">
+<h2><span class="num">5</span>Feature 1 in depth: the trust layer</h2>
+<p class="lead">Feature 1 is the foundation: Features 2–4 answer questions from, take bookings for, and invoice against
+the verified listing it produces. It’s also the part being built right now.</p>
+
+<figure>
+<svg viewBox="0 0 680 600" width="680" height="600" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ar3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1L9 5L1 9z" fill="#5b6673"/></marker>
+  </defs>
+  <style>
+    .t3{font-size:11.5px;font-weight:600;fill:#1d2733}
+    .s3{font-size:9.8px;fill:#5b6673}
+    .done{fill:#e8f5ec;stroke:#1a7f37;stroke-width:1.5}
+    .todo{fill:#fff;stroke:#9aa6b4;stroke-dasharray:4 3}
+  </style>
+  <!-- submit -->
+  <g transform="translate(190,6)">
+    <rect width="300" height="46" rx="8" class="done"/>
+    <text x="150" y="19" text-anchor="middle" class="t3">Broker submits the ad</text>
+    <text x="150" y="35" text-anchor="middle" class="s3">title · description · rent · deposit · brokerage · furnishing · claims</text>
+  </g>
+  <path d="M340 52 V72" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar3)"/>
+  <g transform="translate(190,74)">
+    <rect width="300" height="46" rx="8" class="done"/>
+    <text x="150" y="19" text-anchor="middle" class="t3">Mandate gate</text>
+    <text x="150" y="35" text-anchor="middle" class="s3">active, unexpired mandate for this broker + flat?  no → 403</text>
+  </g>
+  <path d="M340 120 V140" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar3)"/>
+  <g transform="translate(190,142)">
+    <rect width="300" height="46" rx="8" class="done"/>
+    <text x="150" y="19" text-anchor="middle" class="t3">Claim extractor (Groq LLM)</text>
+    <text x="150" y="35" text-anchor="middle" class="s3">finds “2 MIN WALK TO METRO”, “fully furnished” in the text</text>
+  </g>
+  <!-- fan out -->
+  <path d="M340 188 V202 H85 V220" stroke="#5b6673" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <path d="M340 202 H255 V220" stroke="#5b6673" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <path d="M340 202 H425 V220" stroke="#5b6673" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <path d="M340 202 H595 V220" stroke="#5b6673" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <text x="352" y="214" class="s3">run in parallel</text>
+  <g transform="translate(8,222)">
+    <rect width="154" height="100" rx="8" class="todo"/>
+    <text x="10" y="19" class="t3">A · Photos</text>
+    <text x="10" y="37" class="s3">taken within 100 m</text>
+    <text x="10" y="51" class="s3">same room as owner’s</text>
+    <text x="10" y="65" class="s3">no reuse across flats</text>
+    <text x="10" y="79" class="s3">furnishing visible</text>
+    <text x="10" y="93" class="s3" font-style="italic">Phase 6</text>
+  </g>
+  <g transform="translate(178,222)">
+    <rect width="154" height="100" rx="8" class="todo"/>
+    <text x="10" y="19" class="t3">B · Commute</text>
+    <text x="10" y="37" class="s3">route from owner’s pin</text>
+    <text x="10" y="51" class="s3">weekday 08:30 traffic</text>
+    <text x="10" y="65" class="s3">allowed: max(×1.2, +5 min)</text>
+    <text x="10" y="79" class="s3">no data → unverifiable</text>
+    <text x="10" y="93" class="s3" font-style="italic">Phase 4 · next</text>
+  </g>
+  <g transform="translate(348,222)">
+    <rect width="154" height="100" rx="8" class="todo"/>
+    <text x="10" y="19" class="t3">C · Deposit law</text>
+    <text x="10" y="37" class="s3">state cap in months</text>
+    <text x="10" y="51" class="s3">versioned rules file</text>
+    <text x="10" y="65" class="s3">source + effective date</text>
+    <text x="10" y="79" class="s3">law vs platform policy</text>
+    <text x="10" y="93" class="s3" font-style="italic">Phase 5</text>
+  </g>
+  <g transform="translate(518,222)">
+    <rect width="154" height="100" rx="8" class="done"/>
+    <text x="10" y="19" class="t3">D · Owner terms</text>
+    <text x="10" y="37" class="s3">rent inside owner range</text>
+    <text x="10" y="51" class="s3">deposit ≤ owner max</text>
+    <text x="10" y="65" class="s3">furnishing ≤ registered</text>
+    <text x="10" y="79" class="s3">brokerage ≤ cap</text>
+    <text x="10" y="93" class="s3" font-style="italic" fill="#1a7f37">built</text>
+  </g>
+  <!-- fan in -->
+  <path d="M85 322 V340 H340" stroke="#5b6673" stroke-width="1.4" fill="none"/>
+  <path d="M255 322 V340" stroke="#5b6673" stroke-width="1.4" fill="none"/>
+  <path d="M425 322 V340" stroke="#5b6673" stroke-width="1.4" fill="none"/>
+  <path d="M595 322 V340 H340" stroke="#5b6673" stroke-width="1.4" fill="none"/>
+  <path d="M340 340 V356" stroke="#5b6673" stroke-width="1.4" marker-end="url(#ar3)"/>
+  <g transform="translate(190,358)">
+    <rect width="300" height="46" rx="8" class="done"/>
+    <text x="150" y="19" text-anchor="middle" class="t3">Decide</text>
+    <text x="150" y="35" text-anchor="middle" class="s3">any FAIL → fix · any UNVERIFIABLE → review · all PASS → verified</text>
+  </g>
+  <!-- outcomes -->
+  <path d="M260 404 V422 H85 V438" stroke="#b42318" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <path d="M340 404 V438" stroke="#a15c00" stroke-width="1.4" marker-end="url(#ar3)"/>
+  <path d="M420 404 V422 H595 V438" stroke="#1a7f37" stroke-width="1.4" fill="none" marker-end="url(#ar3)"/>
+  <g transform="translate(8,440)">
+    <rect width="154" height="70" rx="8" fill="#fdecea" stroke="#b42318"/>
+    <text x="77" y="20" text-anchor="middle" class="t3" fill="#b42318">NEEDS_FIX</text>
+    <text x="77" y="38" text-anchor="middle" class="s3">evidence + suggested fix</text>
+    <text x="77" y="52" text-anchor="middle" class="s3">to the broker; edit and</text>
+    <text x="77" y="64" text-anchor="middle" class="s3">resubmit (new version)</text>
+  </g>
+  <g transform="translate(263,440)">
+    <rect width="154" height="70" rx="8" fill="#fff4e0" stroke="#a15c00"/>
+    <text x="77" y="20" text-anchor="middle" class="t3" fill="#a15c00">IN_REVIEW</text>
+    <text x="77" y="38" text-anchor="middle" class="s3">a manager sees what</text>
+    <text x="77" y="52" text-anchor="middle" class="s3">couldn’t be checked and</text>
+    <text x="77" y="64" text-anchor="middle" class="s3">approves or rejects</text>
+  </g>
+  <g transform="translate(518,440)">
+    <rect width="154" height="70" rx="8" fill="#e8f5ec" stroke="#1a7f37"/>
+    <text x="77" y="20" text-anchor="middle" class="t3" fill="#1a7f37">VERIFIED</text>
+    <text x="77" y="38" text-anchor="middle" class="s3">audit signed (HMAC)</text>
+    <text x="77" y="52" text-anchor="middle" class="s3">and saved first</text>
+    <text x="77" y="64" text-anchor="middle" class="s3" font-style="italic">signing: Phase 7</text>
+  </g>
+  <path d="M340 510 V528 H595" stroke="#a15c00" stroke-width="1.2" stroke-dasharray="3 3" fill="none"/>
+  <text x="372" y="524" class="s3">approve</text>
+  <path d="M595 510 V542" stroke="#1a7f37" stroke-width="1.4" marker-end="url(#ar3)"/>
+  <g transform="translate(348,544)">
+    <rect width="324" height="50" rx="8" class="todo"/>
+    <text x="162" y="19" text-anchor="middle" class="t3">Outbox → PayPal Catalog product → public page</text>
+    <text x="162" y="36" text-anchor="middle" class="s3">retried safely · anyone can re-check the signature  ·  Phase 7–8</text>
+  </g>
+  <g transform="translate(8,548)" font-size="9.5">
+    <rect width="14" height="12" rx="3" class="done"/><text x="20" y="10" fill="#1d2733">built and tested</text>
+    <rect y="20" width="14" height="12" rx="3" class="todo"/><text x="20" y="30" fill="#1d2733">planned (phase shown)</text>
+  </g>
+</svg>
+<figcaption>Figure 3. The Feature 1 audit pipeline. Until checks A–C exist, any claim they would judge goes to review instead of passing.</figcaption>
+</figure>
+</div>
+
+<div>
+<h3>5.1 The four checks</h3>
+<table>
+  <thead><tr><th style="width:15%">Check</th><th style="width:30%">Question</th><th>Compared against</th><th style="width:22%">Example result</th></tr></thead>
+  <tbody>
+    <tr><td><strong>A</strong> Photos</td><td>Are these real, current photos of <em>this</em> flat?</td><td>The owner’s baseline photos (AI “same room?” comparison that ignores furniture), the photo’s GPS (within 100 m of the flat), and our database of photos already used for other flats</td><td><span class="pill p-fail">FAIL</span> photo taken 3.2 km away</td></tr>
+    <tr><td><strong>B</strong> Commute</td><td>Is “5 min walk to metro” true?</td><td>Maps route from the owner’s verified location at 08:30 on a weekday. Allowed = max(claimed × 1.2, claimed + 5 min)</td><td><span class="pill p-fail">FAIL</span> claimed 5, actual 22 (allowed 10)</td></tr>
+    <tr><td><strong>C</strong> Deposit law</td><td>Is this deposit legal in this state?</td><td>A versioned rules file with section, source link and effective date</td><td><span class="pill p-fail">FAIL</span> Chennai: 6 months, cap 3</td></tr>
+    <tr><td><strong>D</strong> Owner terms</td><td>Does the ad match what the owner agreed?</td><td>The mandate: rent range, maximum deposit, brokerage cap; the flat’s registered furnishing, including furnishing claimed in the ad text</td><td><span class="pill p-fail">FAIL</span> ₹40,000 vs owner range ₹32–35k</td></tr>
+  </tbody>
+</table>
+
+<h3>5.2 What a stored audit report looks like</h3>
+<p>Each audit stores the full report exactly as it was shown to the broker. Every comparison is listed, including the
+ones that passed, and the report names the mandate it was judged against. Below is a real result from the current
+build, for a dishonest submission on the demo flat in Indiranagar:</p>
+<table>
+  <thead><tr><th style="width:20%">Field</th><th style="width:18%">Ad says</th><th style="width:28%">Owner allows</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>rent</td><td>40000.00</td><td>32000.00 – 35000.00</td><td><span class="pill p-fail">FAIL</span></td></tr>
+    <tr><td>deposit</td><td>140000.00</td><td>≤ 70000.00</td><td><span class="pill p-fail">FAIL</span></td></tr>
+    <tr><td>furnishing</td><td>Fully Furnished</td><td>≤ Unfurnished</td><td><span class="pill p-fail">FAIL</span></td></tr>
+    <tr><td>brokerage_fee</td><td>35000.00</td><td>≤ 35000.00 (1 month, counted at most at max rent)</td><td><span class="pill p-pass">PASS</span></td></tr>
+  </tbody>
+</table>
+<p class="small muted">Decision: <strong>NEEDS_FIX</strong>. The broker fixes the ad and resubmits, which creates version 2 with its
+own audit. Version 1 and its failed audit stay on record as evidence.</p>
+
+<h3>5.3 Why it’s built this way</h3>
+<ul>
+  <li><strong>Versions, not edits.</strong> Changing a verified ad creates a new version that needs its own audit.
+    Old terms stay on record, which protects tenants in disputes (“the ad said ₹35,000”).</li>
+  <li><strong>One transaction per submit.</strong> The new version, its audit report and the listing’s new status are
+    saved together or not at all, so there’s never a badge without a report.</li>
+  <li><strong>Signed audit (planned).</strong> The verified report is turned into canonical JSON and signed with a
+    server secret (HMAC). Any later change to rent, photos or claims makes the signature fail, and a public
+    <code>/verify</code> endpoint lets anyone check it.</li>
+  <li><strong>Commission is a separate fee, not hidden in the rent.</strong> Brokerage is declared in its own field
+    and capped (e.g. one month of rent), so the tenant sees the true move-in cost:
+    rent + deposit + brokerage.</li>
+</ul>
+
+<div class="box plain"><span class="tag">In plain words: LangGraph</span>
+<p>LangGraph lets us draw the agent as a flowchart in code: “first read the claims, then run four checks at the same
+time, then decide.” Each box is a small function. Because the order is explicit, we can test each box on its own,
+add a new check by adding one box, and be sure the decision waits until every check has finished.</p></div>
+</div>
+
+<!-- ============================ 6. WORKFLOW ============================ -->
+<div class="section">
+<h2><span class="num">6</span>User workflow, end to end</h2>
+<p class="lead">One flat, one broker, one tenant, from the agency signing up the flat to the tenant moving in. Names match
+the demo data: Rajesh is an honest broker, Priya is a tenant, and the flat is a 2BHK in Indiranagar at ₹35,000 a
+month.</p>
+
+<figure>
+<svg viewBox="0 0 680 760" width="680" height="760" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs><marker id="ar4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1L9 5L1 9z" fill="#5b6673"/></marker></defs>
+  <style>
+    .h4{font-size:10.5px;font-weight:700;fill:#fff}
+    .st{font-size:10.2px;font-weight:600;fill:#1d2733}
+    .ss{font-size:9.2px;fill:#5b6673}
+    .n{font-size:9.5px;font-weight:700;fill:#fff}
+  </style>
+  <!-- lanes -->
+  <g>
+    <rect x="0" y="0" width="134" height="760" fill="#f4f6f9"/>
+    <rect x="136" y="0" width="134" height="760" fill="#fafbfc"/>
+    <rect x="272" y="0" width="134" height="760" fill="#f4f6f9"/>
+    <rect x="408" y="0" width="134" height="760" fill="#fafbfc"/>
+    <rect x="544" y="0" width="136" height="760" fill="#eef4fc"/>
+    <rect x="0" y="0" width="134" height="26" fill="#0b2a4a"/><text x="67" y="17" text-anchor="middle" class="h4">MANAGER</text>
+    <rect x="136" y="0" width="134" height="26" fill="#0b2a4a"/><text x="203" y="17" text-anchor="middle" class="h4">BROKER (Rajesh)</text>
+    <rect x="272" y="0" width="134" height="26" fill="#0b2a4a"/><text x="339" y="17" text-anchor="middle" class="h4">PROPLOCK AI</text>
+    <rect x="408" y="0" width="134" height="26" fill="#0b2a4a"/><text x="475" y="17" text-anchor="middle" class="h4">TENANT (Priya)</text>
+    <rect x="544" y="0" width="136" height="26" fill="#0b5cad"/><text x="612" y="17" text-anchor="middle" class="h4">PAYPAL</text>
+  </g>
+  <!-- phase labels -->
+  <g font-size="9" font-weight="700" fill="#0b5cad" letter-spacing="1">
+    <text x="6" y="44">A · SET UP THE FLAT</text>
+    <text x="6" y="238">B · FIND AND BOOK</text>
+    <text x="6" y="470">C · THE VISIT</text>
+    <text x="6" y="610">D · OUTCOME</text>
+  </g>
+  <!-- step helper: rect + number -->
+  <!-- 1 manager registers -->
+  <g transform="translate(6,52)"><rect width="122" height="56" rx="6" fill="#fff" stroke="#0b2a4a"/>
+    <circle cx="12" cy="12" r="8" fill="#0b2a4a"/><text x="12" y="15.5" text-anchor="middle" class="n">1</text>
+    <text x="24" y="16" class="st">Register flat</text><text x="8" y="32" class="ss">owner’s rent range,</text><text x="8" y="45" class="ss">deposit, furnishing, GPS</text></g>
+  <path d="M128 92 H140" stroke="#5b6673" stroke-width="1.3" marker-end="url(#ar4)"/>
+  <!-- 2 mandate -->
+  <g transform="translate(6,118)"><rect width="122" height="56" rx="6" fill="#fff" stroke="#0b2a4a"/>
+    <circle cx="12" cy="12" r="8" fill="#0b2a4a"/><text x="12" y="15.5" text-anchor="middle" class="n">2</text>
+    <text x="24" y="16" class="st">Give mandate</text><text x="8" y="32" class="ss">Rajesh may list it:</text><text x="8" y="45" class="ss">₹32–35k, 60 days</text></g>
+  <!-- 3 broker drafts -->
+  <g transform="translate(142,80)"><rect width="122" height="70" rx="6" fill="#fff" stroke="#0b2a4a"/>
+    <circle cx="12" cy="12" r="8" fill="#0b2a4a"/><text x="12" y="15.5" text-anchor="middle" class="n">3</text>
+    <text x="24" y="16" class="st">Visit + draft ad</text><text x="8" y="32" class="ss">GPS check-in photo,</text><text x="8" y="45" class="ss">writes ad, instant</text><text x="8" y="58" class="ss">pre-check, submits</text></g>
+  <path d="M264 115 H276" stroke="#5b6673" stroke-width="1.3" marker-end="url(#ar4)"/>
+  <!-- 4 audit -->
+  <g transform="translate(278,80)"><rect width="122" height="70" rx="6" fill="#e8f5ec" stroke="#1a7f37"/>
+    <circle cx="12" cy="12" r="8" fill="#1a7f37"/><text x="12" y="15.5" text-anchor="middle" class="n">4</text>
+    <text x="24" y="16" class="st">Audit A–D</text><text x="8" y="32" class="ss">11-min peak walk to</text><text x="8" y="45" class="ss">metro ✓ rent ✓</text><text x="8" y="58" class="ss">→ VERIFIED, signed</text></g>
+  <path d="M400 115 V170 H556" stroke="#5b6673" stroke-width="1.3" fill="none" marker-end="url(#ar4)"/>
+  <!-- 5 catalog -->
+  <g transform="translate(550,150)"><rect width="124" height="56" rx="6" fill="#fff" stroke="#0b5cad"/>
+    <circle cx="12" cy="12" r="8" fill="#0b5cad"/><text x="12" y="15.5" text-anchor="middle" class="n">5</text>
+    <text x="24" y="16" class="st">Catalog product</text><text x="8" y="32" class="ss">verified listing</text><text x="8" y="45" class="ss">published</text></g>
+
+  <!-- B: 6 tenant finds -->
+  <g transform="translate(414,246)"><rect width="122" height="56" rx="6" fill="#fff" stroke="#0b2a4a"/>
+    <circle cx="12" cy="12" r="8" fill="#0b2a4a"/><text x="12" y="15.5" text-anchor="middle" class="n">6</text>
+    <text x="24" y="16" class="st">Opens link</text><text x="8" y="32" class="ss">sees verified badge,</text><text x="8" y="45" class="ss">owner’s photos</text></g>
+  <path d="M414 290 H400" stroke="#5b6673" stroke-width="1.3" marker-end="url(#ar4)"/>
+  <!-- 7 chat qualify -->
+  <g transform="translate(278,262)"><rect width="122" height="70" rx="6" fill="#fff" stroke="#9aa6b4" stroke-dasharray="4 3"/>
+    <circle cx="12" cy="12" r="8" fill="#5b6673"/><text x="12" y="15.5" text-anchor="middle" class="n">7</text>
+    <text x="24" y="16" class="st">AI chat (F2)</text><text x="8" y="32" class="ss">answers from verified</text><text x="8" y="45" class="ss">data; budget ₹38k ✓</text><text x="8" y="58" class="ss">Sat 4 PM soft hold</text></g>
+  <path d="M278 300 H264" stroke="#5b6673" stroke-width="1.3" marker-end="url(#ar4)"/>
+  <g transform="translate(142,276)"><rect width="122" height="44" rx="6" fill="#fff" stroke="#9aa6b4" stroke-dasharray="4 3"/>
+    <text x="8" y="17" class="st">Slot appears</text><text x="8" y="33" class="ss">15-min countdown</text></g>
+  <path d="M400 320 V352 H414" stroke="#5b6673" stroke-width="1.3" fill="none" marker-end="url(#ar4)"/>
+  <!-- 8 approve hold -->
+  <g transform="translate(414,340)"><rect width="122" height="56" rx="6" fill="#fff" stroke="#0b2a4a"/>
+    <circle cx="12" cy="12" r="8" fill="#0b2a4a"/><text x="12" y="15.5" text-anchor="middle" class="n">8</text>
+    <text x="24" y="16" class="st">Approves ₹500</text><text x="8" y="32" class="ss">in PayPal checkout</text><text x="8" y="45" class="ss">(money stays hers)</text></g>
+  <path d="M536 368 H550" stroke="#5b6673" stroke-width="1.3" marker-end="url(#ar4)"/>
+  <g transform="translate(550,340)"><rect width="124" height="56" rx="6" fill="#fff" stroke="#0b5cad"/>
+    <text x="8" y="16" class="st">Orders v2</text><text x="8" y="32" class="ss">intent=AUTHORIZE</text><text x="8" y="45" class="ss">₹500 held, not paid</text></g>
+  <path d="M612 396 V412 H210 V420" stroke="#5b6673" stroke-width="1.3" fill="none" marker-end="url(#ar4)"/>
+  <g transform="translate(142,420)"><rect width="122" height="36" rx="6" fill="#e8f5ec" stroke="#1a7f37"/>
+    <text x="8" y="15" class="st">Slot confirmed</text><text x="8" y="29" class="ss">turns solid green</text></g>
+
+  <!-- C: visit -->
+  <g transform="translate(142,478)"><rect width="122" height="70" rx="6" fill="#fff" stroke="#0b2a4a"/>
+    <circle cx="12" cy="12" r="8" fill="#0b2a4a"/><text x="12" y="15.5" text-anchor="middle" class="n">9</text>
+    <text x="24" y="16" class="st">Door check-in</text><text x="8" y="32" class="ss">enters Priya’s PIN</text><text x="8" y="45" class="ss">8492; GPS confirms</text><text x="8" y="58" class="ss">both are on site</text></g>
+  <path d="M414 513 H264" stroke="#5b6673" stroke-width="1.3" marker-end="url(#ar4)"/>
+  <g transform="translate(414,486)"><rect width="122" height="54" rx="6" fill="#fff" stroke="#0b2a4a"/>
+    <text x="8" y="17" class="st">Arrives 4:02 PM</text><text x="8" y="33" class="ss">shows her PIN</text><text x="8" y="46" class="ss">no-show rule switched off</text></g>
+  <g transform="translate(278,556)"><rect width="122" height="40" rx="6" fill="#fff" stroke="#9aa6b4" stroke-dasharray="4 3"/>
+    <text x="8" y="17" class="st">Referee (F3)</text><text x="8" y="31" class="ss">records proof</text></g>
+
+  <!-- D: outcomes -->
+  <g transform="translate(414,618)"><rect width="122" height="56" rx="6" fill="#fff" stroke="#0b2a4a"/>
+    <circle cx="12" cy="12" r="9" fill="#0b2a4a"/><text x="12" y="15.5" text-anchor="middle" class="n">10</text>
+    <text x="26" y="16" class="st">Pass or Lock?</text><text x="8" y="32" class="ss">taps one button</text><text x="8" y="45" class="ss">in the app</text></g>
+  <path d="M536 634 H550" stroke="#1a7f37" stroke-width="1.3" marker-end="url(#ar4)"/>
+  <path d="M536 662 H550" stroke="#0b5cad" stroke-width="1.3" marker-end="url(#ar4)"/>
+  <g transform="translate(550,612)"><rect width="124" height="34" rx="6" fill="#e8f5ec" stroke="#1a7f37"/>
+    <text x="8" y="14" class="st">Pass → /void</text><text x="8" y="27" class="ss">₹500 released, $0 fee</text></g>
+  <g transform="translate(550,650)"><rect width="124" height="50" rx="6" fill="#e9f1fb" stroke="#0b5cad"/>
+    <text x="8" y="14" class="st">Lock → /capture</text><text x="8" y="28" class="ss">₹500 becomes token</text><text x="8" y="41" class="ss">+ Invoicing v2</text></g>
+  <path d="M612 700 V716 H210 V706" stroke="#5b6673" stroke-width="1.3" fill="none" marker-end="url(#ar4)"/>
+  <g transform="translate(142,640)"><rect width="122" height="64" rx="6" fill="#fff" stroke="#9aa6b4" stroke-dasharray="4 3"/>
+    <text x="8" y="17" class="st">Invoice sent (F4)</text><text x="8" y="32" class="ss">deposit + brokerage</text><text x="8" y="45" class="ss">− ₹500 already paid</text><text x="8" y="58" class="ss">flat → RENTED</text></g>
+  <path d="M142 672 H128" stroke="#5b6673" stroke-width="1.3" marker-end="url(#ar4)"/>
+  <g transform="translate(6,640)"><rect width="122" height="64" rx="6" fill="#fff" stroke="#0b2a4a"/>
+    <circle cx="12" cy="12" r="9" fill="#0b2a4a"/><text x="12" y="15.5" text-anchor="middle" class="n">11</text>
+    <text x="26" y="16" class="st">Ledger</text><text x="8" y="32" class="ss">every hold, capture,</text><text x="8" y="45" class="ss">void and invoice in</text><text x="8" y="58" class="ss">one AG Grid view</text></g>
+  <text x="340" y="748" text-anchor="middle" font-size="9.2" fill="#5b6673">Solid boxes: step done by a person or PayPal · green: Feature 1 (being built) · dashed: Features 2–4 (designed)</text>
+</svg>
+<figcaption>Figure 4. End-to-end workflow across the five parties.</figcaption>
+</figure>
+</div>
+
+<div>
+<h3>6.1 The four ways a visit can end</h3>
+<p>The blueprint calls this the anti-cheat matrix. The money only moves when both kinds of proof agree, so neither
+side can cheat on their own:</p>
+<table>
+  <thead><tr><th style="width:18%">What happened</th><th style="width:24%">Proof needed</th><th style="width:24%">PayPal action</th><th>Why nobody can cheat</th></tr></thead>
+  <tbody>
+    <tr><td>Tenant visited, doesn’t want it</td><td>Door PIN entered (or tenant’s GPS at the flat)</td><td><span class="pill p-pass">void</span> 100% released, $0 fee · flat stays open</td><td>Once the PIN is entered, the no-show penalty can no longer apply. “Pass” frees the slot for the next visitor.</td></tr>
+    <tr><td>Tenant wants the flat</td><td>Both agree: tenant taps Lock, broker approves</td><td><span class="pill p-blue">capture</span> + invoice · flat LOCKED</td><td>No capture, no lock. The ₹500 is subtracted from the first invoice, so a serious tenant loses nothing.</td></tr>
+    <tr><td>Tenant didn’t show</td><td>Broker’s GPS at the flat <em>and</em> tenant’s GPS absent, after a 30-min grace period</td><td><span class="pill p-blue">capture</span>, which compensates the broker</td><td>A broker can’t claim a no-show from home; their own GPS must place them at the flat during the slot.</td></tr>
+    <tr><td>Broker didn’t show, or fake flat</td><td>Tenant’s GPS at the flat + live geo-tagged photo</td><td><span class="pill p-pass">void</span> + listing flagged</td><td>The referee releases the hold without the broker’s permission, and the listing loses its badge.</td></tr>
+  </tbody>
+</table>
+
+<h3>6.2 The life of a listing</h3>
+<figure>
+  <img src="../figures/fig5_lifecycle.svg" alt="Listing lifecycle states" style="width:100%">
+  <figcaption>Figure 5. Listing states. A failed check sends the ad back to the broker, an unsure one goes to a manager,
+  and a live ad must be re-confirmed every 7 days or it expires.</figcaption>
+</figure>
+</div>
+
+<!-- ============================ 7. BROKER IRL ============================ -->
+<div class="section">
+<h2><span class="num">7</span>How it fits a broker’s real day</h2>
+<p class="lead">PropLock doesn’t ask brokers to work differently. Every check is attached to something they already do:
+visit the flat, post the ad, show the flat, close the deal. The goal is less wasted time, not more paperwork.</p>
+
+<h3>7.1 How brokers work today</h3>
+<figure>
+  <img src="../figures/fig2_broker_workflow.svg" alt="The broker's day today" style="width:100%">
+  <figcaption>Figure 6. A rental broker’s workflow in Indian metros today. The token is the risky payment.</figcaption>
+</figure>
+<p class="small muted">Based on common practice in Bengaluru, Chennai, Mumbai and Delhi. Fees and customs vary by city.
+Brokerage is usually one month’s rent (sometimes 15 days), paid separately, usually by the tenant.</p>
+
+<h3>7.2 The same day with PropLock</h3>
+<figure>
+  <img src="../figures/fig4_broker_journey.svg" alt="Broker journey with PropLock" style="width:96%">
+  <figcaption>Figure 7. Each step adds one check to something the broker already does. Scam numbers refer to §2.3.</figcaption>
+</figure>
+</div>
+
+<div>
+<h3>7.3 Step by step: what changes for the broker</h3>
+<table>
+  <thead><tr><th style="width:17%">Real-world step</th><th style="width:28%">Today</th><th style="width:33%">With PropLock</th><th>Extra effort</th></tr></thead>
+  <tbody>
+    <tr><td>Getting the flat</td><td>Owner hands over keys, verbally agrees a price</td><td>Agency records the owner’s terms; broker gets a <strong>mandate</strong> in the app</td><td>None for the broker</td></tr>
+    <tr><td>Visiting to shoot photos</td><td>Takes photos on the phone</td><td>Takes a <strong>check-in photo in the app</strong>, which records GPS and time automatically</td><td>Seconds; they’re at the flat anyway</td></tr>
+    <tr><td>Writing the ad</td><td>Free text, often exaggerated to beat rival brokers</td><td><strong>Instant pre-check</strong>: “Maps says 22 min, not 5” with one-click corrected wording; nothing saved yet</td><td>Fewer rejected ads</td></tr>
+    <tr><td>Posting</td><td>Portals, WhatsApp, Facebook groups</td><td>Shares a <strong>verified link / WhatsApp card</strong> with the badge and the owner’s photos</td><td>None; one link instead of many uploads</td></tr>
+    <tr><td>Answering leads</td><td>Dozens of calls with the same questions</td><td>The AI chat answers from verified data and qualifies the tenant (F2)</td><td>Less: only qualified tenants reach the calendar</td></tr>
+    <tr><td>Site visit</td><td>Drives over and hopes they come</td><td>The visit is backed by a ₹500 hold; enters the tenant’s PIN at the door</td><td>One PIN entry; paid if the tenant doesn’t show</td></tr>
+    <tr><td>Closing</td><td>Cash/UPI token, agreement, WhatsApp screenshots</td><td>Capture + invoice with the token deducted; everything in the ledger (F4)</td><td>Less: no manual tracking</td></tr>
+    <tr><td>Keeping ads fresh</td><td>Old ads stay up for months (bait)</td><td>Confirm availability every 7 days or the listing expires</td><td>One tap a week</td></tr>
+  </tbody>
+</table>
+
+<div class="box note"><span class="tag">Why an honest broker would want this</span>
+<ul>
+  <li><strong>Paid for no-shows.</strong> A tenant who books and doesn’t come forfeits the ₹500, but only if the broker’s
+    GPS proves they were there.</li>
+  <li><strong>Stands out from the clickbait.</strong> A verified badge plus a trust score that grows with every
+    first-time-verified listing (+2) and every completed visit (+1).</li>
+  <li><strong>Fewer pointless calls.</strong> FAQs are answered automatically, and only qualified tenants with a
+    hold reach the calendar.</li>
+  <li><strong>Protection in disputes.</strong> Signed listing versions and PIN/GPS logs prove what was promised and who
+    showed up.</li>
+</ul></div>
+
+<div class="box risk"><span class="tag">Commission vs. rent markup</span>
+<p>Brokers do need to earn. In the normal Indian rental market, commission is a <em>separate</em> fee, not added to the
+rent: the lease is signed by owner and tenant, so a hidden markup comes out at signing. PropLock therefore allows an
+<strong>asking price anywhere inside the owner’s range</strong> and a <strong>declared, capped brokerage fee</strong>,
+and blocks rent above the owner’s maximum. Rent-to-rent and co-living operators who legitimately build margin into
+the rent can be supported later, with the owner’s written consent recorded in the mandate.</p></div>
+</div>
+
+<!-- ============================ 8. MANAGER IRL ============================ -->
+<div class="section">
+<h2><span class="num">8</span>How it fits a manager’s real day</h2>
+<p class="lead">The “manager” is the agency desk, for example “XYZ Properties”: the people who sign up flats from owners and
+hand them to their own or partner brokers. In PropLock they hold the source of truth that every check is measured
+against.</p>
+
+<h3>8.1 What the manager does, and what PropLock does with it</h3>
+<table>
+  <thead><tr><th style="width:20%">Manager task</th><th style="width:30%">Real-world moment</th><th>In PropLock</th></tr></thead>
+  <tbody>
+    <tr><td>Register the flat</td><td>Owner signs up with the agency and hands over keys</td><td>Records owner, address, <strong>verified GPS pin</strong>, registered furnishing and baseline photos. Only managers can do this, so nobody can invent an owner.</td></tr>
+    <tr><td>Agree terms with the owner</td><td>“Don’t go below ₹32k or above ₹35k; deposit max 2 months; brokerage 1 month”</td><td>Written into the <strong>mandate</strong> as min/max rent, maximum deposit, brokerage cap and end date. Check D uses these exact numbers.</td></tr>
+    <tr><td>Assign brokers</td><td>Gives the flat to one or more brokers</td><td>One mandate per broker per flat. Revoking it takes effect immediately: the broker can’t submit or keep the ad live.</td></tr>
+    <tr><td>Handle unclear cases</td><td>“Is this listing OK?” phone calls</td><td>A <strong>review queue</strong> of IN_REVIEW audits showing exactly what couldn’t be checked (e.g. no route data). Approve or reject with a note.</td></tr>
+    <tr><td>Watch broker quality</td><td>Reputation by word of mouth</td><td>Trust score per broker from trust events: verified first time +2, needs fix −1, photo found online −15, broker no-show −10.</td></tr>
+    <tr><td>Track money</td><td>Notebooks, screenshots, bank statements</td><td>One AG Grid ledger of every hold, capture, void and invoice, queried in plain English (F4).</td></tr>
+    <tr><td>Resolve disputes</td><td>One side’s word against the other’s</td><td>Signed listing versions, audit reports, check-in PIN/GPS records and PayPal’s own records.</td></tr>
+  </tbody>
+</table>
+
+<h3>8.2 A manager’s week in practice</h3>
+<ol>
+  <li><strong>Monday:</strong> two new owners sign up. The manager registers both flats (address, GPS pin, furnishing, a
+    few baseline photos) and sets the rent range with each owner.</li>
+  <li><strong>Monday:</strong> gives Rajesh a 60-day mandate for the Indiranagar flat and QuickCash Rentals a mandate for
+    the Chennai flat.</li>
+  <li><strong>Tuesday:</strong> QuickCash submits the Indiranagar ad at ₹40,000 “fully furnished”. It’s rejected
+    automatically (NEEDS_FIX) with the evidence. The manager does nothing; the system has already explained why.</li>
+  <li><strong>Wednesday:</strong> a listing claims “12 min to Manyata Tech Park”, a route the demo maps table doesn’t
+    cover. It lands in the review queue; the manager checks it and approves with a note.</li>
+  <li><strong>Saturday:</strong> the ledger shows three visits voided (tenants passed), one captured for a no-show (broker
+    GPS confirmed) and one locked, with an invoice sent with ₹500 deducted.</li>
+</ol>
+
+<h3>8.3 Who can do what</h3>
+<table>
+  <thead><tr><th style="width:26%">Action</th><th style="width:18%">Manager</th><th style="width:18%">Broker</th><th>Public / tenant</th></tr></thead>
+  <tbody>
+    <tr><td>Register flats, give or revoke mandates</td><td><span class="pill p-pass">yes</span></td><td><span class="pill p-fail">403</span></td><td><span class="pill p-fail">no</span></td></tr>
+    <tr><td>Open and submit listings</td><td><span class="pill p-fail">403</span></td><td><span class="pill p-pass">own mandates only</span></td><td><span class="pill p-fail">no</span></td></tr>
+    <tr><td>Read audit reports</td><td><span class="pill p-pass">all</span></td><td><span class="pill p-pass">own only</span></td><td><span class="pill p-grey">verified summary</span></td></tr>
+    <tr><td>Approve or reject IN_REVIEW</td><td><span class="pill p-pass">yes</span></td><td><span class="pill p-fail">no</span></td><td><span class="pill p-fail">no</span></td></tr>
+    <tr><td>Book a visit, approve a hold</td><td>—</td><td>—</td><td><span class="pill p-pass">yes</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ============================ 9. STATUS ============================ -->
+<div class="section">
+<h2><span class="num">9</span>Build status, risks and roadmap</h2>
+<p class="lead">The current focus is to get Feature 1 complete and honest, since every other feature depends on it. It is
+being built in phases, each finished with passing tests and a build-log entry.</p>
+
+<h3>9.1 Where Feature 1 stands (4 November 2026)</h3>
+<table>
+  <thead><tr><th style="width:24%">Phase</th><th style="width:12%">Status</th><th>What it delivers</th></tr></thead>
+  <tbody>
+    <tr><td>0 Foundations</td><td><span class="pill p-pass">done</span></td><td>FastAPI app, pinned dependencies, settings; Groq proven (text model for claims, vision model that accepts two photos at once)</td></tr>
+    <tr><td>1 Data, roles, seed</td><td><span class="pill p-pass">done</span></td><td>11 database tables with migrations; API-key login with MANAGER/BROKER roles; manager endpoints for flats and mandates; demo data</td></tr>
+    <tr><td>2 First slice (Check D)</td><td><span class="pill p-pass">done</span></td><td>Three-state results, Check D, decision; LangGraph pipeline; open and submit listing; audits saved in one transaction and read back exactly</td></tr>
+    <tr><td>3 Claim extraction</td><td><span class="pill p-pass">done</span></td><td>Groq reads claims hidden in the ad text (tested on English and Hinglish, and against a prompt-injection attempt); furnishing claimed in the text is checked; 78 automated tests</td></tr>
+    <tr><td>4 Check B commute</td><td><span class="pill p-warn">next</span></td><td>Tolerance rule, Maps adapter, demo route table; unknown routes go to review</td></tr>
+    <tr><td>5 Check C compliance</td><td><span class="pill p-grey">planned</span></td><td>Versioned deposit-rules file with sources and dates</td></tr>
+    <tr><td>6 Check A photos</td><td><span class="pill p-grey">planned</span></td><td>GPS check-in photo, duplicate detection, AI same-room comparison</td></tr>
+    <tr><td>7 Seal and mint</td><td><span class="pill p-grey">planned</span></td><td>HMAC-signed audit + <code>/verify</code>; outbox worker that creates the PayPal Catalog product</td></tr>
+    <tr><td>8 Broker workflow + demo</td><td><span class="pill p-grey">planned</span></td><td>Review queue, pre-check, public listing page, availability, trust score, end-to-end demo script</td></tr>
+  </tbody>
+</table>
+
+<h3>9.2 Changes from the original blueprint</h3>
+<table>
+  <thead><tr><th style="width:28%">Blueprint said</th><th style="width:28%">Now</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Gemini 2.5 Flash for vision and text</td><td>Groq (<code>openai/gpt-oss-120b</code> for text, <code>qwen/qwen3.8-27b</code> for vision)</td><td>The key that’s available. A spike proved both models work, including two images in one request.</td></tr>
+    <tr><td>Three checks (A–C)</td><td>Four checks (A–D) + claim extraction</td><td>Without Check D, a broker could charge ₹55k for a ₹35k flat and still be verified. Without extraction, lies in the title were never checked.</td></tr>
+    <tr><td>VERIFIED or REJECTED</td><td>NEEDS_FIX · IN_REVIEW · VERIFIED</td><td>Honest brokers get a path to fix their ad, and unclear cases go to a person.</td></tr>
+    <tr><td>Hash of the listing</td><td>HMAC-signed, versioned report covering everything checked</td><td>An unsigned hash can be recomputed by anyone, and the old one ignored the broker’s photos.</td></tr>
+  </tbody>
+</table>
+
+<div class="box risk"><span class="tag">Risks to check before the demo</span>
+<ul>
+  <li><strong>Deadline.</strong> Submissions close <strong>12 November 2026</strong>. Features 2–4 and the frontend are
+    designed but not built, so the demo should lead with Feature 1 end to end plus a narrow slice of the escrow flow
+    (one AUTHORIZE → void / capture in the PayPal sandbox).</li>
+  <li><strong>INR on PayPal.</strong> PayPal stopped domestic payments within India in 2021, so a real ₹500 hold
+    between two Indian accounts may not be possible. Demo in the sandbox in USD ($15) and present INR as the
+    market framing, or name a local partner for production.</li>
+  <li><strong>Authorization timing.</strong> PayPal authorizations have a short honor period (3 days in PayPal’s docs)
+    inside a longer validity window (up to 29 days), with re-authorization possible. Visits booked more than a few days
+    ahead need this handled. Check the current docs before relying on the numbers.</li>
+  <li><strong>Legal figures.</strong> The deposit caps in Check C are marked unverified until checked against the
+    official texts. Karnataka’s 3–6-month rule is treated as platform policy, not law.</li>
+  <li><strong>Unsourced statistics.</strong> Figures such as “up to 70% no-shows” come from the blueprint and should be
+    presented as estimates unless a source is added.</li>
+</ul></div>
+
+<h3>9.3 How it maps to the hackathon</h3>
+<p>The hackathon has no fixed tracks; its one rule is that a project must meaningfully use both PayPal and AI. PropLock
+does both at its core: AI agents decide <em>when</em> money should move, and PayPal holds, releases, captures and
+invoices it. Relevant prize categories include <strong>Best Use of Agentic Commerce</strong>, <strong>Best Use of PayPal +
+AI</strong> and <strong>Most Impactful</strong>, plus the sponsor prizes for AG Grid (ledger), Bryntum (visit scheduler),
+APIMatic (type-safe PayPal SDK use) and Render (hosting).</p>
+</div>
+
+<!-- ============================ 10. GLOSSARY ============================ -->
+<div class="section">
+<h2><span class="num">10</span>Glossary</h2>
+<table style="font-size:8.9pt">
+  <thead><tr><th style="width:24%">Term</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td>Agentic commerce</td><td>Software agents that don’t just chat but take real commercial actions (hold, capture, void, invoice) within strict rules.</td></tr>
+    <tr><td>Audit / audit report</td><td>The stored result of checking one version of an ad: every comparison, its verdict and its source.</td></tr>
+    <tr><td>Authorization (PayPal)</td><td>Money reserved on the buyer’s account but not transferred. Created with Orders v2 <code>intent=AUTHORIZE</code>.</td></tr>
+    <tr><td>Capture</td><td>Turning an authorization into a real payment.</td></tr>
+    <tr><td>Void</td><td>Cancelling an authorization; the money is released with no fee.</td></tr>
+    <tr><td>Catalog product (PayPal)</td><td>A product record in PayPal. PropLock publishes each verified listing as one, linked to its signed audit.</td></tr>
+    <tr><td>Invoice (PayPal)</td><td>A formal bill sent through PayPal; here deposit + brokerage minus the ₹500 token.</td></tr>
+    <tr><td>Mandate</td><td>The agency’s permission for one broker to list one flat, with rent, deposit and brokerage limits and an end date.</td></tr>
+    <tr><td>Ground truth</td><td>Facts the broker can’t change: the owner’s terms, the flat’s GPS pin, the registered furnishing.</td></tr>
+    <tr><td>UNVERIFIABLE</td><td>“We couldn’t check this.” Always sent to a person; never treated as a pass.</td></tr>
+    <tr><td>NEEDS_FIX / IN_REVIEW / VERIFIED</td><td>Outcome of an audit: a claim is wrong / something couldn’t be checked / everything passed.</td></tr>
+    <tr><td>LLM</td><td>Large language model, the AI that reads text (here via Groq). Used only to <em>extract</em> claims.</td></tr>
+    <tr><td>Prompt injection</td><td>Text inside an ad that tries to give the AI instructions (“ignore your rules”). PropLock treats the ad as data and judges claims with code.</td></tr>
+    <tr><td>LangGraph</td><td>A library for building AI agents as explicit graphs of steps, with parallel branches and a final join.</td></tr>
+    <tr><td>MCP / Agent Toolkit</td><td>Model Context Protocol: a standard way for AI agents to call tools. PayPal’s Agent Toolkit exposes PayPal actions to agents this way.</td></tr>
+    <tr><td>HMAC signature</td><td>A code computed from the report and a server secret. If any byte of the report changes, the code no longer matches.</td></tr>
+    <tr><td>Outbox</td><td>A table of “work to do after saving”, such as creating the PayPal product. A worker retries it until it succeeds.</td></tr>
+    <tr><td>Idempotency key</td><td>A fixed ID sent with a request so that retrying it never creates a duplicate (e.g. two PayPal products).</td></tr>
+    <tr><td>pHash</td><td>A short fingerprint of an image that stays similar when the image is resized or recompressed; used to spot reused photos.</td></tr>
+    <tr><td>Geofence</td><td>A circle around the flat’s GPS pin; being inside it during the slot counts as being present.</td></tr>
+  </tbody>
+</table>
+<p class="small muted" style="margin-top:6mm">Sources: PropLock AI Product Blueprint; PropLock Feature 1 Technical Review (22 Oct 2026); Feature 1
+rebuild plan and build log (repository <code>docs/</code>); PayPal AI Hackathon announcement on the PayPal Developer
+Community blog (30 Sep 2026).</p>
+</div>
+
+</body>
+</html>
