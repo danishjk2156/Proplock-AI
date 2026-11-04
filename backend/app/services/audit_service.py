@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.adapters.llm import LLM
+from app.adapters.maps import Maps, Place
 from app.agents.graph import run_checks
 from app.db.models import (
     Audit,
@@ -31,7 +32,7 @@ from app.schemas.audit import AuditReport
 from app.schemas.listing import ListingSubmit
 
 # Bump whenever any check's rules change, so every stored report says which rules judged it.
-RULESET_VERSION = "2"  # 2: claims read from the ad text; furnishing in text checked by D
+RULESET_VERSION = "3"  # 2: claims read from the ad text; 3: Check B judges commute claims
 
 SUBMITTABLE = {ListingStatus.DRAFT, ListingStatus.NEEDS_FIX}
 STATUS_FOR = {
@@ -75,7 +76,7 @@ def open_listing(session: Session, broker: User, property_id: str) -> Listing:
 
 
 def submit_listing(
-    session: Session, listing: Listing, content: ListingSubmit, llm: LLM
+    session: Session, listing: Listing, content: ListingSubmit, llm: LLM, maps: Maps
 ) -> tuple[Audit, AuditReport]:
     mandate = session.get(Mandate, listing.mandate_id)
     if not _is_usable(mandate):
@@ -104,8 +105,10 @@ def submit_listing(
         description=content.description,
         listing=terms,
         owner=owner,
+        place=Place(prop.id, prop.latitude, prop.longitude, prop.city),
         form_commute=content.commute_claims,
         llm=llm,
+        maps=maps,
     )
 
     try:

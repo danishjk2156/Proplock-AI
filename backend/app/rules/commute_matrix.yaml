@@ -1,0 +1,28 @@
+# Demo route table, used ONLY when DEMO_MODE=true and there is no GOOGLE_MAPS_API_KEY.
+# Minutes are illustrative weekday-08:30 values for the seeded flats, NOT measurements.
+# Every result from this file is labelled "demo-table" in the audit report.
+#
+# Matching is exact (case and extra spaces ignored) against `destination` or one of its
+# `aliases`; there is no substring matching, and an unknown destination is UNVERIFIABLE.
+version: 1
+routes:
+  PROP-BLR-001:  # 12th Main Rd, HAL 2nd Stage, Indiranagar, Bengaluru
+    - destination: Indiranagar Metro Station
+      aliases: [Indiranagar Metro, Indiranagar metro, Indiranagar station]
+      minutes: {walking: 11, driving: 6}
+    - destination: Bagmane Tech Park
+      aliases: [Bagmane Tech Park CV Raman Nagar, Bagmane]
+      minutes: {driving: 25, transit: 35}
+    - destination: Embassy Golf Links
+      aliases: [EGL, Embassy Golf Links Business Park]
+      minutes: {driving: 22}
+  PROP-CHN-002:  # Plot 42, Rajiv Gandhi Salai (OMR), Thoraipakkam, Chennai
+    - destination: Thoraipakkam Bus Stop
+      aliases: [Thoraipakkam bus stand]
+      minutes: {walking: 7}
+    - destination: Sholinganallur Junction
+      aliases: [Sholinganallur]
+      minutes: {driving: 20, transit: 30}
+    - destination: Chennai International Airport
+      aliases: [Chennai Airport, MAA]
+      minutes: {driving: 45}

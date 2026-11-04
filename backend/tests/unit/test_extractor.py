@@ -15,6 +15,7 @@ from app.adapters.llm import (
     GroqLLM,
     UnconfiguredLLM,
 )
+from app.adapters.maps import FakeMaps, Place
 from app.agents.graph import run_checks
 from app.db.models import ClaimSource, CommuteMode, Furnishing
 from app.domain.check_result import Check, Verdict
@@ -145,8 +146,10 @@ def _run(llm, form_commute=()):
         description="Spacious flat.",
         listing=HONEST,
         owner=OWNER,
+        place=Place("PROP-BLR-001", Decimal("12.97"), Decimal("77.64"), "Bengaluru"),
         form_commute=list(form_commute),
         llm=llm,
+        maps=FakeMaps(),  # knows no routes, so any commute claim is UNVERIFIABLE
     )
 
 
@@ -162,7 +165,7 @@ def test_no_claims_anywhere_is_verified():
     assert _verdict(run, Check.CLAIMS).source == "fake"
 
 
-def test_claim_in_text_is_extracted_and_sent_to_review_until_check_b_exists():
+def test_claim_in_text_is_extracted_and_checked_by_check_b():
     run = _run(FakeLLM(ExtractedClaims.model_validate({"commute": [METRO]})))
 
     assert [(c.destination, c.source) for c in run.commute] == [("Indiranagar Metro", ClaimSource.EXTRACTED)]

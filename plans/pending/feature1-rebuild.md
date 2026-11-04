@@ -250,7 +250,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 | 1 Data + auth | **done** — 11 tables + migration, API-key roles, seed, manager endpoints; 28 tests |
 | 2 First slice (Check D) | **done** — Check D, decision, LangGraph pipeline, open + submit listing, stored audits; 60 tests |
 | 3 Claim extraction | **done** — Groq extractor (JSON mode + Pydantic, one retry), merged form/text claims, text furnishing → Check D, commute placeholder; 78 tests |
-| 4 Check B | not started |
+| 4 Check B | **done** — tolerance rule, rush-hour departure, Google Routes adapter (mock-tested, no key yet), exact-match demo table behind DEMO_MODE; 121 tests |
 | 5 Check C | not started |
 | 6 Check A | not started |
 | 7 Seal and mint | not started |

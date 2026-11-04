@@ -7,9 +7,11 @@ from typing import Annotated, TypedDict
 from langchain_core.runnables import RunnableConfig
 
 from app.adapters.llm import LLM, ExtractionUnavailable
+from app.adapters.maps import Maps, Place
 from app.db.models import Furnishing
 from app.domain.check_result import Check, CheckResult, Verdict
 from app.domain.claims import ClaimedCommute, CommuteClaimIn, merge_commute_claims
+from app.domain.commute_rules import check_commute
 from app.domain.decision import Decision
 from app.domain.ground_truth import ListingTerms, OwnerTerms, check_ground_truth
 
@@ -19,6 +21,7 @@ class AuditState(TypedDict):
     description: str
     listing: ListingTerms
     owner: OwnerTerms
+    place: Place
     form_commute: list[CommuteClaimIn]
     # Set by extract_claims:
     commute: list[ClaimedCommute]
@@ -58,17 +61,14 @@ def extract_claims(state: AuditState, config: RunnableConfig) -> dict:
     }
 
 
-def commute(state: AuditState) -> dict:
-    """Placeholder until Phase 4 (Check B). Claims it cannot check yet go to review, never pass."""
-    if not state["commute"]:
-        result = CheckResult(check=Check.COMMUTE, verdict=Verdict.PASS, source="none", summary="No commute claims.")
-    else:
-        result = CheckResult(
-            check=Check.COMMUTE,
-            verdict=Verdict.UNVERIFIABLE,
-            source="none",
-            summary=f"{len(state['commute'])} commute claim(s); route checking arrives in Phase 4.",
-        )
+def commute(state: AuditState, config: RunnableConfig) -> dict:
+    """Check B: look up each claimed route from the flat's verified pin, then judge it."""
+    maps: Maps = config["configurable"]["maps"]
+    claims = state["commute"]
+    lookups = [maps.travel_minutes(state["place"], c.destination, c.mode) for c in claims]
+    result = check_commute(claims, lookups, source=maps.name)
+    if maps.name == "demo-table" and claims:
+        result = result.model_copy(update={"summary": f"{result.summary} DEMO route table, not live traffic data."})
     return {"results": [result]}
 
 

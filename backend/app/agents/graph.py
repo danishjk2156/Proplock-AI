@@ -11,6 +11,7 @@ from typing import NamedTuple
 from langgraph.graph import END, START, StateGraph
 
 from app.adapters.llm import LLM
+from app.adapters.maps import Maps, Place
 from app.agents import nodes
 from app.agents.nodes import AuditState
 from app.db.models import Furnishing
@@ -59,8 +60,10 @@ def run_checks(
     description: str,
     listing: ListingTerms,
     owner: OwnerTerms,
+    place: Place,
     form_commute: list[CommuteClaimIn],
     llm: LLM,
+    maps: Maps,
 ) -> AuditRun:
     final = audit_graph().invoke(
         {
@@ -68,10 +71,11 @@ def run_checks(
             "description": description,
             "listing": listing,
             "owner": owner,
+            "place": place,
             "form_commute": form_commute,
             "results": [],
         },
         # Services go in the run config, not the state: the state is data, these are tools.
-        config={"configurable": {"llm": llm}},
+        config={"configurable": {"llm": llm, "maps": maps}},
     )
     return AuditRun(final["results"], final["decision"], final["commute"], final["text_furnishing"])

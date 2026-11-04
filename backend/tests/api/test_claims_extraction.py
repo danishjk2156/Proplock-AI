@@ -44,7 +44,7 @@ def test_claim_only_in_the_title_is_extracted_and_stored(client, rajesh, fake_ll
     assert report["commute_claims"] == [
         {"destination": "Indiranagar Metro", "minutes": 2, "mode": "walking", "source": "EXTRACTED"}
     ]
-    # Check B doesn't exist yet, so the claim can't be confirmed: review, never a silent pass.
+    # The test maps know no routes, so Check B can't confirm the claim: review, never a silent pass.
     assert _check(report, "commute")["verdict"] == "UNVERIFIABLE"
     assert report["decision"] == "IN_REVIEW"
     stored = db_session.scalars(select(CommuteClaim)).all()

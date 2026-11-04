@@ -28,7 +28,7 @@ class Evidence(BaseModel):
     field: str
     claimed: str
     allowed: str
-    ok: bool
+    ok: bool | None  # None = this comparison couldn't be made (e.g. no route data)
     note: str
 
 
