@@ -55,7 +55,7 @@ def test_honest_listing_is_verified_and_read_back_exactly(client, keys):
     body = submitted.json()
     assert body["listing_status"] == "VERIFIED"
     assert body["report"]["decision"] == "VERIFIED"
-    assert sorted(c["check"] for c in body["report"]["checks"]) == ["claims", "commute", "ground_truth"]
+    assert sorted(c["check"] for c in body["report"]["checks"]) == ["claims", "commute", "compliance", "ground_truth"]
     stored = client.get(f"/audits/{body['audit_id']}", headers=keys["broker_rajesh"]).json()
     assert stored["status"] == "VERIFIED"
     assert stored["report"] == body["report"]

@@ -32,7 +32,7 @@ from app.schemas.audit import AuditReport
 from app.schemas.listing import ListingSubmit
 
 # Bump whenever any check's rules change, so every stored report says which rules judged it.
-RULESET_VERSION = "3"  # 2: claims read from the ad text; 3: Check B judges commute claims
+RULESET_VERSION = "4"  # 2: claims from ad text; 3: Check B commute; 4: Check C deposit rules
 
 SUBMITTABLE = {ListingStatus.DRAFT, ListingStatus.NEEDS_FIX}
 STATUS_FOR = {
@@ -105,7 +105,7 @@ def submit_listing(
         description=content.description,
         listing=terms,
         owner=owner,
-        place=Place(prop.id, prop.latitude, prop.longitude, prop.city),
+        place=Place(prop.id, prop.latitude, prop.longitude, prop.city, prop.state),
         form_commute=content.commute_claims,
         llm=llm,
         maps=maps,

@@ -12,7 +12,7 @@ from app.adapters.maps import DemoTableMaps, GoogleRoutesMaps, Place, Unconfigur
 from app.config import Settings
 from app.db.models import CommuteMode
 
-BLR = Place("PROP-BLR-001", Decimal("12.9718910"), Decimal("77.6411510"), "Bengaluru")
+BLR = Place("PROP-BLR-001", Decimal("12.9718910"), Decimal("77.6411510"), "Bengaluru", "Karnataka")
 # Wednesday 4 Nov 2026, 15:00 IST -> next peak is Thursday 5 Nov 08:30 IST = 03:00 UTC.
 NOW = datetime(2026, 11, 4, 9, 30, tzinfo=UTC)
 
@@ -127,7 +127,7 @@ def test_demo_table_never_matches_substrings_or_unknown_places(destination):
 
 
 def test_demo_table_is_per_flat_and_per_mode():
-    chennai = Place("PROP-CHN-002", Decimal("12.94"), Decimal("80.24"), "Chennai")
+    chennai = Place("PROP-CHN-002", Decimal("12.94"), Decimal("80.24"), "Chennai", "Tamil Nadu")
     demo = DemoTableMaps()
 
     assert demo.travel_minutes(chennai, "Indiranagar Metro", CommuteMode.WALKING).minutes is None

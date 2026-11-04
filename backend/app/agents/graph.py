@@ -22,6 +22,7 @@ from app.domain.ground_truth import ListingTerms, OwnerTerms
 
 CHECK_NODES: dict[Check, Callable[[AuditState], dict]] = {
     Check.COMMUTE: nodes.commute,
+    Check.COMPLIANCE: nodes.compliance,
     Check.GROUND_TRUTH: nodes.ground_truth,
 }
 # Reading the ad text is required too: if it failed, hidden claims could slip through.

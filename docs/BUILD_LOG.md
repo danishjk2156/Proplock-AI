@@ -389,3 +389,48 @@ As Rajesh, open a listing for `PROP-BLR-001` and submit with the title `2 MIN WA
 - v2 "11 min walk to Indiranagar Metro": both PASS → **VERIFIED**.
 
 **Not verified:** the real `GoogleRoutesMaps` hasn't made a live call, because there's no key. It's tested against a mock HTTP server that checks the exact request (URL, headers, field mask, body, departure time). Run one real call when a key is available.
+
+---
+
+## Step 5.1: Check C — deposit compliance (2026-11-04)
+
+**What changed**
+- `app/rules/deposit_caps.yaml` (new): deposit rules as data. Each rule has `max_months`, `severity` (hard/advisory), `kind` (law/platform_policy), `citation`, `section`, `source_url`, `effective_date`, `verified` and `note`. The file has its own `version`.
+- `app/domain/compliance_rules.py` (new): `load_rules()`, `deposit_months()` and `check_compliance(state, rent, deposit, rules)`.
+- `app/agents/nodes.py` / `graph.py`: a new `compliance` node, added to `CHECK_NODES`, which makes it a required check automatically. `Place` now carries the flat's `state`. `RULESET_VERSION` is now `"4"`.
+- Tests: `tests/unit/test_compliance_rules.py` (14), `tests/api/test_compliance_check.py` (2).
+
+**The rules on file**
+| State | Rule | Kind | Severity | Verified |
+|---|---|---|---|---|
+| Tamil Nadu | ≤ 3 months: TN Regulation of Rights and Responsibilities of Landlords and Tenants Act, 2017, s.11(1) | law | hard → FAIL | no |
+| Karnataka | ≤ 3 months | PropLock policy | advisory → PASS + warning | (own policy) |
+| Karnataka | ≤ 6 months | PropLock policy | hard → FAIL | (own policy) |
+| any other state | — | — | UNVERIFIABLE → manager review | — |
+
+**What the research found (and didn't)**
+- *Tamil Nadu:* the s.11(1) text, seen via Indian Kanoon, makes a deposit above three months' rent unlawful, but it opens with "save an agreement to the contrary", so a signed agreement can allow more. A public ad comes before any agreement, so PropLock enforces 3 months and says why in the rule's note. The commencement date (22 Feb 2019) comes from secondary sources.
+- *Karnataka:* **no statutory cap confirmed.** Sources disagree about the Karnataka Rent Act, 1999: one says s.11 limits deposits to 3 months, others say 10 months is normal. A search excerpt of s.11 only covered payments for giving up a tenancy. The 2-month cap belongs to the old 1961 Act. So Karnataka is **platform policy**, as decision D9 already said, and the report labels it "PropLock policy, not law".
+- *Model Tenancy Act, 2021:* s.11 caps residential deposits at 2 months, but it's a model law that applies only where a state enacts it. It isn't applied.
+- The official texts on indiacode.nic.in refused automated fetches (HTTP 403). That's why the TN rule is `verified: false` and every report shows **"NOT YET VERIFIED against the official text"**. Someone should open the gazette PDFs by hand and flip the flag.
+
+**Key idea: rules as data, labelled honestly (fixes D6)**
+The old code had a hard-coded dict with "3 months everywhere", no dates and some wrong citations. Now:
+1. The numbers live in one YAML file with a version. Every report records which version judged it (`source: deposit_caps.yaml@2026-11-04`).
+2. Law and PropLock's own policy are labelled differently in the evidence, so a broker or tenant never mistakes policy for statute.
+3. An unverified legal figure still applies, but the label says it's unverified. Honest labelling beats either hiding the rule or pretending it's certain.
+4. An unknown state gives UNVERIFIABLE, never a guessed cap.
+
+**Key idea: advisory vs hard**
+An *advisory* rule never fails a listing. Its evidence row has `ok: true`, a note starting with `ADVISORY:`, and the check's summary includes the warning, so it reaches the stored report and later the tenant's listing page. (The old code computed a Karnataka warning but dropped it before the report.) A *hard* rule above its cap means FAIL → NEEDS_FIX.
+
+**Detail worth knowing:** months are rounded to 2 decimals before comparing. ₹1,00,000 on ₹33,333 rent is 3.00003 months, shown and judged as 3.00, so it passes a 3-month cap. Off-by-a-rupee cases go to the broker's benefit and the evidence shows exactly what was compared.
+
+**How to see it**
+```bash
+cd backend
+.venv/Scripts/python -m pytest -q tests/unit/test_compliance_rules.py tests/api/test_compliance_check.py
+```
+In `/docs`, as QuickCash, open a listing for `PROP-CHN-002` and submit rent 40000 / deposit 240000 → NEEDS_FIX, with the TN citation in the `compliance` evidence.
+
+**Verified:** 136 tests pass. Live (real Groq, demo routes, scratch database): QuickCash's Chennai ad with a 6-month deposit → **NEEDS_FIX**. Check C failed with the s.11(1) citation and the "not yet verified" label, and Check D also failed (₹2.4L vs the owner's ₹1.2L). Bengaluru at 4 months (owner agreed 4) → **VERIFIED**, with the advisory in the stored report.

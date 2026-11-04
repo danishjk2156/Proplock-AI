@@ -225,6 +225,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 | D11 | Frontend | **Chosen:** out of this plan; Swagger UI + demo script for now | Backend correctness first; UI gets its own plan |
 | D12 | Pace and explanations | **Chosen:** pause after each phase with an explainer; BUILD_LOG entry per step | You asked to understand what happens while I code |
 | D15 | Extraction failure | Missing key / API error / invalid JSON twice → `claims` check UNVERIFIABLE → IN_REVIEW (not just a flag); commute claims → UNVERIFIABLE until Check B exists | Unread text could hide claims; matches "missing key gives UNVERIFIABLE, never a guess" |
+| D16 | Deposit rule sources | TN 3 months from s.11(1) (text via Indian Kanoon; "save an agreement to the contrary" — enforced because an ad precedes any agreement); Karnataka stays platform policy (no statutory cap confirmed); Model Tenancy Act not applied (model law) | indiacode.nic.in blocked automated fetches; verify by hand and flip `verified` |
 
 ## Not yet specified
 
@@ -251,7 +252,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 | 2 First slice (Check D) | **done** — Check D, decision, LangGraph pipeline, open + submit listing, stored audits; 60 tests |
 | 3 Claim extraction | **done** — Groq extractor (JSON mode + Pydantic, one retry), merged form/text claims, text furnishing → Check D, commute placeholder; 78 tests |
 | 4 Check B | **done** — tolerance rule, rush-hour departure, Google Routes adapter (mock-tested, no key yet), exact-match demo table behind DEMO_MODE; 121 tests |
-| 5 Check C | not started |
+| 5 Check C | **done** — versioned deposit_caps.yaml (TN law s.11(1) unverified; Karnataka platform policy 3 advisory / 6 hard), unknown state → UNVERIFIABLE; 136 tests |
 | 6 Check A | not started |
 | 7 Seal and mint | not started |
 | 8 Broker workflow + demo | not started |

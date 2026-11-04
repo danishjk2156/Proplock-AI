@@ -1,0 +1,49 @@
+# Security-deposit rules for Check C, as data (fixes D6: no hard-coded "3 months everywhere").
+#
+# Each state has one or more rules. severity "hard" -> FAIL above max_months;
+# severity "advisory" -> PASS, but the warning is shown in the audit report.
+# kind "law" cites a statute; kind "platform_policy" is PropLock's own rule and is
+# labelled as such everywhere, so nobody mistakes it for law.
+#
+# verified: false means the figure has NOT been checked against the official gazette
+# text yet (indiacode.nic.in refused automated fetches on 2026-11-04). The audit
+# report says so next to every unverified rule. Check by hand before relying on it.
+#
+# States not listed here give UNVERIFIABLE (manager review), never a guessed cap.
+# Bump `version` whenever any rule changes; reports record which version judged them.
+version: "2026-11-04"
+states:
+  Tamil Nadu:
+    - max_months: 3
+      severity: hard
+      kind: law
+      citation: Tamil Nadu Regulation of Rights and Responsibilities of Landlords and Tenants Act, 2017
+      section: "11(1)"
+      source_url: https://www.indiacode.nic.in/bitstream/123456789/21810/1/2017tn42.pdf
+      effective_date: "2019-02-22"
+      verified: false
+      note: >-
+        Text seen via Indian Kanoon: deposit above three months' rent is unlawful "save an
+        agreement to the contrary". A public ad comes before any agreement, so PropLock
+        enforces the cap. Commencement date is from secondary sources.
+  Karnataka:
+    - max_months: 3
+      severity: advisory
+      kind: platform_policy
+      citation: PropLock platform policy (Bengaluru market norm is 3-10 months)
+      section: null
+      source_url: null
+      effective_date: "2026-11-04"
+      verified: true  # our own policy: nothing to verify against
+      note: >-
+        No statutory cap confirmed for Karnataka; sources conflict on the Karnataka Rent Act,
+        1999 (Act 34 of 2001). Above 3 months the tenant sees a warning; the listing still passes.
+    - max_months: 6
+      severity: hard
+      kind: platform_policy
+      citation: PropLock platform policy
+      section: null
+      source_url: null
+      effective_date: "2026-11-04"
+      verified: true
+      note: PropLock does not verify listings asking more than 6 months' deposit.

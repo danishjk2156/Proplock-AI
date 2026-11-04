@@ -12,6 +12,7 @@ from app.db.models import Furnishing
 from app.domain.check_result import Check, CheckResult, Verdict
 from app.domain.claims import ClaimedCommute, CommuteClaimIn, merge_commute_claims
 from app.domain.commute_rules import check_commute
+from app.domain.compliance_rules import check_compliance, default_rules
 from app.domain.decision import Decision
 from app.domain.ground_truth import ListingTerms, OwnerTerms, check_ground_truth
 
@@ -70,6 +71,12 @@ def commute(state: AuditState, config: RunnableConfig) -> dict:
     if maps.name == "demo-table" and claims:
         result = result.model_copy(update={"summary": f"{result.summary} DEMO route table, not live traffic data."})
     return {"results": [result]}
+
+
+def compliance(state: AuditState) -> dict:
+    """Check C: is the advertised deposit allowed in the flat's state?"""
+    listing = state["listing"]
+    return {"results": [check_compliance(state["place"].state, listing.rent, listing.deposit, default_rules())]}
 
 
 def ground_truth(state: AuditState) -> dict:

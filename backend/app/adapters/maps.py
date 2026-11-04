@@ -31,6 +31,7 @@ class Place:
     latitude: Decimal
     longitude: Decimal
     city: str
+    state: str  # used by Check C (deposit rules), not by routing
 
 
 def normalize(destination: str) -> str:
