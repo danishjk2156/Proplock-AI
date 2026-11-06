@@ -719,3 +719,37 @@ I browsed Pinterest (signed in, in Chrome) for "real estate app ui design" and "
 - long address chips ran off the screen (chips now wrap their text);
 - pills stretched inside stacked layouts;
 - a manager-approved audit said "Every check passed" when one check couldn't run. It now says the agency approved it after checking by hand.
+
+---
+
+## Check B on OpenStreetMap: no key, no card (2026-11-07)
+
+Google's Routes API needs a billing account (a card, or a UPI autopay mandate in India). This adds a free provider so commute claims are checked against real routes anyway.
+
+**What changed**
+- `app/adapters/maps.py`: `OsmMaps`.
+  - **Nominatim** finds the destination. The search is limited to about 30 km around the flat's pin (`viewbox` + `bounded`), so "Metro" can't resolve to another city.
+  - The **FOSSGIS OSRM** servers at `routing.openstreetmap.de` (the ones openstreetmap.org uses for its own directions) give the walking or driving route from the manager's pin.
+  - Fair use: at most one Nominatim request per second, an identifying User-Agent, and routes and places cached.
+- `app/domain/commute_rules.py`: `RouteLookup` gains `basis` (what the minutes measure, shown in the evidence) and `lower_bound` (a best case).
+- `app/config.py`: `MAPS_PROVIDER` = `auto` (default; Google if a key is set, else the demo table in `DEMO_MODE`) or `osm`. `osm` wins even in `DEMO_MODE`.
+- `backend/.env`: `MAPS_PROVIDER=osm` is on.
+- Tests: `tests/unit/test_osm_maps.py` (13), against a mock HTTP server: request shapes, throttling, caching, every failure reason, and the best-case rule. 280 in total.
+
+**Key idea: a best case can prove a lie, but not the truth**
+OpenStreetMap has no live traffic, so a driving time is what the trip takes on empty roads:
+- If even that is over the allowed time, the claim is false at any hour → **FAIL**.
+- If it fits, rush hour could still blow it → **UNVERIFIABLE**, with the reason "rush-hour traffic can't be checked", so a manager decides.
+
+Walking isn't affected by traffic, so walking claims (the most common lie, "2 min walk to metro") get a normal PASS/FAIL. OSM has no transit timetables, so transit claims are UNVERIFIABLE.
+
+**Verified with real calls** (2026-11-07):
+| From | To | Mode | OSM says | Result for a typical claim |
+|---|---|---|---|---|
+| Indiranagar flat | Indiranagar Metro Station | walking | 13 min | "11 min walk" PASS (allowed ≤ 16) · "2 min walk" FAIL (allowed ≤ 7) |
+| Indiranagar flat | Bagmane Tech Park | driving | 7 min, empty roads | "25 min drive" fits → review |
+| Thoraipakkam flat | Sholinganallur | driving | 7 min, empty roads | best case only |
+| Indiranagar flat | Indiranagar Metro Station | transit | — | "no public-transport times" |
+| Indiranagar flat | a made-up place | walking | — | "no place called … found near the flat" |
+
+**Demo note:** with OSM on, the honest demo ad's "25 min drive to Bagmane Tech Park" goes to a manager, because a driving time can't be confirmed for rush hour. Leave drive claims out of a demo ad, or approve it in the review queue. `scripts/demo.py` always uses the demo table and is unaffected.

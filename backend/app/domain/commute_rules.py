@@ -41,12 +41,28 @@ class RouteLookup:
     minutes: int | None
     source: str
     reason: str = ""  # set when minutes is None
+    basis: str = "at weekday 08:30"  # what the minutes measure, shown in the evidence
+    # True when the minutes are a best case (empty roads, no live traffic): exceeding the limit
+    # still proves the claim false, but fitting inside it proves nothing about rush hour.
+    lower_bound: bool = False
 
 
 def _evidence(claim: ClaimedCommute, lookup: RouteLookup) -> Evidence:
     allowed = allowed_minutes(claim.minutes)
     label = f"commute: {claim.destination} ({claim.mode.value})"
     origin = "ad text" if claim.source is ClaimSource.EXTRACTED else "form"
+    if lookup.minutes is not None and lookup.lower_bound and lookup.minutes <= allowed:
+        return Evidence(
+            field=label,
+            claimed=f"{claim.minutes} min",
+            allowed=f"<= {allowed:g} min",
+            ok=None,
+            note=(
+                f"{lookup.minutes} min {lookup.basis} ({lookup.source}) fits, but rush-hour traffic "
+                f"can't be checked without live traffic data. Claim from the {origin}."
+            ),
+            suggestion="A manager checks rush-hour driving times by hand.",
+        )
     if lookup.minutes is None:
         return Evidence(
             field=label,
@@ -64,7 +80,7 @@ def _evidence(claim: ClaimedCommute, lookup: RouteLookup) -> Evidence:
         claimed=f"{claim.minutes} min",
         allowed=f"<= {allowed:g} min",
         ok=lookup.minutes <= allowed,
-        note=f"Actual {lookup.minutes} min at weekday 08:30 ({lookup.source}). Claim from the {origin}.",
+        note=f"Actual {lookup.minutes} min {lookup.basis} ({lookup.source}). Claim from the {origin}.",
         suggestion=(
             f'Say "{lookup.minutes} min {MODE_WORDS[claim.mode]} {claim.destination}" '
             f"instead of {claim.minutes} min."

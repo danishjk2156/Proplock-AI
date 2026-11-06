@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,6 +29,9 @@ class Settings(BaseSettings):
     groq_vision_model: str = ""
 
     google_maps_api_key: str | None = None
+    # "auto": Google if a key is set, else the demo table in DEMO_MODE, else no routes.
+    # "osm": OpenStreetMap (free, no key; no live traffic, no transit).
+    maps_provider: Literal["auto", "osm"] = "auto"
 
     paypal_client_id: str | None = None
     paypal_client_secret: str | None = None

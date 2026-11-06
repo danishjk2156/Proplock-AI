@@ -102,7 +102,8 @@ The script exits non-zero if any step behaves differently. Add `--offline` to sk
 |---|---|---|
 | `GROQ_API_KEY`, `GROQ_TEXT_MODEL` | reading claims in ad text | claims check UNVERIFIABLE → review |
 | `GROQ_VISION_MODEL` | comparing extra photos with the owner's | extra photos UNVERIFIABLE → review |
-| `GOOGLE_MAPS_API_KEY` | real rush-hour routes (Routes API) | `DEMO_MODE` route table, else UNVERIFIABLE |
+| `MAPS_PROVIDER=osm` | real routes from OpenStreetMap: free, no key or card | — (default `auto`: Google if keyed, else the demo table in `DEMO_MODE`) |
+| `GOOGLE_MAPS_API_KEY` | real rush-hour routes with live traffic (Routes API, needs billing) | `DEMO_MODE` route table, else UNVERIFIABLE |
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | sandbox Catalog products | `DEMO_MODE` `FAKE-` ids, else the listing waits as VERIFIED |
 | `DEMO_MODE` | demo route table and fake PayPal ids | off: missing services are UNVERIFIABLE |
 | `AUDIT_SECRET` | signing audits | dev default (refused when `APP_ENV=production`) |
@@ -151,7 +152,8 @@ npm run build
 
 ## Known limits
 
-- **Not yet tested against the real services:** no Google Maps or PayPal sandbox call has been made (no keys). Both adapters are tested against mock servers. Run `python -m scripts.spike_paypal` once PayPal keys exist.
+- **Not yet tested against the real services:** no Google Maps or PayPal sandbox call has been made (no keys). OpenStreetMap routing has been called for real.
+- **OpenStreetMap has no live traffic or transit:** walking claims are judged fully; a driving claim that fits the empty-road time, or any transit claim, goes to a manager. Both adapters are tested against mock servers. Run `python -m scripts.spike_paypal` once PayPal keys exist.
 - **The Tamil Nadu deposit cap is unverified:** it is labelled "not yet verified against the official text" until someone checks the gazette by hand. Karnataka's limits are PropLock policy, not law.
 - **Check-in GPS can be faked:** it comes from the upload request (or the photo's EXIF data), so an API client can send any coordinates until the frontend has its own camera page.
 - **Single-process limits:** the pre-check rate limit (10/min per broker) is kept in memory, and photo-reuse detection scans every photo. Both are fine for a demo, not for scale.

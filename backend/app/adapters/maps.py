@@ -1,10 +1,13 @@
 """Travel times for Check B.
 
-GoogleRoutesMaps is the real one (needs GOOGLE_MAPS_API_KEY). DemoTableMaps reads
-app/rules/commute_matrix.yaml and is used only when DEMO_MODE=true. FakeMaps is for tests.
+GoogleRoutesMaps uses live traffic (needs GOOGLE_MAPS_API_KEY and a billing account).
+OsmMaps uses OpenStreetMap: free, no key, but no live traffic (MAPS_PROVIDER=osm).
+DemoTableMaps reads app/rules/commute_matrix.yaml and is used only when DEMO_MODE=true.
+FakeMaps is for tests.
 None of them ever invents a number: no data gives a RouteLookup with minutes=None and a reason.
 """
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -103,6 +106,94 @@ class GoogleRoutesMaps:
         return result
 
 
+class OsmMaps:
+    """OpenStreetMap, no key or payment needed: Nominatim finds the place, the FOSSGIS OSRM
+    servers (the ones openstreetmap.org uses for directions) give the route.
+
+    Walking times don't depend on traffic, so they are judged fully. OSM has no live traffic,
+    so a driving time is a best case (`lower_bound`): over the limit is a proven FAIL, inside it
+    goes to a manager. OSM has no public-transport timetables, so transit is UNVERIFIABLE.
+
+    Public servers, fair use: at most one Nominatim request per second, an identifying
+    User-Agent, and results cached so the same route is asked for once.
+    """
+
+    GEOCODE_URL = "https://nominatim.openstreetmap.org/search"
+    ROUTE_URL = {
+        CommuteMode.WALKING: "https://routing.openstreetmap.de/routed-foot/route/v1/foot",
+        CommuteMode.DRIVING: "https://routing.openstreetmap.de/routed-car/route/v1/driving",
+    }
+    USER_AGENT = "PropLock-hackathon/0.1 (+https://github.com/danishjk2156/Proplock-AI)"
+    SEARCH_BOX_DEG = 0.3  # look for the destination within ~30 km of the flat
+    MAX_DISTANCE_M = 50_000
+    MIN_INTERVAL_S = 1.1  # Nominatim's usage policy: no more than one request a second
+
+    name = "openstreetmap"
+
+    def __init__(self, client: httpx.Client | None = None, sleep: Callable[[float], None] | None = None,
+                 clock: Callable[[], float] | None = None):
+        self._client = client or httpx.Client(timeout=15, headers={"User-Agent": self.USER_AGENT})
+        self._sleep = sleep or time.sleep
+        self._clock = clock or time.monotonic
+        self._last_geocode = float("-inf")
+        self._places: dict[tuple[str, str], tuple[float, float] | None] = {}
+        self._cache: dict[tuple[str, str, CommuteMode], RouteLookup] = {}
+
+    def _geocode(self, place: Place, destination: str) -> tuple[float, float] | None:
+        key = (place.property_id, normalize(destination))
+        if key in self._places:
+            return self._places[key]
+        wait = self.MIN_INTERVAL_S - (self._clock() - self._last_geocode)
+        if wait > 0:
+            self._sleep(wait)
+        lat, lon, d = float(place.latitude), float(place.longitude), self.SEARCH_BOX_DEG
+        resp = self._client.get(self.GEOCODE_URL, params={
+            "q": f"{destination}, {place.city}",
+            "format": "jsonv2",
+            "limit": 1,
+            # Only accept matches near the flat, so "Metro" can't resolve to another city.
+            "viewbox": f"{lon - d},{lat + d},{lon + d},{lat - d}",
+            "bounded": 1,
+        })
+        self._last_geocode = self._clock()
+        resp.raise_for_status()
+        hits = resp.json()
+        found = (float(hits[0]["lat"]), float(hits[0]["lon"])) if hits else None
+        self._places[key] = found
+        return found
+
+    def travel_minutes(self, place: Place, destination: str, mode: CommuteMode) -> RouteLookup:
+        if mode is CommuteMode.TRANSIT:
+            return RouteLookup(None, self.name, "OpenStreetMap has no public-transport times")
+        key = (place.property_id, normalize(destination), mode)
+        if key in self._cache:
+            return self._cache[key]
+        try:
+            target = self._geocode(place, destination)
+            if target is None:
+                return RouteLookup(None, self.name, f'no place called "{destination}" found near the flat')
+            coords = f"{float(place.longitude)},{float(place.latitude)};{target[1]},{target[0]}"
+            resp = self._client.get(f"{self.ROUTE_URL[mode]}/{coords}", params={"overview": "false"})
+        except httpx.HTTPError as e:
+            return RouteLookup(None, self.name, f"OpenStreetMap unreachable: {type(e).__name__}")
+        if resp.status_code != 200:
+            return RouteLookup(None, self.name, f"OpenStreetMap routing returned HTTP {resp.status_code}")
+        body = resp.json()
+        routes = body.get("routes") or []
+        if body.get("code") != "Ok" or not routes:
+            return RouteLookup(None, self.name, "no route found")
+        route = routes[0]
+        if route.get("distance", 0) > self.MAX_DISTANCE_M:
+            return RouteLookup(None, self.name, f"route is {route['distance'] / 1000:.0f} km, probably the wrong place")
+        minutes = round(route["duration"] / 60)
+        if mode is CommuteMode.WALKING:
+            result = RouteLookup(minutes, self.name, basis="on foot (walking isn't affected by traffic)")
+        else:
+            result = RouteLookup(minutes, self.name, basis="with empty roads (no live traffic)", lower_bound=True)
+        self._cache[key] = result
+        return result
+
+
 class DemoTableMaps:
     """Exact-match lookups in the demo route table (fixes the old substring bug in M3)."""
 
@@ -156,8 +247,11 @@ class FakeMaps:
 
 @lru_cache
 def get_maps() -> Maps:
-    """FastAPI dependency. Real routes if there's a key; the demo table only when DEMO_MODE is on."""
+    """FastAPI dependency. MAPS_PROVIDER=osm always uses OpenStreetMap. The default, "auto":
+    Google if there's a key, else the demo table when DEMO_MODE is on, else none."""
     settings = get_settings()
+    if settings.maps_provider == "osm":
+        return OsmMaps()
     if settings.google_maps_api_key:
         return GoogleRoutesMaps(settings.google_maps_api_key)
     if settings.demo_mode:
