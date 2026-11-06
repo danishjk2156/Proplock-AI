@@ -8,6 +8,22 @@ Features 2–4 (AI qualification, the ₹500 visit hold, invoicing) build on thi
 Built for the PayPal AI Hackathon. Background: [docs/PropLock_Solution_Overview.pdf](docs/PropLock_Solution_Overview.pdf).
 Step-by-step build notes: [docs/BUILD_LOG.md](docs/BUILD_LOG.md).
 
+## Screenshots
+
+| Broker home | Pre-check with suggested fixes | Audit result: needs fix |
+|---|---|---|
+| ![Broker home](docs/screenshots/broker-home.jpg) | ![Pre-check](docs/screenshots/broker-precheck.jpg) | ![Needs fix](docs/screenshots/broker-needs-fix.jpg) |
+
+| Live listing | Tenant: verified listing | Tenant: is this genuine? |
+|---|---|---|
+| ![Live listing](docs/screenshots/broker-live.jpg) | ![Tenant listing](docs/screenshots/tenant-listing.jpg) | ![Verify](docs/screenshots/tenant-verify.jpg) |
+
+**Agency manager (web, dark theme)**
+
+![Manager: flats and mandates](docs/screenshots/manager-flats.jpg)
+
+![Manager: review queue](docs/screenshots/manager-reviews.jpg)
+
 ## How an ad is judged
 
 ```text
