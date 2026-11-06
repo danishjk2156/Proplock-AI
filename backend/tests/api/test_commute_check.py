@@ -6,6 +6,7 @@ from app.adapters.llm import ExtractedClaims
 from app.adapters.maps import DemoTableMaps, get_maps
 from app.db.models import CommuteMode
 from app.db.seed import seed
+from tests.conftest import upload_photo
 
 AD = {
     "title": "2BHK in Indiranagar",
@@ -21,6 +22,7 @@ METRO_5_MIN = {"destination": "Indiranagar Metro", "minutes": 5, "mode": "walkin
 def rajesh(client, db_session):
     headers = {"X-API-Key": seed(db_session)["broker_rajesh"]}
     listing = client.post("/broker/listings", json={"property_id": "PROP-BLR-001"}, headers=headers).json()
+    upload_photo(client, headers, listing["id"])  # a valid check-in photo, so Check A passes
     return headers, listing["id"]
 
 

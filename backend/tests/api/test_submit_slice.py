@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from app.db.models import Audit, Listing, ListingVersion, Mandate, MandateStatus
 from app.db.seed import seed
 from app.services import audit_service
+from tests.conftest import BLR_PIN, CHN_PIN, upload_photo
 
 BLR = "PROP-BLR-001"  # seeded: owner agreed 32k-35k, deposit <= 70k, unfurnished, 1 month brokerage
 CHN = "PROP-CHN-002"  # seeded: only QuickCash has a mandate
@@ -30,7 +31,11 @@ def keys(db_session):
 
 
 def _open(client, headers, property_id=BLR):
-    return client.post("/broker/listings", json={"property_id": property_id}, headers=headers)
+    """Open a listing and, when that works, add a valid check-in photo taken at the flat."""
+    response = client.post("/broker/listings", json={"property_id": property_id}, headers=headers)
+    if response.status_code == 201:
+        upload_photo(client, headers, response.json()["id"], pin=BLR_PIN if property_id == BLR else CHN_PIN)
+    return response
 
 
 def _submit(client, headers, listing_id, body):
@@ -55,7 +60,7 @@ def test_honest_listing_is_verified_and_read_back_exactly(client, keys):
     body = submitted.json()
     assert body["listing_status"] == "VERIFIED"
     assert body["report"]["decision"] == "VERIFIED"
-    assert sorted(c["check"] for c in body["report"]["checks"]) == ["claims", "commute", "compliance", "ground_truth"]
+    assert sorted(c["check"] for c in body["report"]["checks"]) == ["claims", "commute", "compliance", "ground_truth", "photos"]
     stored = client.get(f"/audits/{body['audit_id']}", headers=keys["broker_rajesh"]).json()
     assert stored["status"] == "VERIFIED"
     assert stored["report"] == body["report"]

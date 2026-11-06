@@ -1,10 +1,15 @@
+import io
+import random
+
 import pytest
+from PIL import Image
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.adapters.llm import FakeLLM, get_llm
+from app.adapters.llm import FakeLLM, FakeVision, get_llm, get_vision
 from app.adapters.maps import FakeMaps, get_maps
 from app.auth import generate_key, hash_key
+from app.config import get_upload_dir
 from app.db import models  # noqa: F401  (registers tables)
 from app.db.base import Base, get_session, make_engine
 from app.db.models import Role, User
@@ -34,13 +39,57 @@ def fake_maps() -> FakeMaps:
 
 
 @pytest.fixture
-def client(db_session, fake_llm, fake_maps) -> TestClient:
-    """The real app, but every request uses this test's database and never calls Groq or Google."""
+def fake_vision() -> FakeVision:
+    """No inspection set: extra photos are UNVERIFIABLE unless a test sets fake_vision.inspection."""
+    return FakeVision()
+
+
+@pytest.fixture
+def client(db_session, fake_llm, fake_maps, fake_vision, tmp_path) -> TestClient:
+    """The real app, but with this test's database and upload folder, and no Groq or Google calls."""
     app = create_app()
     app.dependency_overrides[get_session] = lambda: db_session
     app.dependency_overrides[get_llm] = lambda: fake_llm
     app.dependency_overrides[get_maps] = lambda: fake_maps
+    app.dependency_overrides[get_vision] = lambda: fake_vision
+    app.dependency_overrides[get_upload_dir] = lambda: tmp_path / "uploads"
     return TestClient(app)
+
+
+# Seeded flats' verified pins.
+BLR_PIN = ("12.9718910", "77.6411510")
+CHN_PIN = ("12.9431870", "80.2374820")
+
+
+def _dms(value: float):
+    value = abs(value)
+    d = int(value)
+    m = int((value - d) * 60)
+    return (d, m, round(((value - d) * 60 - m) * 60, 4))
+
+
+def photo_bytes(seed: int, fmt: str = "JPEG", gps: tuple[float, float] | None = None, taken: str | None = None) -> bytes:
+    """A noise image: each seed gives a different perceptual hash. Optional EXIF GPS and time."""
+    rng = random.Random(seed)
+    img = Image.frombytes("L", (32, 32), bytes(rng.randrange(256) for _ in range(32 * 32)))
+    img = img.resize((320, 320)).convert("RGB")
+    exif = Image.Exif()
+    if gps:
+        gps_ifd = exif.get_ifd(0x8825)
+        gps_ifd.update({1: "N" if gps[0] >= 0 else "S", 2: _dms(gps[0]), 3: "E" if gps[1] >= 0 else "W", 4: _dms(gps[1])})
+    if taken:
+        exif.get_ifd(0x8769)[36867] = taken
+    buf = io.BytesIO()
+    img.save(buf, format=fmt, exif=exif.tobytes()) if (gps or taken) else img.save(buf, format=fmt)
+    return buf.getvalue()
+
+
+def upload_photo(client, headers, listing_id, seed=1, kind="CHECKIN", pin=BLR_PIN, **photo_kwargs):
+    data = {"kind": kind}
+    if pin:
+        data.update(latitude=pin[0], longitude=pin[1])
+    files = [("files", (f"p{seed}.jpg", photo_bytes(seed, **photo_kwargs), "image/jpeg"))]
+    return client.post(f"/broker/listings/{listing_id}/photos", data=data, files=files, headers=headers)
 
 
 @pytest.fixture

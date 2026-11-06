@@ -1,20 +1,23 @@
 """Graph state and nodes. A node reads the state and returns only the keys it changes."""
 
 import operator
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from datetime import UTC, datetime
 from typing import Annotated, TypedDict
 
 from langchain_core.runnables import RunnableConfig
 
-from app.adapters.llm import LLM, ExtractionUnavailable
+from app.adapters.llm import LLM, ExtractionUnavailable, Vision, VisionUnavailable
 from app.adapters.maps import Maps, Place
-from app.db.models import Furnishing
+from app.db.models import Furnishing, PhotoKind
 from app.domain.check_result import Check, CheckResult, Verdict
 from app.domain.claims import ClaimedCommute, CommuteClaimIn, merge_commute_claims
 from app.domain.commute_rules import check_commute
 from app.domain.compliance_rules import check_compliance, default_rules
 from app.domain.decision import Decision
-from app.domain.ground_truth import ListingTerms, OwnerTerms, check_ground_truth
+from app.domain.ground_truth import FURNISHING_RANK, ListingTerms, OwnerTerms, check_ground_truth
+from app.domain.photo_rules import PhotoFacts, PhotoInput, check_photos
 
 
 class AuditState(TypedDict):
@@ -23,6 +26,8 @@ class AuditState(TypedDict):
     listing: ListingTerms
     owner: OwnerTerms
     place: Place
+    photos: list[PhotoInput]
+    baselines: list[str]  # file paths of the owner's photos
     form_commute: list[CommuteClaimIn]
     # Set by extract_claims:
     commute: list[ClaimedCommute]
@@ -71,6 +76,28 @@ def commute(state: AuditState, config: RunnableConfig) -> dict:
     if maps.name == "demo-table" and claims:
         result = result.model_copy(update={"summary": f"{result.summary} DEMO route table, not live traffic data."})
     return {"results": [result]}
+
+
+def photos(state: AuditState, config: RunnableConfig) -> dict:
+    """Check A: one vision call per extra photo (in parallel), then judge every photo."""
+    vision: Vision = config["configurable"]["vision"]
+    extras = [p for p in state["photos"] if p.kind is PhotoKind.EXTRA]
+
+    def inspect(photo: PhotoInput):
+        try:
+            return vision.inspect_photo(photo.path, state["baselines"]), ""
+        except VisionUnavailable as e:
+            return None, str(e)
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        inspected = dict(zip([p.photo_id for p in extras], pool.map(inspect, extras), strict=True))
+    facts = [
+        PhotoFacts(p.photo_id, p.kind, p.distance_m, p.captured_at, p.duplicate_of, *inspected.get(p.photo_id, (None, "")))
+        for p in state["photos"]
+    ]
+    listing = state["listing"]
+    claimed = max(filter(None, [listing.furnishing, state["text_furnishing"]]), key=FURNISHING_RANK.__getitem__)
+    return {"results": [check_photos(facts, claimed, datetime.now(UTC), source=f"phash+gps+{vision.name}")]}
 
 
 def compliance(state: AuditState) -> dict:

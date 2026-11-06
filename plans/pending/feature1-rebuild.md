@@ -232,7 +232,7 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 - ~~Phase 0: which Groq models to use~~ **Resolved 2026-10-28:** text `openai/gpt-oss-120b`, vision `qwen/qwen3.8-27b`; two images per request works. Original question: the spike must confirm (a) a text model that returns valid JSON for claim extraction, and (b) a vision model that accepts **two images in one request**. If (b) fails, Step 6.2 compares photos one at a time against a text description of the baseline, or returns UNVERIFIABLE → IN_REVIEW.
 
 - Phase 0: keys available = **Groq only** (changed from Gemini on 2026-10-28). Maps runs on the demo route table (`commute_matrix.yaml`, unknown routes → UNVERIFIABLE). PayPal runs on the Fake adapter until a sandbox app exists; the real adapter is still built and unit-tested against recorded responses.
-- Phase 6: exact GPS source for the check-in photo when there is no frontend (proposal: lat/lng sent in the upload request, EXIF as backup). Fog until a UI exists.
+- ~~Phase 6: exact GPS source for the check-in photo~~ **Resolved 2026-11-04:** lat/lng sent with the upload (`gps_source: device`), EXIF as backup. Spoofable by an API client until the frontend has its own capture page.
 - Phase 8: hosting (Render) and the background worker process model — fog, decided when we deploy.
 - Features 2–4 integration points (escrow, invoice) — fog, out of this plan.
 
@@ -253,6 +253,6 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 | 3 Claim extraction | **done** — Groq extractor (JSON mode + Pydantic, one retry), merged form/text claims, text furnishing → Check D, commute placeholder; 78 tests |
 | 4 Check B | **done** — tolerance rule, rush-hour departure, Google Routes adapter (mock-tested, no key yet), exact-match demo table behind DEMO_MODE; 121 tests |
 | 5 Check C | **done** — versioned deposit_caps.yaml (TN law s.11(1) unverified; Karnataka platform policy 3 advisory / 6 hard), unknown state → UNVERIFIABLE; 136 tests |
-| 6 Check A | not started |
+| 6 Check A | **done** — photo upload (device GPS, EXIF backup), check-in ≤100 m / ≤30 days, pHash reuse across flats, Groq vision same-flat/watermark/furniture with confidence threshold; 196 tests |
 | 7 Seal and mint | not started |
 | 8 Broker workflow + demo | not started |

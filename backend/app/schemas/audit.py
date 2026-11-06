@@ -4,10 +4,18 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.db.models import AuditStatus, Furnishing
+from app.db.models import AuditStatus, Furnishing, PhotoKind
 from app.domain.check_result import CheckResult
 from app.domain.claims import ClaimedCommute
 from app.domain.decision import Decision
+
+
+class PhotoRecord(BaseModel):
+    """Which photo was judged, and its fingerprint, so a later swap is detectable."""
+
+    id: str
+    kind: PhotoKind
+    phash: str
 
 
 class AuditReport(BaseModel):
@@ -20,6 +28,7 @@ class AuditReport(BaseModel):
     # The claims that were judged: form + extracted from the text (defaults keep ruleset-1 reports readable).
     commute_claims: list[ClaimedCommute] = []
     text_furnishing: Furnishing | None = None
+    photos: list[PhotoRecord] = []
 
 
 class AuditOut(BaseModel):

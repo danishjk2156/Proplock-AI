@@ -6,10 +6,13 @@ from sqlalchemy import select
 
 from app.db.models import Mandate
 from app.db.seed import seed
+from tests.conftest import BLR_PIN, CHN_PIN, upload_photo
 
 
 def _open(client, headers, property_id):
-    return client.post("/broker/listings", json={"property_id": property_id}, headers=headers).json()["id"]
+    listing_id = client.post("/broker/listings", json={"property_id": property_id}, headers=headers).json()["id"]
+    upload_photo(client, headers, listing_id, pin=BLR_PIN if property_id == "PROP-BLR-001" else CHN_PIN)
+    return listing_id
 
 
 def _submit(client, headers, listing_id, **terms):

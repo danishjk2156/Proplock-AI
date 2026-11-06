@@ -74,3 +74,13 @@ class MandateOut(BaseModel):
     valid_until: datetime
     status: MandateStatus
     created_at: datetime
+
+
+class BaselinePhotoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    property_id: str
+    phash: str
+    room_type: str
+    captured_at: datetime

@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.adapters.llm import ExtractedClaims, ExtractionUnavailable
 from app.db.models import ClaimSource, CommuteClaim
 from app.db.seed import seed
+from tests.conftest import upload_photo
 
 AD = {
     "title": "2 MIN WALK TO INDIRANAGAR METRO!!",
@@ -20,6 +21,7 @@ AD = {
 def rajesh(client, db_session):
     headers = {"X-API-Key": seed(db_session)["broker_rajesh"]}
     listing = client.post("/broker/listings", json={"property_id": "PROP-BLR-001"}, headers=headers).json()
+    upload_photo(client, headers, listing["id"])  # a valid check-in photo, so Check A passes
     return headers, listing["id"]
 
 

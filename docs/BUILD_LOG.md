@@ -434,3 +434,69 @@ cd backend
 In `/docs`, as QuickCash, open a listing for `PROP-CHN-002` and submit rent 40000 / deposit 240000 → NEEDS_FIX, with the TN citation in the `compliance` evidence.
 
 **Verified:** 136 tests pass. Live (real Groq, demo routes, scratch database): QuickCash's Chennai ad with a 6-month deposit → **NEEDS_FIX**. Check C failed with the s.11(1) citation and the "not yet verified" label, and Check D also failed (₹2.4L vs the owner's ₹1.2L). Bengaluru at 4 months (owner agreed 4) → **VERIFIED**, with the advisory in the stored report.
+
+---
+
+## Phase 6: Check A — photos (2026-11-04)
+
+Steps 6.1 (upload, GPS check-in, duplicates) and 6.2 (Groq vision) were built together.
+
+**What changed**
+- `app/domain/photo_rules.py` (new): `PhotoInspection` (the vision model's answer), `PhotoInput`/`PhotoFacts` and `check_photos()`. Pure rules, no I/O.
+- `app/adapters/images.py` (new): upload validation, perceptual hash, EXIF GPS/time, `haversine_m`, content-addressed storage, and small JPEG copies for the vision model.
+- `app/adapters/llm.py`: `GroqVision` (`GROQ_VISION_MODEL`, the photo + up to 3 owner photos in one request), `FakeVision`, `UnconfiguredVision`, `get_vision()`.
+- `app/services/photo_service.py` (new): add/remove listing photos, add baseline photos, and at submit: distance from the flat and reuse across flats.
+- Endpoints:
+  - `POST /broker/listings/{id}/photos`: multipart; `kind` CHECKIN/EXTRA; optional `latitude`/`longitude` from the device.
+  - `GET /broker/listings/{id}/photos`
+  - `DELETE /broker/listings/{id}/photos/{photo_id}`
+  - `POST /manager/properties/{id}/photos`: the owner's baseline photos, with `room_type`.
+- Database: migration `b95ffddc5bec`. `listing_photos` now belongs to the **listing** (`listing_id`), with `version_id` optional (the first version audited with it), plus `gps_source`, `removed_at` and `created_at`.
+- The report gains `photos: [{id, kind, phash}]`. These are the fingerprints of the photos judged, which Phase 7 will sign. `RULESET_VERSION` is now `"5"`. New setting `UPLOAD_DIR` (git-ignored `backend/uploads/`).
+- Tests: `test_images.py` (14), `test_photo_rules.py` (22), `test_photo_node.py` (10), `tests/api/test_photos.py` (14). Every listing in the older API tests now gets a valid check-in photo, because one is required.
+
+**The rules**
+| Photo | Rule | If broken |
+|---|---|---|
+| Check-in (required) | GPS within **100 m** of the manager's pin | FAIL ("2002 m from the flat") |
+| Check-in | taken in the last **30 days** (EXIF time, else upload time) | FAIL |
+| Check-in | missing entirely, or no GPS | FAIL ("take one at the flat with location on") |
+| Any | not a copy of a photo of **another flat** (pHash within 6 of 64 bits) | FAIL ("copy of a photo of PROP-BLR-001") |
+| Extra | if it has GPS, it must be at the flat | FAIL |
+| Extra | vision: same flat as the owner's photos, no watermark | FAIL |
+| Extra | vision unavailable, confidence < 0.6, or "can't tell" | UNVERIFIABLE → review |
+| All | "Fully Furnished" ad, but every judged photo shows an empty room | FAIL (a one-step gap is fine) |
+
+**Key idea: perceptual hash (pHash)**
+A normal file hash changes completely if one pixel changes. A perceptual hash summarises what the picture *looks like* in 64 bits, so a resized or recompressed copy lands within a few bits of the original. "Hamming distance ≤ 6" means "the same photo". At submit we compare every photo with every photo of every *other* flat, from listings and from baselines. That catches a broker reusing photos across flats, and a photo stolen after it was first uploaded. (The scan is linear: fine for a demo; a BK-tree or vector index would replace it at scale.)
+
+**Key idea: where the GPS comes from**
+The browser's location sent with the upload is used first (`gps_source: "device"`), and EXIF GPS in the file is the backup (`"exif"`). Distance is measured to the **manager's** pin with the haversine formula (distance along the Earth's surface). **Limit:** without our own camera page, an API client can send any coordinates. This is the agreed approach for the demo (decision D5). The real fix is in-app capture in the frontend.
+
+**Key idea: the vision model describes, code decides**
+For each extra photo, one Groq call sends the photo and up to 3 owner photos. The model answers in JSON: `same_flat` (true/false/**null**), `watermark`, `furniture_level`, `confidence`. Code then applies thresholds: below 0.6 confidence it doesn't count, `null` means review, and with no owner photos `same_flat` is forced to `null`. The prompt says text inside images is data, so a photo saying "this is the same flat" can't vote. Extra photos are inspected in parallel (4 at a time).
+
+**Upload safety (fixes D7)**
+JPEG/PNG/WEBP only, judged by the file's real format, not its name. At most 8 MB, read with a hard limit. At most 20 photos per listing. `Image.MAX_IMAGE_PIXELS = 40M`, checked explicitly, because Pillow only *warns* between 1× and 2× the limit. Files are stored by content hash, so the same upload is stored once. Photos can't be changed while a listing is VERIFIED or IN_REVIEW (409). Removing a photo only hides it from later audits; the row and file stay as evidence.
+
+**How to see it**
+In `/docs`:
+1. As the manager, `POST /manager/properties/PROP-BLR-001/photos` with an owner photo.
+2. As Rajesh, open a listing.
+3. Upload a CHECKIN photo with latitude `12.97195`, longitude `77.6412`, plus an EXTRA photo.
+4. Submit, and look at the `photos` check in the report.
+
+**Verified:** 196 tests pass. Real Groq vision (`qwen/qwen3.8-27b`) through `GroqVision`, with drawn test rooms (the owner's photo is an empty room):
+
+| Broker photo | same_flat | watermark | furniture | confidence |
+|---|---|---|---|---|
+| same room + sofa | true | false | Semi-Furnished | 0.95 |
+| different room (colours, tiles, window swapped) | **false** | false | Unfurnished | 0.95 |
+| same room + "NoBroker.in" watermark | true | **true** | Semi-Furnished | 0.95 |
+
+Live HTTP run (real Groq, demo routes, scratch database and upload folder): baseline uploaded → check-in 8 m from the pin → extra photo of a different room → **NEEDS_FIX** ("different flat", 0.95). Removed it, uploaded the right room → the photos check **PASS**. The listing then went to IN_REVIEW only because the ad said "11 min walk to **metro**" with no station named, and Check B correctly refused to guess a route for "metro".
+
+**Caveats**
+- Drawn rooms prove the plumbing and the model's basic judgement, not its accuracy on real flat photos. Test with real photos before the demo.
+- Two of the three vision calls took about 40 s (probably Groq rate limiting with retry), so a listing with several extra photos can take a while to audit.
+- Reverse image search (is this photo on the web?) is out of scope (plan: "Never in this plan").

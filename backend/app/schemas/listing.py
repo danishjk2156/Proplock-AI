@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.db.models import Furnishing, ListingStatus
+from app.db.models import Furnishing, ListingStatus, PhotoKind
 from app.domain.claims import CommuteClaimIn
 from app.schemas.audit import AuditReport
 
@@ -40,3 +40,15 @@ class SubmitOut(BaseModel):
     audit_id: str
     listing_status: ListingStatus
     report: AuditReport
+
+
+class PhotoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    kind: PhotoKind
+    phash: str
+    latitude: Decimal | None
+    longitude: Decimal | None
+    gps_source: str | None
+    captured_at: datetime | None

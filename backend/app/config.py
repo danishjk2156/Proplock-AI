@@ -1,6 +1,7 @@
 """Application settings, read from environment variables or backend/.env."""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,6 +13,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./proplock.db"
     audit_secret: str = "dev-only-change-me"
     demo_mode: bool = False
+    upload_dir: str = "uploads"  # photos are stored here, named by content hash
 
     # An empty model name means "not configured": the adapter reports UNVERIFIABLE instead of guessing.
     groq_api_key: str | None = None
@@ -28,3 +30,8 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def get_upload_dir() -> Path:
+    """FastAPI dependency, so tests can store photos in a temporary folder."""
+    return Path(get_settings().upload_dir)

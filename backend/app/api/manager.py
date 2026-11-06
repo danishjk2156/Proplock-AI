@@ -1,13 +1,19 @@
 """Manager endpoints: register flats (owner ground truth) and give brokers mandates to list them."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.adapters import images
 from app.auth import require_role
+from app.config import get_upload_dir
 from app.db.base import get_session
 from app.db.models import Mandate, MandateStatus, Property, Role, User
-from app.schemas.manager import BrokerOut, MandateIn, MandateOut, PropertyIn, PropertyOut
+from app.schemas.manager import BaselinePhotoOut, BrokerOut, MandateIn, MandateOut, PropertyIn, PropertyOut
+from app.services import photo_service
+from app.services.photo_service import PhotoRejected, Upload
 
 router = APIRouter(prefix="/manager", tags=["manager"])
 manager_only = require_role(Role.MANAGER)
@@ -88,3 +94,25 @@ def revoke_mandate(
     mandate.status = MandateStatus.REVOKED
     session.commit()
     return mandate
+
+
+@router.post(
+    "/properties/{property_id}/photos", response_model=list[BaselinePhotoOut], status_code=status.HTTP_201_CREATED
+)
+def upload_baseline_photos(
+    property_id: str,
+    files: list[UploadFile] = File(..., description="The owner's own photos of the flat (JPEG, PNG or WEBP)"),
+    room_type: str = Form("general", max_length=50),
+    _: User = Depends(manager_only),
+    session: Session = Depends(get_session),
+    upload_dir: Path = Depends(get_upload_dir),
+):
+    """Baseline photos: what the flat really looks like. Extra broker photos are compared with these."""
+    prop = session.get(Property, property_id)
+    if prop is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Property {property_id} not found")
+    uploads = [Upload(f.filename or "upload", f.file.read(images.MAX_BYTES + 1)) for f in files]
+    try:
+        return photo_service.add_baseline_photos(session, prop, uploads, room_type, upload_dir)
+    except PhotoRejected as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e

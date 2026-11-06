@@ -11,13 +11,14 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.adapters.llm import LLM
+from app.adapters.llm import LLM, Vision
 from app.adapters.maps import Maps, Place
 from app.agents.graph import run_checks
 from app.db.models import (
     Audit,
     AuditStatus,
     CommuteClaim,
+    ListingPhoto,
     Listing,
     ListingStatus,
     ListingVersion,
@@ -28,11 +29,12 @@ from app.db.models import (
 )
 from app.domain.decision import Decision
 from app.domain.ground_truth import ListingTerms, OwnerTerms
-from app.schemas.audit import AuditReport
+from app.schemas.audit import AuditReport, PhotoRecord
 from app.schemas.listing import ListingSubmit
+from app.services import photo_service
 
 # Bump whenever any check's rules change, so every stored report says which rules judged it.
-RULESET_VERSION = "4"  # 2: claims from ad text; 3: Check B commute; 4: Check C deposit rules
+RULESET_VERSION = "5"  # 2: claims from ad text; 3: Check B commute; 4: Check C deposits; 5: Check A photos
 
 SUBMITTABLE = {ListingStatus.DRAFT, ListingStatus.NEEDS_FIX}
 STATUS_FOR = {
@@ -76,7 +78,7 @@ def open_listing(session: Session, broker: User, property_id: str) -> Listing:
 
 
 def submit_listing(
-    session: Session, listing: Listing, content: ListingSubmit, llm: LLM, maps: Maps
+    session: Session, listing: Listing, content: ListingSubmit, llm: LLM, maps: Maps, vision: Vision
 ) -> tuple[Audit, AuditReport]:
     mandate = session.get(Mandate, listing.mandate_id)
     if not _is_usable(mandate):
@@ -100,15 +102,19 @@ def submit_listing(
         furnishing=content.furnishing,
     )
     # Checks run before any write, so the transaction stays short once they call real APIs.
+    photos = photo_service.photo_inputs(session, listing, prop)
     run = run_checks(
         title=content.title,
         description=content.description,
         listing=terms,
         owner=owner,
         place=Place(prop.id, prop.latitude, prop.longitude, prop.city, prop.state),
+        photos=photos,
+        baselines=photo_service.baseline_paths(session, prop),
         form_commute=content.commute_claims,
         llm=llm,
         maps=maps,
+        vision=vision,
     )
 
     try:
@@ -123,6 +129,8 @@ def submit_listing(
         session.add(version)
         session.flush()  # gives the version its id without committing yet
         session.add_all(CommuteClaim(version_id=version.id, **c.model_dump()) for c in run.commute)
+        for photo in session.scalars(select(ListingPhoto).where(ListingPhoto.id.in_([p.photo_id for p in photos]))):
+            photo.version_id = photo.version_id or version.id  # first version audited with it
 
         report = AuditReport(
             listing_id=listing.id,
@@ -133,6 +141,7 @@ def submit_listing(
             checks=run.results,
             commute_claims=run.commute,
             text_furnishing=run.text_furnishing,
+            photos=[PhotoRecord(id=p.photo_id, kind=p.kind, phash=p.phash) for p in photos],
         )
         audit_status, listing.status = STATUS_FOR[run.decision]
         audit = Audit(

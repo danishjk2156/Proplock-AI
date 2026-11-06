@@ -1,6 +1,7 @@
 """The Groq adapter (against a fake client), claim merging, and the extract node inside the graph."""
 
 import json
+from datetime import UTC, datetime
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -9,6 +10,7 @@ import httpx
 import pytest
 
 from app.adapters.llm import (
+    FakeVision,
     ExtractedClaims,
     ExtractionUnavailable,
     FakeLLM,
@@ -17,11 +19,12 @@ from app.adapters.llm import (
 )
 from app.adapters.maps import FakeMaps, Place
 from app.agents.graph import run_checks
-from app.db.models import ClaimSource, CommuteMode, Furnishing
+from app.db.models import ClaimSource, CommuteMode, Furnishing, PhotoKind
 from app.domain.check_result import Check, Verdict
 from app.domain.claims import CommuteClaimIn, merge_commute_claims
 from app.domain.decision import Decision
 from app.domain.ground_truth import ListingTerms, OwnerTerms
+from app.domain.photo_rules import PhotoInput
 
 METRO = {"destination": "Indiranagar Metro", "minutes": 2, "mode": "walking"}
 
@@ -140,6 +143,17 @@ HONEST = ListingTerms(
 )
 
 
+CHECKIN_AT_THE_FLAT = PhotoInput(
+    photo_id="p1",
+    kind=PhotoKind.CHECKIN,
+    path="checkin.jpg",
+    phash="0" * 16,
+    distance_m=12.0,
+    captured_at=datetime.now(UTC),
+    duplicate_of=None,
+)
+
+
 def _run(llm, form_commute=()):
     return run_checks(
         title="2BHK Indiranagar",
@@ -147,9 +161,12 @@ def _run(llm, form_commute=()):
         listing=HONEST,
         owner=OWNER,
         place=Place("PROP-BLR-001", Decimal("12.97"), Decimal("77.64"), "Bengaluru", "Karnataka"),
+        photos=[CHECKIN_AT_THE_FLAT],
+        baselines=[],
         form_commute=list(form_commute),
         llm=llm,
         maps=FakeMaps(),  # knows no routes, so any commute claim is UNVERIFIABLE
+        vision=FakeVision(),
     )
 
 

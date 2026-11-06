@@ -14,3 +14,6 @@ __pycache__/
 
 # Demo API keys written by the seed script
 backend/demo_keys.json
+
+# Uploaded photos
+backend/uploads/

@@ -10,7 +10,7 @@ from typing import NamedTuple
 
 from langgraph.graph import END, START, StateGraph
 
-from app.adapters.llm import LLM
+from app.adapters.llm import LLM, Vision
 from app.adapters.maps import Maps, Place
 from app.agents import nodes
 from app.agents.nodes import AuditState
@@ -19,8 +19,10 @@ from app.domain.check_result import Check, CheckResult
 from app.domain.claims import ClaimedCommute, CommuteClaimIn
 from app.domain.decision import Decision, decide
 from app.domain.ground_truth import ListingTerms, OwnerTerms
+from app.domain.photo_rules import PhotoInput
 
 CHECK_NODES: dict[Check, Callable[[AuditState], dict]] = {
+    Check.PHOTOS: nodes.photos,
     Check.COMMUTE: nodes.commute,
     Check.COMPLIANCE: nodes.compliance,
     Check.GROUND_TRUTH: nodes.ground_truth,
@@ -62,9 +64,12 @@ def run_checks(
     listing: ListingTerms,
     owner: OwnerTerms,
     place: Place,
+    photos: list[PhotoInput],
+    baselines: list[str],
     form_commute: list[CommuteClaimIn],
     llm: LLM,
     maps: Maps,
+    vision: Vision,
 ) -> AuditRun:
     final = audit_graph().invoke(
         {
@@ -73,10 +78,12 @@ def run_checks(
             "listing": listing,
             "owner": owner,
             "place": place,
+            "photos": photos,
+            "baselines": baselines,
             "form_commute": form_commute,
             "results": [],
         },
         # Services go in the run config, not the state: the state is data, these are tools.
-        config={"configurable": {"llm": llm, "maps": maps}},
+        config={"configurable": {"llm": llm, "maps": maps, "vision": vision}},
     )
     return AuditRun(final["results"], final["decision"], final["commute"], final["text_furnishing"])

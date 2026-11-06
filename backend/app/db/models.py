@@ -197,19 +197,27 @@ class ListingVersion(Base):
 
 
 class ListingPhoto(Base):
+    """A broker's photo. It belongs to the listing; every submit audits the listing's current
+    (not removed) photos. Removing a photo hides it from later audits but keeps it as evidence."""
+
     __tablename__ = "listing_photos"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    version_id: Mapped[str] = mapped_column(ForeignKey("listing_versions.id", ondelete="CASCADE"))
+    listing_id: Mapped[str] = mapped_column(ForeignKey("listings.id", ondelete="CASCADE"), index=True)
+    # The first version audited with this photo; empty until the listing is submitted.
+    version_id: Mapped[str | None] = mapped_column(ForeignKey("listing_versions.id", ondelete="CASCADE"))
     kind: Mapped[PhotoKind] = enum_column(PhotoKind)
     storage_path: Mapped[str] = mapped_column(Text)
     phash: Mapped[str] = mapped_column(String(16), index=True)
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
+    gps_source: Mapped[str | None] = mapped_column(String(10))  # "device" (sent with the upload) or "exif"
     captured_at: Mapped[datetime | None]
     sequence: Mapped[int] = mapped_column(default=0)
+    removed_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
-    version: Mapped[ListingVersion] = relationship(back_populates="photos")
+    version: Mapped[ListingVersion | None] = relationship(back_populates="photos")
 
 
 class CommuteClaim(Base):
