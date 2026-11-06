@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.llm import LLM, Vision
 from app.adapters.maps import Maps, Place
+from app.config import get_settings
 from app.agents.graph import run_checks
 from app.db.models import (
     Audit,
@@ -24,14 +25,16 @@ from app.db.models import (
     ListingVersion,
     Mandate,
     MandateStatus,
+    new_id,
     Property,
     User,
 )
 from app.domain.decision import Decision
 from app.domain.ground_truth import ListingTerms, OwnerTerms
-from app.schemas.audit import AuditReport, PhotoRecord
+from app.domain.signing import sign
+from app.schemas.audit import AuditReport, OwnerSnapshot, PhotoRecord, SubmittedTerms
 from app.schemas.listing import ListingSubmit
-from app.services import photo_service
+from app.services import outbox, photo_service
 
 # Bump whenever any check's rules change, so every stored report says which rules judged it.
 RULESET_VERSION = "5"  # 2: claims from ad text; 3: Check B commute; 4: Check C deposits; 5: Check A photos
@@ -40,8 +43,8 @@ SUBMITTABLE = {ListingStatus.DRAFT, ListingStatus.NEEDS_FIX}
 STATUS_FOR = {
     Decision.NEEDS_FIX: (AuditStatus.NEEDS_FIX, ListingStatus.NEEDS_FIX),
     Decision.IN_REVIEW: (AuditStatus.IN_REVIEW, ListingStatus.IN_REVIEW),
-    # Phase 7 changes this to PENDING_MINT: sign the audit, then mint the PayPal product.
-    Decision.VERIFIED: (AuditStatus.VERIFIED, ListingStatus.VERIFIED),
+    # Saved and signed first; the outbox then creates the PayPal product and makes it VERIFIED / LIVE.
+    Decision.VERIFIED: (AuditStatus.PENDING_MINT, ListingStatus.VERIFIED),
 }
 
 
@@ -142,15 +145,35 @@ def submit_listing(
             commute_claims=run.commute,
             text_furnishing=run.text_furnishing,
             photos=[PhotoRecord(id=p.photo_id, kind=p.kind, phash=p.phash) for p in photos],
+            terms=SubmittedTerms(**content.model_dump(exclude={"commute_claims"})),
+            owner=OwnerSnapshot(
+                mandate_id=owner.mandate_id,
+                min_rent=owner.min_rent,
+                max_rent=owner.max_rent,
+                max_deposit=owner.max_deposit,
+                max_brokerage_months=owner.max_brokerage_months,
+                furnishing=owner.furnishing,
+                latitude=prop.latitude,
+                longitude=prop.longitude,
+                city=prop.city,
+                state=prop.state,
+            ),
         )
         audit_status, listing.status = STATUS_FOR[run.decision]
+        audit_id = new_id()
+        report_json = report.model_dump_json()
         audit = Audit(
+            id=audit_id,
             version_id=version.id,
             status=audit_status,
-            report_json=report.model_dump_json(),
+            report_json=report_json,
             ruleset_version=RULESET_VERSION,
+            # Every audit is sealed, failed ones too: they are evidence in disputes.
+            signature=sign(audit_id, report_json, get_settings().audit_secret),
         )
         session.add(audit)
+        if audit_status is AuditStatus.PENDING_MINT:
+            outbox.enqueue_mint(session, audit)  # same commit as the audit: never one without the other
         session.commit()
     except Exception:
         session.rollback()  # undo the flushed version and the status change

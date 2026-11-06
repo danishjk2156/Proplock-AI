@@ -3,7 +3,11 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+DEV_AUDIT_SECRET = "dev-only-change-me"
 
 
 class Settings(BaseSettings):
@@ -11,7 +15,7 @@ class Settings(BaseSettings):
 
     app_env: str = "development"
     database_url: str = "sqlite:///./proplock.db"
-    audit_secret: str = "dev-only-change-me"
+    audit_secret: str = DEV_AUDIT_SECRET
     demo_mode: bool = False
     upload_dir: str = "uploads"  # photos are stored here, named by content hash
 
@@ -25,6 +29,13 @@ class Settings(BaseSettings):
     paypal_client_id: str | None = None
     paypal_client_secret: str | None = None
     paypal_api_base: str = "https://api-m.sandbox.paypal.com"
+
+    @model_validator(mode="after")
+    def _real_secret_outside_development(self) -> "Settings":
+        # Audit signatures are only as secret as this key; the default is public in the repo.
+        if self.app_env == "production" and self.audit_secret == DEV_AUDIT_SECRET:
+            raise ValueError("Set AUDIT_SECRET to a long random value before running in production")
+        return self
 
 
 @lru_cache

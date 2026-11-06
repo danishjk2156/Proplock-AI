@@ -26,5 +26,7 @@ def get_audit(
         id=audit.id,
         status=audit.status,
         created_at=audit.created_at,
+        signature=audit.signature,
+        paypal_product_id=audit.paypal_product_id,
         report=AuditReport.model_validate_json(audit.report_json),  # parsed from storage, never rebuilt
     )

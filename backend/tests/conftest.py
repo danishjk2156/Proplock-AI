@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters.llm import FakeLLM, FakeVision, get_llm, get_vision
 from app.adapters.maps import FakeMaps, get_maps
+from app.adapters.paypal import FakePayPal, get_paypal
 from app.auth import generate_key, hash_key
 from app.config import get_upload_dir
 from app.db import models  # noqa: F401  (registers tables)
@@ -45,13 +46,20 @@ def fake_vision() -> FakeVision:
 
 
 @pytest.fixture
-def client(db_session, fake_llm, fake_maps, fake_vision, tmp_path) -> TestClient:
-    """The real app, but with this test's database and upload folder, and no Groq or Google calls."""
+def fake_paypal() -> FakePayPal:
+    """An in-memory catalog that accepts every product unless a test sets fail_times."""
+    return FakePayPal()
+
+
+@pytest.fixture
+def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, tmp_path) -> TestClient:
+    """The real app, but with this test's database and upload folder, and no Groq, Google or PayPal calls."""
     app = create_app()
     app.dependency_overrides[get_session] = lambda: db_session
     app.dependency_overrides[get_llm] = lambda: fake_llm
     app.dependency_overrides[get_maps] = lambda: fake_maps
     app.dependency_overrides[get_vision] = lambda: fake_vision
+    app.dependency_overrides[get_paypal] = lambda: fake_paypal
     app.dependency_overrides[get_upload_dir] = lambda: tmp_path / "uploads"
     return TestClient(app)
 

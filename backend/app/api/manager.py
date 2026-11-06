@@ -7,12 +7,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.adapters import images
+from app.adapters.paypal import PayPal, get_paypal
 from app.auth import require_role
 from app.config import get_upload_dir
 from app.db.base import get_session
 from app.db.models import Mandate, MandateStatus, Property, Role, User
 from app.schemas.manager import BaselinePhotoOut, BrokerOut, MandateIn, MandateOut, PropertyIn, PropertyOut
-from app.services import photo_service
+from app.services import outbox, photo_service
 from app.services.photo_service import PhotoRejected, Upload
 
 router = APIRouter(prefix="/manager", tags=["manager"])
@@ -116,3 +117,13 @@ def upload_baseline_photos(
         return photo_service.add_baseline_photos(session, prop, uploads, room_type, upload_dir)
     except PhotoRejected as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
+
+
+@router.post("/outbox/run")
+def run_outbox(
+    _: User = Depends(manager_only),
+    session: Session = Depends(get_session),
+    paypal: PayPal = Depends(get_paypal),
+) -> dict[str, int]:
+    """Retry every due PayPal job now (the background worker does the same every 30 s)."""
+    return {"minted": outbox.run_due(session, paypal)}

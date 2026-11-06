@@ -1,5 +1,6 @@
 """Broker endpoints: open a listing for a flat they hold a mandate for, add photos, submit it for audit."""
 
+import logging
 from decimal import Decimal
 from pathlib import Path
 
@@ -10,15 +11,17 @@ from sqlalchemy.orm import Session
 from app.adapters import images
 from app.adapters.llm import LLM, Vision, get_llm, get_vision
 from app.adapters.maps import Maps, get_maps
+from app.adapters.paypal import PayPal, get_paypal
 from app.auth import require_role
 from app.config import get_upload_dir
 from app.db.base import get_session
-from app.db.models import Listing, ListingPhoto, PhotoKind, Role, User
+from app.db.models import Listing, ListingPhoto, OutboxJob, PhotoKind, Role, User
 from app.schemas.listing import ListingCreate, ListingOut, ListingSubmit, PhotoOut, SubmitOut
-from app.services import audit_service, photo_service
+from app.services import audit_service, outbox, photo_service
 from app.services.audit_service import ListingConflict, NoMandate
 from app.services.photo_service import PhotoRejected, Upload
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/broker", tags=["broker"])
 broker_only = require_role(Role.BROKER)
 
@@ -46,6 +49,7 @@ def submit_listing(
     llm: LLM = Depends(get_llm),
     maps: Maps = Depends(get_maps),
     vision: Vision = Depends(get_vision),
+    paypal: PayPal = Depends(get_paypal),
 ) -> SubmitOut:
     listing = session.get(Listing, listing_id)
     if listing is None or listing.broker_id != broker.id:  # someone else's listing looks the same as none
@@ -56,6 +60,16 @@ def submit_listing(
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(e)) from e
     except ListingConflict as e:
         raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
+    # The audit and its mint job are already saved. Try the job now so the listing usually goes
+    # LIVE straight away; if PayPal is down it stays queued and the worker retries it.
+    job = session.scalar(select(OutboxJob).where(OutboxJob.audit_id == audit.id))
+    if job is not None:
+        try:
+            outbox.run_job(session, job.id, paypal)
+        except Exception:
+            session.rollback()
+            logger.exception("Immediate mint failed for audit %s; the outbox worker will retry", audit.id)
+        session.refresh(listing)
     return SubmitOut(audit_id=audit.id, listing_status=listing.status, report=report)
 
 

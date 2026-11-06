@@ -500,3 +500,68 @@ Live HTTP run (real Groq, demo routes, scratch database and upload folder): base
 - Drawn rooms prove the plumbing and the model's basic judgement, not its accuracy on real flat photos. Test with real photos before the demo.
 - Two of the three vision calls took about 40 s (probably Groq rate limiting with retry), so a listing with several extra photos can take a while to audit.
 - Reverse image search (is this photo on the web?) is out of scope (plan: "Never in this plan").
+
+---
+
+## Phase 7: Seal and mint (2026-11-06)
+
+Steps 7.1 (signing + verify) and 7.2 (outbox + PayPal) were built together.
+
+**What changed**
+- `app/domain/signing.py` (new): `canonical_json`, `seal_payload`, `sign`, `is_valid` (HMAC-SHA256 with `AUDIT_SECRET`).
+- The report now also records `terms` (the ad exactly as submitted, money in paise precision) and `owner` (the mandate limits, the flat's furnishing, pin, city and state). With `photos` from Phase 6, it holds everything that was judged.
+- `app/services/audit_service.py`: **every** audit is signed when saved. A VERIFIED decision now saves the audit as `PENDING_MINT` (listing `VERIFIED`) **plus an outbox job, in the same commit**.
+- `app/adapters/paypal.py` (new):
+  - `PayPalCatalog`: OAuth2 client credentials with a cached token, `POST /v1/catalogs/products`, and `PayPal-Request-Id`.
+  - `DemoPayPal`: `FAKE-` ids, `DEMO_MODE` only.
+  - `UnconfiguredPayPal` and `FakePayPal`, plus `get_paypal()`.
+- `app/services/outbox.py` (new):
+  - `enqueue_mint`, `run_job` (claim → mint → LIVE), `run_due`.
+  - A worker loop: `python -m app.services.outbox`.
+- Endpoints:
+  - `GET /public/audits/{id}/verify` (no login).
+  - `POST /manager/outbox/run` (retry due jobs now).
+  - Submit now tries the mint right away.
+- `app/config.py`: refuses to start with `APP_ENV=production` and the default `AUDIT_SECRET`.
+- `scripts/spike_paypal.py`: a sandbox check. It exits 2 for now, because there are no PayPal keys.
+- Tests: `test_signing.py` (7), `test_paypal_adapter.py` (13), `test_outbox.py` (14), `tests/api/test_verify.py` (8). API tests get a `FakePayPal`. Honest listings in older tests now end **LIVE**.
+
+**The listing's path now**
+`submit → all checks PASS → audit PENDING_MINT + listing VERIFIED + mint job (one commit) → PayPal product created → audit VERIFIED + listing LIVE`.
+If PayPal fails, the listing stays VERIFIED (not LIVE). The job is retried after 1, 2, 4 … minutes (at most an hour), and after 8 failed attempts it is marked FAILED for a person to look at.
+
+**Key idea: hash vs HMAC (fixes M4)**
+A plain SHA-256 proves nothing against tampering: whoever edits the data can recompute it. An HMAC mixes in a secret key (`AUDIT_SECRET`), so only the server can produce a matching code. The old hash also covered the owner's photos instead of the broker's, and only the first commute claim. The new seal covers the whole report: terms and text, every claim, the broker's photo fingerprints, the owner snapshot, every check's verdict, evidence and source (model names, rules-file version), the ruleset version and the audit id.
+
+**Key idea: canonical JSON**
+`{"a":1,"b":2}` and `{ "b": 2, "a": 1 }` mean the same thing but are different bytes, so they'd get different signatures. Before signing, we always produce the same bytes: keys sorted, no spaces, UTF-8. A test proves that re-indenting the stored JSON doesn't break the seal, while changing one value does.
+
+**Key idea: `/verify` asks two questions**
+1. *Is the report genuine?* Re-sign the stored report and compare (`hmac.compare_digest`, which takes the same time however many characters match). If someone edits `report_json` → `signature_valid: false`.
+2. *Does the live data still agree?* Compare the signed report with today's rows: ad fields, each photo's fingerprint, mandate limits, the flat's furnishing and pin. If someone edits a row → `matches_current_data: false`, with a readable list such as `ad rent: signed 35000.00, now 30000.00`. Values are compared, not text, so `35000` and `35000.00` count as equal. The second question is only asked when the first passes; a forged report proves nothing.
+
+**Key idea: the dual-write problem and the outbox (fixes M5, M7)**
+Saving the audit and creating the PayPal product touch two systems. Whichever goes first, a crash in between leaves one without the other: the old code could create a PayPal product for an audit it then failed to save. Now the audit and a "mint" **job** are saved in one database commit, and PayPal is called afterwards:
+- **Idempotent:** the product id is ours and fixed (`PL-{version_id}`) and is also sent as `PayPal-Request-Id`. A retry gets the first result back instead of a second product. If PayPal reports an error but a product with our id exists (an earlier run crashed after creating it), that counts as done.
+- **One worker at a time:** a worker claims a job with a single `UPDATE … WHERE status = PENDING AND next_run_at <= now`, which pushes `next_run_at` 5 minutes ahead (a lease). Only one worker's update can match. A test runs the worker twice → PayPal is called once.
+- **Never a fake id:** failures are kept in `last_error` with PayPal's `debug_id`. Without keys the job just waits (`DEMO_MODE` uses visibly fake `FAKE-` ids instead).
+- PayPal's limits are enforced before sending: name ≤ 127 characters, description ≤ 256 (the old 283-character description was rejected). `category` is left out (the old `REAL_ESTATE` value was doubtful).
+
+**How to see it**
+```bash
+cd backend
+.venv/Scripts/alembic upgrade head            # if not done since Phase 6
+.venv/Scripts/python -m uvicorn app.main:app --reload
+.venv/Scripts/python -m app.services.outbox   # optional: retries in the background
+```
+Submit an honest listing with a check-in photo and look for `listing_status: LIVE`. Then open `GET /public/audits/{audit_id}/verify`.
+
+**Verified:** 238 tests pass. Live (real Groq, demo routes, `DEMO_MODE` PayPal, scratch database):
+| Step | Result |
+|---|---|
+| honest listing + check-in photo, submit | decision VERIFIED → listing **LIVE**, product `FAKE-PL-…` |
+| `/verify` untouched | `signature_valid: true`, `matches_current_data: true` |
+| rent row edited to 30000 in the database | `signature_valid: true`, `matches_current_data: false`, `ad rent: signed 35000.00, now 30000.00` |
+| stored report edited instead | `signature_valid: false` |
+
+**Not verified:** no real PayPal sandbox call has been made (no keys). `PayPalCatalog` is tested against a mock server that checks the exact login and create requests, the cached token, the existing-product path and the debug id. Once keys are in `backend/.env`, run `.venv/Scripts/python -m scripts.spike_paypal`.

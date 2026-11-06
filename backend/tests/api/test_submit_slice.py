@@ -58,7 +58,7 @@ def test_honest_listing_is_verified_and_read_back_exactly(client, keys):
 
     assert submitted.status_code == 200
     body = submitted.json()
-    assert body["listing_status"] == "VERIFIED"
+    assert body["listing_status"] == "LIVE"  # verified, then minted as a PayPal product
     assert body["report"]["decision"] == "VERIFIED"
     assert sorted(c["check"] for c in body["report"]["checks"]) == ["claims", "commute", "compliance", "ground_truth", "photos"]
     stored = client.get(f"/audits/{body['audit_id']}", headers=keys["broker_rajesh"]).json()
@@ -74,7 +74,7 @@ def test_inflated_listing_needs_fix_then_resubmit_is_verified(client, keys):
 
     assert first["listing_status"] == "NEEDS_FIX"
     assert _failed(first["report"]) == ["rent", "furnishing"]
-    assert second["listing_status"] == "VERIFIED"
+    assert second["listing_status"] == "LIVE"
     assert [first["report"]["version_no"], second["report"]["version_no"]] == [1, 2]
     # The failed version 1 audit is kept as evidence and still reads back unchanged.
     old = client.get(f"/audits/{first['audit_id']}", headers=keys["manager"]).json()
