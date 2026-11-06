@@ -1,6 +1,5 @@
 """Broker endpoints: open a listing for a flat they hold a mandate for, add photos, submit it for audit."""
 
-import logging
 from decimal import Decimal
 from pathlib import Path
 
@@ -15,15 +14,25 @@ from app.adapters.paypal import PayPal, get_paypal
 from app.auth import require_role
 from app.config import get_upload_dir
 from app.db.base import get_session
-from app.db.models import Listing, ListingPhoto, OutboxJob, PhotoKind, Role, User
-from app.schemas.listing import ListingCreate, ListingOut, ListingSubmit, PhotoOut, SubmitOut
-from app.services import audit_service, outbox, photo_service
+from app.db.models import Listing, ListingPhoto, PhotoKind, Role, User
+from app.schemas.listing import (
+    ListingCreate,
+    ListingOut,
+    ListingSubmit,
+    PhotoOut,
+    PrecheckIn,
+    PrecheckOut,
+    SubmitOut,
+)
+from app.services import audit_service, listing_service, outbox, photo_service
 from app.services.audit_service import ListingConflict, NoMandate
 from app.services.photo_service import PhotoRejected, Upload
+from app.services.rate_limit import RateLimiter
 
-logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/broker", tags=["broker"])
 broker_only = require_role(Role.BROKER)
+# Each pre-check costs an LLM call and route lookups, so brokers get 10 a minute.
+precheck_limit = RateLimiter(limit=10, per_seconds=60)
 
 
 @router.post("/listings", response_model=ListingOut, status_code=status.HTTP_201_CREATED)
@@ -62,14 +71,8 @@ def submit_listing(
         raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
     # The audit and its mint job are already saved. Try the job now so the listing usually goes
     # LIVE straight away; if PayPal is down it stays queued and the worker retries it.
-    job = session.scalar(select(OutboxJob).where(OutboxJob.audit_id == audit.id))
-    if job is not None:
-        try:
-            outbox.run_job(session, job.id, paypal)
-        except Exception:
-            session.rollback()
-            logger.exception("Immediate mint failed for audit %s; the outbox worker will retry", audit.id)
-        session.refresh(listing)
+    outbox.try_now(session, audit.id, paypal)
+    session.refresh(listing)
     return SubmitOut(audit_id=audit.id, listing_status=listing.status, report=report)
 
 
@@ -129,3 +132,45 @@ def remove_photo(
     if listing.status not in audit_service.SUBMITTABLE:
         raise HTTPException(status.HTTP_409_CONFLICT, f"Photos can't be changed while the listing is {listing.status}")
     photo_service.remove_listing_photo(session, photo)
+
+
+@router.post("/precheck", response_model=PrecheckOut)
+def precheck(
+    body: PrecheckIn,
+    broker: User = Depends(broker_only),
+    session: Session = Depends(get_session),
+    llm: LLM = Depends(get_llm),
+    maps: Maps = Depends(get_maps),
+) -> PrecheckOut:
+    """Try a draft before submitting: the same claim, commute, deposit and owner checks, with
+    suggested wording for anything that would fail. Nothing is saved, signed or minted."""
+    listing = _own_listing(session, broker, body.listing_id)
+    if not precheck_limit.allow(broker.id):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many pre-checks; try again in a minute")
+    try:
+        run = audit_service.precheck_listing(session, listing, body.ad, llm, maps)
+    except NoMandate as e:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(e)) from e
+    suggestions = [e.suggestion for r in run.results for e in r.evidence if e.suggestion]
+    return PrecheckOut(would_be=run.decision, checks=run.results, commute_claims=run.commute, suggestions=suggestions)
+
+
+def _listing_action(session: Session, broker: User, listing_id: str, action) -> Listing:
+    listing = _own_listing(session, broker, listing_id)
+    try:
+        return action(session, listing)
+    except NoMandate as e:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(e)) from e
+    except ListingConflict as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
+
+
+@router.post("/listings/{listing_id}/confirm-availability", response_model=ListingOut)
+def confirm_availability(listing_id: str, broker: User = Depends(broker_only), session: Session = Depends(get_session)):
+    """Still available: keeps the listing LIVE for 7 more days (or brings back an EXPIRED one)."""
+    return _listing_action(session, broker, listing_id, listing_service.confirm_availability)
+
+
+@router.post("/listings/{listing_id}/mark-rented", response_model=ListingOut)
+def mark_rented(listing_id: str, broker: User = Depends(broker_only), session: Session = Depends(get_session)):
+    return _listing_action(session, broker, listing_id, listing_service.mark_rented)

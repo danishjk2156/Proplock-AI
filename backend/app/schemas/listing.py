@@ -6,7 +6,9 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.db.models import Furnishing, ListingStatus, PhotoKind
-from app.domain.claims import CommuteClaimIn
+from app.domain.check_result import CheckResult
+from app.domain.claims import ClaimedCommute, CommuteClaimIn
+from app.domain.decision import Decision
 from app.schemas.audit import AuditReport
 
 
@@ -21,6 +23,7 @@ class ListingOut(BaseModel):
     property_id: str
     mandate_id: str
     status: ListingStatus
+    last_confirmed_at: datetime | None = None
     created_at: datetime
 
 
@@ -52,3 +55,18 @@ class PhotoOut(BaseModel):
     longitude: Decimal | None
     gps_source: str | None
     captured_at: datetime | None
+
+
+class PrecheckIn(BaseModel):
+    listing_id: str
+    ad: ListingSubmit
+
+
+class PrecheckOut(BaseModel):
+    """What would happen if this draft were submitted now. Nothing was saved."""
+
+    would_be: Decision
+    checks: list[CheckResult]
+    commute_claims: list[ClaimedCommute]
+    suggestions: list[str]
+    note: str = "Photos are checked only on submit. Nothing was saved."

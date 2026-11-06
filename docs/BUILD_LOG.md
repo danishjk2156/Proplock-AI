@@ -565,3 +565,79 @@ Submit an honest listing with a check-in photo and look for `listing_status: LIV
 | stored report edited instead | `signature_valid: false` |
 
 **Not verified:** no real PayPal sandbox call has been made (no keys). `PayPalCatalog` is tested against a mock server that checks the exact login and create requests, the cached token, the existing-product path and the debug id. Once keys are in `backend/.env`, run `.venv/Scripts/python -m scripts.spike_paypal`.
+
+---
+
+## Phase 8: Broker workflow and demo (2026-11-06)
+
+Steps 8.1–8.4 were built together. Feature 1's backend is now complete.
+
+**What changed**
+- **Suggested fixes (feeds 8.2):** `Evidence` gains `suggestion`. Every rule now says what the broker can change to pass, e.g. *Say "11 min walk to Indiranagar Metro" instead of 2 min.*, *Lower the deposit to at most 70000.00.*, *Remove this photo: it is used for a different flat.* A model validator drops the advice from rows that pass, so only problems carry it. NEEDS_FIX reports include the suggestions too.
+- **8.1 Review queue:**
+  - `GET /manager/reviews` lists IN_REVIEW audits with `open_questions`: exactly what couldn't be checked, e.g. `commute: metro (walking): No route data`.
+  - `POST /manager/reviews/{audit_id}` takes `{approve, note}`.
+    - Approve → PENDING_MINT → the normal outbox → LIVE.
+    - Reject → audit REJECTED and listing NEEDS_FIX, so the broker can fix the ad and resubmit.
+  - The signed report is never edited; the decision is stored next to it (`reviewed_by`, `review_note`).
+  - An audit can be decided only once (409).
+- **8.2 Pre-check:**
+  - `POST /broker/precheck {listing_id, ad}` runs the claim extractor plus Checks B, C and D, and returns `would_be`, every check and `suggestions`. Nothing is saved, signed or minted.
+  - Photos are skipped because a draft has none yet.
+  - The graph now compiles per set of checks (`audit_graph(checks)`); the required checks follow from the set.
+  - The rate limit is 10 a minute per broker: `services/rate_limit.py`, a sliding window in memory.
+- **8.3 Public page, availability, trust:**
+  - `GET /public/listings/{id}`: only a LIVE listing whose **own latest version** has a VERIFIED audit (fixes D9). It is built from the signed report and shows:
+    - the terms, and the move-in total (rent + deposit + brokerage);
+    - commute claims marked "checked at rush hour";
+    - advisories;
+    - the **owner's** photos (`GET /public/photos/{id}`);
+    - the broker card with trust score;
+    - the verify link, and the PayPal product (flagged when it's a demo `FAKE-` product).
+  - EXPIRED/RENTED give 410; anything else gives 404.
+  - `POST /broker/listings/{id}/confirm-availability` keeps a listing LIVE for 7 more days, or brings back an EXPIRED one while the mandate is valid.
+  - `POST /broker/listings/{id}/mark-rented`.
+  - `services/listing_service.py` expires LIVE listings not confirmed for 7 days, or whose mandate was revoked or ended. It runs when the public page is viewed and in the outbox worker loop.
+  - `services/trust.py`: every score change is a `trust_events` row.
+- **8.4 Demo + README:**
+  - `scripts/demo.py` runs the full story on a throwaway database and exits non-zero if any step differs.
+  - `README.md` at the repo root covers setup, configuration, the API by role, the layout and the limits.
+  - `pyproject.toml` gains a `[build-system]`, so `pip install -e ".[dev]"` works on a fresh clone.
+- Tests: `test_reviews.py` (7), `test_precheck.py` (6), `test_public_listing.py` (10). `FakeMaps` now normalises destination names on every lookup.
+
+**Trust points**
+| Event | Points | When |
+|---|---|---|
+| `verified_first_try` | +2 | version 1 verified (automatically or by a manager's approval) |
+| `needs_fix` | −1 | an audit fails, or a manager rejects one |
+| `photo_reused_from_another_flat` | −15 | Check A finds a photo of a different flat |
+| `listing_expired_stale` | −3 | not confirmed for 7 days (a revoked mandate costs nothing: it isn't the broker's fault) |
+
+Visit points (+1 completed, −10 broker no-show) belong to Feature 3.
+
+**Key idea: help honest brokers, not just catch dishonest ones**
+A check that only says "FAIL" makes honest brokers guess. The pre-check runs the same rules on a draft and says what to change, worded so the broker can paste it. The demo shows the loop: the money is fixed, the pre-check still flags "2 MIN WALK" and suggests "11 min walk to Indiranagar Metro", and with that the draft would be VERIFIED.
+
+**Key idea: stale listings are bait**
+A common bait listing is a real flat that was rented weeks ago. LIVE now has to be earned again every 7 days with one tap ("still available"), or the listing drops off the public page and costs the broker 3 points.
+
+**How to see it**
+```bash
+cd backend
+.venv/Scripts/python -m scripts.demo            # real Groq if GROQ_API_KEY is set
+.venv/Scripts/python -m scripts.demo --offline  # no network at all
+```
+
+**Verified:** 261 tests pass; `alembic check` finds no schema drift (no migration needed in this phase). The demo ran twice, `--offline` and with real Groq (`openai/gpt-oss-120b`), with the same outcome, exit 0:
+1. QuickCash submits "LUXURY 2BHK, 2 MIN WALK TO INDIRANAGAR METRO!!", ₹40k, ₹1.4L deposit, Fully Furnished → **NEEDS_FIX**. Six failed rows: commute 2 vs allowed 7, rent, deposit, furnishing, brokerage, and furnishing in the text.
+2. Pre-check with the money fixed but "2 MIN WALK" kept → NEEDS_FIX, suggesting *Say "11 min walk to Indiranagar Metro" instead of 2 min.* With that wording → would be VERIFIED.
+3. Resubmit → **VERIFIED → LIVE** (demo PayPal product `FAKE-PL-…`).
+4. Public page: move-in total 1,40,000; both commute claims checked at rush hour; QuickCash's trust score 99 (one needs-fix, no first-try bonus).
+5. Rent edited in the database → signature valid, `matches_current_data: false` (`ad rent: signed 35000.00, now 30000.00`).
+6. Signed report edited → `signature_valid: false`.
+
+**Still open (see README "Known limits")**
+- No real Google Routes or PayPal sandbox call yet (no keys).
+- The Tamil Nadu deposit cap hasn't been checked against the official text.
+- Check-in GPS can be spoofed until there's a frontend.
+- The rate limit and reuse scan are single-process, demo scale.

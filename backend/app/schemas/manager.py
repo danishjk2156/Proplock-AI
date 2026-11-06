@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.db.models import Furnishing, MandateStatus
+from app.db.models import AuditStatus, Furnishing, ListingStatus, MandateStatus
 
 Money = Field(gt=0, max_digits=12, decimal_places=2)
 
@@ -84,3 +84,24 @@ class BaselinePhotoOut(BaseModel):
     phash: str
     room_type: str
     captured_at: datetime
+
+
+class ReviewItem(BaseModel):
+    audit_id: str
+    listing_id: str
+    property_id: str
+    broker_name: str
+    version_no: int
+    created_at: datetime
+    open_questions: list[str]  # what the checks couldn't decide
+
+
+class ReviewIn(BaseModel):
+    approve: bool
+    note: str = Field(min_length=3, max_length=1000, examples=["Called the owner: the metro is 9 min on foot."])
+
+
+class ReviewOut(BaseModel):
+    audit_id: str
+    audit_status: AuditStatus
+    listing_status: ListingStatus

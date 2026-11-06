@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "proplock-feature1"
 version = "0.1.0"
@@ -25,6 +29,9 @@ dev = [
     "pytest==9.2.0",
     "pytest-asyncio==1.4.1",
 ]
+
+[tool.setuptools.packages.find]
+include = ["app*"]  # only the app is a package; scripts/ and tests/ run from backend/
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

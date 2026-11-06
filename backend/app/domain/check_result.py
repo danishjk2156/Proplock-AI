@@ -2,7 +2,7 @@
 
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class Check(StrEnum):
@@ -30,6 +30,14 @@ class Evidence(BaseModel):
     allowed: str
     ok: bool | None  # None = this comparison couldn't be made (e.g. no route data)
     note: str
+    suggestion: str = ""  # what the broker can change to pass; empty when nothing needs changing
+
+    @model_validator(mode="after")
+    def _no_advice_when_fine(self) -> "Evidence":
+        # Rules pass their advice every time; it is kept only for rows that need action.
+        if self.ok is True and self.suggestion:
+            object.__setattr__(self, "suggestion", "")
+        return self
 
 
 class CheckResult(BaseModel):

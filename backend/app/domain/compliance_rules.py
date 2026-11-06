@@ -96,6 +96,10 @@ def check_compliance(state: str, rent: Decimal, deposit: Decimal, rules: Deposit
                 # An advisory never fails the listing; it is shown, not enforced.
                 ok=within or rule.severity == "advisory",
                 note=f"{prefix}{rule.label()}. {rule.note}".strip(),
+                suggestion=(
+                    f"Lower the deposit to at most {rule.max_months.normalize()} months' rent "
+                    f"({rule.max_months * rent:.2f})."
+                ),
             )
         )
 

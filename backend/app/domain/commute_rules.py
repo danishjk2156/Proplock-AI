@@ -7,11 +7,16 @@ testable without any network. A claim with no route data is UNVERIFIABLE, never 
 from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta, timezone
 
-from app.db.models import ClaimSource
+from app.db.models import ClaimSource, CommuteMode
 from app.domain.check_result import Check, CheckResult, Evidence, Verdict
 from app.domain.claims import ClaimedCommute
 
 IST = timezone(timedelta(hours=5, minutes=30))
+MODE_WORDS = {
+    CommuteMode.WALKING: "walk to",
+    CommuteMode.DRIVING: "drive to",
+    CommuteMode.TRANSIT: "by public transport to",
+}
 PEAK = time(8, 30)
 
 
@@ -49,6 +54,10 @@ def _evidence(claim: ClaimedCommute, lookup: RouteLookup) -> Evidence:
             allowed=f"<= {allowed:g} min",
             ok=None,
             note=f"No route data ({lookup.reason}). Claim from the {origin}.",
+            suggestion=(
+                "Name a specific place (for example the station's full name) or remove the claim; "
+                "otherwise a manager checks it by hand."
+            ),
         )
     return Evidence(
         field=label,
@@ -56,6 +65,10 @@ def _evidence(claim: ClaimedCommute, lookup: RouteLookup) -> Evidence:
         allowed=f"<= {allowed:g} min",
         ok=lookup.minutes <= allowed,
         note=f"Actual {lookup.minutes} min at weekday 08:30 ({lookup.source}). Claim from the {origin}.",
+        suggestion=(
+            f'Say "{lookup.minutes} min {MODE_WORDS[claim.mode]} {claim.destination}" '
+            f"instead of {claim.minutes} min."
+        ),
     )
 
 

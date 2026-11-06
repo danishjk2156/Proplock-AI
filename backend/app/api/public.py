@@ -1,15 +1,31 @@
 """Public endpoints: anyone can check that a verified listing's audit hasn't been changed."""
 
+from datetime import UTC, datetime
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.base import get_session
-from app.db.models import Audit, AuditStatus, ListingPhoto, ListingVersion, Mandate, Property
+from app.db.models import (
+    Audit,
+    AuditStatus,
+    BaselinePhoto,
+    Listing,
+    ListingPhoto,
+    ListingStatus,
+    ListingVersion,
+    Mandate,
+    Property,
+)
 from app.domain.signing import is_valid
 from app.schemas.audit import AuditReport
+from app.schemas.public import PublicListingOut
+from app.services import listing_service
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -67,3 +83,28 @@ def verify_audit(audit_id: str, session: Session = Depends(get_session)) -> Veri
         matches_current_data=valid and not mismatches,
         mismatches=mismatches,
     )
+
+
+@router.get("/listings/{listing_id}", response_model=PublicListingOut)
+def public_listing(listing_id: str, session: Session = Depends(get_session)):
+    """The tenant's page: only LIVE listings, built from this listing's own latest signed audit."""
+    listing = session.get(Listing, listing_id)
+    if listing is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Listing not found")
+    if listing_service.expire_if_stale(session, listing, datetime.now(UTC)):
+        session.commit()
+    if listing.status in (ListingStatus.EXPIRED, ListingStatus.RENTED):
+        raise HTTPException(status.HTTP_410_GONE, f"This listing is {listing.status.value.lower()}")
+    view = listing_service.public_view(session, listing)
+    if view is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This listing is not verified")
+    return view
+
+
+@router.get("/photos/{photo_id}")
+def public_photo(photo_id: str, session: Session = Depends(get_session)) -> FileResponse:
+    """The owner's baseline photos, shown on the public page."""
+    photo = session.get(BaselinePhoto, photo_id)
+    if photo is None or not Path(photo.url).is_file():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Photo not found")
+    return FileResponse(photo.url)

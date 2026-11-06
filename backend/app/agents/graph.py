@@ -27,8 +27,9 @@ CHECK_NODES: dict[Check, Callable[[AuditState], dict]] = {
     Check.COMPLIANCE: nodes.compliance,
     Check.GROUND_TRUTH: nodes.ground_truth,
 }
-# Reading the ad text is required too: if it failed, hidden claims could slip through.
-REQUIRED_CHECKS = (Check.CLAIMS, *CHECK_NODES)
+ALL_CHECKS = tuple(CHECK_NODES)
+# The broker's pre-check: everything that doesn't need photos, so it can run on a draft.
+PRECHECK_CHECKS = (Check.COMMUTE, Check.COMPLIANCE, Check.GROUND_TRUTH)
 
 
 class AuditRun(NamedTuple):
@@ -38,21 +39,24 @@ class AuditRun(NamedTuple):
     text_furnishing: Furnishing | None
 
 
-def _decide(state: AuditState) -> dict:
-    return {"decision": decide(state["results"], REQUIRED_CHECKS)}
-
-
 @lru_cache
-def audit_graph():
+def audit_graph(checks: tuple[Check, ...] = ALL_CHECKS):
+    """One compiled graph per set of checks. Every check in the graph, plus reading the ad text,
+    is required: if extraction failed, hidden claims could slip through."""
+    required = (Check.CLAIMS, *checks)
+
+    def _decide(state: AuditState) -> dict:
+        return {"decision": decide(state["results"], required)}
+
     graph = StateGraph(AuditState)
     graph.add_node("extract", nodes.extract_claims)
     graph.add_node("decide", _decide)
     graph.add_edge(START, "extract")
-    for check, node in CHECK_NODES.items():
-        graph.add_node(check.value, node)
+    for check in checks:
+        graph.add_node(check.value, CHECK_NODES[check])
         graph.add_edge("extract", check.value)  # fan-out: every check starts after extract
     # Fan-in: a list of sources means "decide" waits until all of them have finished.
-    graph.add_edge([c.value for c in CHECK_NODES], "decide")
+    graph.add_edge([c.value for c in checks], "decide")
     graph.add_edge("decide", END)
     return graph.compile()
 
@@ -70,8 +74,9 @@ def run_checks(
     llm: LLM,
     maps: Maps,
     vision: Vision,
+    checks: tuple[Check, ...] = ALL_CHECKS,
 ) -> AuditRun:
-    final = audit_graph().invoke(
+    final = audit_graph(checks).invoke(
         {
             "title": title,
             "description": description,

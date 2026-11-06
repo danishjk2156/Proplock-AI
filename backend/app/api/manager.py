@@ -11,9 +11,31 @@ from app.adapters.paypal import PayPal, get_paypal
 from app.auth import require_role
 from app.config import get_upload_dir
 from app.db.base import get_session
-from app.db.models import Mandate, MandateStatus, Property, Role, User
-from app.schemas.manager import BaselinePhotoOut, BrokerOut, MandateIn, MandateOut, PropertyIn, PropertyOut
-from app.services import outbox, photo_service
+from app.db.models import (
+    Audit,
+    AuditStatus,
+    Listing,
+    ListingVersion,
+    Mandate,
+    MandateStatus,
+    Property,
+    Role,
+    User,
+)
+from app.schemas.audit import AuditReport
+from app.schemas.manager import (
+    BaselinePhotoOut,
+    BrokerOut,
+    MandateIn,
+    MandateOut,
+    PropertyIn,
+    PropertyOut,
+    ReviewIn,
+    ReviewItem,
+    ReviewOut,
+)
+from app.services import audit_service, outbox, photo_service
+from app.services.audit_service import ListingConflict, NoMandate
 from app.services.photo_service import PhotoRejected, Upload
 
 router = APIRouter(prefix="/manager", tags=["manager"])
@@ -127,3 +149,53 @@ def run_outbox(
 ) -> dict[str, int]:
     """Retry every due PayPal job now (the background worker does the same every 30 s)."""
     return {"minted": outbox.run_due(session, paypal)}
+
+
+@router.get("/reviews", response_model=list[ReviewItem])
+def list_reviews(_: User = Depends(manager_only), session: Session = Depends(get_session)) -> list[ReviewItem]:
+    """Audits waiting for a person: each lists exactly what the checks couldn't decide."""
+    rows = session.execute(
+        select(Audit, ListingVersion, Listing, User)
+        .join(ListingVersion, Audit.version_id == ListingVersion.id)
+        .join(Listing, ListingVersion.listing_id == Listing.id)
+        .join(User, Listing.broker_id == User.id)
+        .where(Audit.status == AuditStatus.IN_REVIEW)
+        .order_by(Audit.created_at)
+    ).all()
+    return [
+        ReviewItem(
+            audit_id=audit.id,
+            listing_id=listing.id,
+            property_id=listing.property_id,
+            broker_name=broker.name,
+            version_no=version.version_no,
+            created_at=audit.created_at,
+            open_questions=audit_service.open_questions(AuditReport.model_validate_json(audit.report_json)),
+        )
+        for audit, version, listing, broker in rows
+    ]
+
+
+@router.post("/reviews/{audit_id}", response_model=ReviewOut)
+def decide_review(
+    audit_id: str,
+    body: ReviewIn,
+    manager: User = Depends(manager_only),
+    session: Session = Depends(get_session),
+    paypal: PayPal = Depends(get_paypal),
+) -> ReviewOut:
+    """Approve (it is minted and goes LIVE, like an automatic VERIFIED) or reject (back to the broker)."""
+    audit = session.get(Audit, audit_id)
+    if audit is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Audit not found")
+    try:
+        listing = audit_service.review_audit(session, audit, manager, body.approve, body.note)
+    except ListingConflict as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
+    except NoMandate as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"Can't approve: {e}") from e
+    if body.approve:
+        outbox.try_now(session, audit.id, paypal)
+        session.refresh(audit)
+        session.refresh(listing)
+    return ReviewOut(audit_id=audit.id, audit_status=audit.status, listing_status=listing.status)

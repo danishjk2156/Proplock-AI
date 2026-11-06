@@ -142,12 +142,13 @@ class FakeMaps:
     name = "fake"
 
     def __init__(self, routes: dict[tuple[str, CommuteMode], int] | None = None):
-        self.routes = {(normalize(d), m): v for (d, m), v in (routes or {}).items()}
+        self.routes = dict(routes or {})  # tests may replace this; names are normalised on lookup
         self.calls: list[tuple[str, str, CommuteMode]] = []
 
     def travel_minutes(self, place: Place, destination: str, mode: CommuteMode) -> RouteLookup:
         self.calls.append((place.property_id, destination, mode))
-        minutes = self.routes.get((normalize(destination), mode))
+        routes = {(normalize(d), m): v for (d, m), v in self.routes.items()}
+        minutes = routes.get((normalize(destination), mode))
         if minutes is None:
             return RouteLookup(None, self.name, "no fake route")
         return RouteLookup(minutes, self.name)

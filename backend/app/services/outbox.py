@@ -5,7 +5,7 @@ crash between them leaves one without the other. So the audit and a "mint" job a
 same commit, and PayPal is called afterwards. If the call fails, the job is retried later with
 the same product id, so a retry can never create a second product.
 
-Run the worker:  .venv/Scripts/python -m app.services.outbox
+Run the worker (it also expires stale listings):  .venv/Scripts/python -m app.services.outbox
 """
 
 import logging
@@ -92,6 +92,18 @@ def run_job(session: Session, job_id: str, paypal: PayPal, now: datetime | None 
     return job.status
 
 
+def try_now(session: Session, audit_id: str, paypal: PayPal) -> None:
+    """Run the audit's mint job right away, if it has one. Failures leave it queued for the worker."""
+    job = session.scalar(select(OutboxJob).where(OutboxJob.audit_id == audit_id, OutboxJob.status == JobStatus.PENDING))
+    if job is None:
+        return
+    try:
+        run_job(session, job.id, paypal)
+    except Exception:
+        session.rollback()
+        logger.exception("Immediate mint failed for audit %s; the outbox worker will retry", audit_id)
+
+
 def run_due(session: Session, paypal: PayPal, now: datetime | None = None, limit: int = 20) -> int:
     """Run every job that is due. Returns how many succeeded."""
     now = now or datetime.now(UTC)
@@ -107,6 +119,7 @@ def run_due(session: Session, paypal: PayPal, now: datetime | None = None, limit
 def main(poll_seconds: int = 30) -> None:
     from app.adapters.paypal import get_paypal
     from app.db.base import SessionLocal
+    from app.services.listing_service import expire_stale
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     paypal = get_paypal()
@@ -114,8 +127,9 @@ def main(poll_seconds: int = 30) -> None:
     while True:
         with SessionLocal() as session:
             done = run_due(session, paypal)
-        if done:
-            logger.info("Minted %d product(s)", done)
+            expired = expire_stale(session)  # LIVE listings not confirmed for 7 days
+        if done or expired:
+            logger.info("Minted %d product(s), expired %d stale listing(s)", done, expired)
         time.sleep(poll_seconds)
 
 

@@ -3,7 +3,7 @@
 Source of truth for the design: `docs/PropLock_Feature1_Review.pdf`, section 10 ("Target architecture") and section 11 ("Integrating the broker workflow").
 Old implementation: deleted on 2026-10-28; backup at `D:\hackathon\_archive\proplock_feature1_old_2026-10-28.zip`.
 
-Status: **APPROVED 2026-10-28, executing.** Gate 1 answered 2026-10-28 (keys, photos, frontend, pace).
+Status: **APPROVED 2026-10-28; all 8 phases done 2026-11-06.** Gate 1 answered 2026-10-28 (keys, photos, frontend, pace).
 
 ---
 
@@ -255,4 +255,4 @@ Verified when: the e2e demo script runs the full story: dishonest submit → NEE
 | 5 Check C | **done** — versioned deposit_caps.yaml (TN law s.11(1) unverified; Karnataka platform policy 3 advisory / 6 hard), unknown state → UNVERIFIABLE; 136 tests |
 | 6 Check A | **done** — photo upload (device GPS, EXIF backup), check-in ≤100 m / ≤30 days, pHash reuse across flats, Groq vision same-flat/watermark/furniture with confidence threshold; 196 tests |
 | 7 Seal and mint | **done** — every audit HMAC-signed over the full report; /public/audits/{id}/verify (signature + live-data mismatches); outbox with PL-{version_id} + PayPal-Request-Id, lease, backoff; PayPal adapter mock-tested (no sandbox keys yet); 238 tests |
-| 8 Broker workflow + demo | not started |
+| 8 Broker workflow + demo | **done** — review queue, pre-check with suggested fixes (rate-limited), public listing page from its own signed audit, 7-day availability + expiry, trust events, `scripts/demo.py` + README; 261 tests |

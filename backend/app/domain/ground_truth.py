@@ -51,6 +51,10 @@ def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
             allowed=f"{_money(owner.min_rent)}-{_money(owner.max_rent)}",
             ok=owner.min_rent <= listing.rent <= owner.max_rent,
             note="Rent must be inside the owner's range; commission goes in brokerage_fee, not the rent.",
+            suggestion=(
+                f"Set the rent between {_money(owner.min_rent)} and {_money(owner.max_rent)}; "
+                "charge your commission as brokerage_fee."
+            ),
         ),
         Evidence(
             field="deposit",
@@ -58,6 +62,7 @@ def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
             allowed=f"<= {_money(owner.max_deposit)}",
             ok=listing.deposit <= owner.max_deposit,
             note="Deposit cannot exceed what the owner agreed.",
+            suggestion=f"Lower the deposit to at most {_money(owner.max_deposit)}.",
         ),
         Evidence(
             field="furnishing",
@@ -65,6 +70,7 @@ def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
             allowed=f"<= {owner.furnishing.value}",
             ok=FURNISHING_RANK[listing.furnishing] <= FURNISHING_RANK[owner.furnishing],
             note="The ad cannot claim more furnishing than the owner registered.",
+            suggestion=f"Set furnishing to {owner.furnishing.value}, as the owner registered it.",
         ),
         Evidence(
             field="brokerage_fee",
@@ -72,6 +78,7 @@ def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
             allowed=f"<= {_money(brokerage_cap)} ({owner.max_brokerage_months} x rent)",
             ok=listing.brokerage_fee <= brokerage_cap,
             note="Brokerage is capped in months of rent, counting rent only up to the owner's maximum.",
+            suggestion=f"Lower the brokerage fee to at most {_money(brokerage_cap)}.",
         ),
     )
     if listing.text_furnishing is not None:
@@ -83,6 +90,10 @@ def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
                 allowed=f"<= {owner.furnishing.value}",
                 ok=FURNISHING_RANK[listing.text_furnishing] <= FURNISHING_RANK[owner.furnishing],
                 note="Furnishing claimed in the title or description, read by the claim extractor.",
+                suggestion=(
+                    "Change the furnishing wording in the title or description: "
+                    f"the owner registered {owner.furnishing.value}."
+                ),
             ),
         )
     verdict = Verdict.PASS if all(e.ok for e in evidence) else Verdict.FAIL
