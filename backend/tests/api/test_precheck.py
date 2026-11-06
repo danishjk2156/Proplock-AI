@@ -44,7 +44,7 @@ def test_precheck_finds_the_problems_and_suggests_fixes(client, quickcash, fake_
     # advisory (no suggestion); the owner's 70k limit is what it breaks.
     assert set(body["suggestions"]) == {
         'Say "11 min walk to Indiranagar Metro" instead of 2 min.',
-        "Set the rent between 32000.00 and 35000.00; charge your commission as brokerage_fee.",
+        "Set the rent between 32000.00 and 35000.00; charge your commission as the brokerage fee.",
         "Lower the deposit to at most 70000.00.",
     }
     assert {c["check"] for c in body["checks"]} == {"claims", "commute", "compliance", "ground_truth"}  # no photos

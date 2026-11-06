@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     audit_secret: str = DEV_AUDIT_SECRET
     demo_mode: bool = False
     upload_dir: str = "uploads"  # photos are stored here, named by content hash
+    # Browser origins allowed to call the API (comma-separated in .env). The dev frontend
+    # proxies through Vite and needs none; a deployed frontend needs its own origin here.
+    cors_origins: str = "http://localhost:5173"
 
     # An empty model name means "not configured": the adapter reports UNVERIFIABLE instead of guessing.
     groq_api_key: str | None = None

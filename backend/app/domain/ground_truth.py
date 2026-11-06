@@ -50,10 +50,10 @@ def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
             claimed=_money(listing.rent),
             allowed=f"{_money(owner.min_rent)}-{_money(owner.max_rent)}",
             ok=owner.min_rent <= listing.rent <= owner.max_rent,
-            note="Rent must be inside the owner's range; commission goes in brokerage_fee, not the rent.",
+            note="Rent must be inside the owner's range; commission goes in the brokerage fee, not the rent.",
             suggestion=(
                 f"Set the rent between {_money(owner.min_rent)} and {_money(owner.max_rent)}; "
-                "charge your commission as brokerage_fee."
+                "charge your commission as the brokerage fee."
             ),
         ),
         Evidence(
@@ -96,7 +96,17 @@ def check_ground_truth(listing: ListingTerms, owner: OwnerTerms) -> CheckResult:
                 ),
             ),
         )
-    verdict = Verdict.PASS if all(e.ok for e in evidence) else Verdict.FAIL
+    failed = sum(not e.ok for e in evidence)
+    verdict = Verdict.FAIL if failed else Verdict.PASS
+    summary = (
+        f"{failed} of {len(evidence)} terms don't match what the owner agreed."
+        if failed
+        else "Rent, deposit, furnishing and brokerage match what the owner agreed."
+    )
     return CheckResult(
-        check=Check.GROUND_TRUTH, verdict=verdict, evidence=evidence, source=f"mandate:{owner.mandate_id}"
+        check=Check.GROUND_TRUTH,
+        verdict=verdict,
+        evidence=evidence,
+        source=f"mandate:{owner.mandate_id}",
+        summary=summary,
     )

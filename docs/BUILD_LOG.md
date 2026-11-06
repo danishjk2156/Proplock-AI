@@ -641,3 +641,47 @@ cd backend
 - The Tamil Nadu deposit cap hasn't been checked against the official text.
 - Check-in GPS can be spoofed until there's a frontend.
 - The rate limit and reuse scan are single-process, demo scale.
+
+---
+
+## Frontend: the Feature 1 web app (2026-11-06)
+
+Built from the wireframe canvas. The original plan left the frontend out (decision D11); this adds it on top.
+
+**What changed**
+- `frontend/` (new): Vite 5 + React 18 + TypeScript (strict) + React Router 6, exact versions pinned, plain CSS with the wireframe's palette and a dark theme.
+  - Broker: `/b` (home), `/b/listings/:id/checkin`, `/b/listings/:id/ad`, `/b/audits/:id`, `/b/listings/:id` (live listing; drafts and failed audits are sent to the right step).
+  - Manager: `/m` (flats & mandates), `/m/reviews`.
+  - Public: `/l/:listingId`, `/v/:auditId`.
+  - `src/api.ts` sends `X-API-Key` and turns FastAPI errors (including 422 field lists) into readable messages. `ErrorBoundary.tsx` means a crashing screen shows a message, never a blank page.
+- Backend additions for the screens:
+  - `GET /broker/mandates`: flats the broker may list, with limits and the verified pin.
+  - `GET /broker/listings`, `GET /broker/listings/{id}`: status, latest audit, problem counts, photos, and the last version's ad for prefilling an edit.
+  - `GET /manager/properties/{id}/photos`.
+  - CORS limited to `CORS_ORIGINS` (default `http://localhost:5173`), never `*`.
+  - Tests: `tests/api/test_broker_views.py` (5).
+- Wording found while testing in the browser:
+  - Check D's suggestion says "the brokerage fee", not `brokerage_fee`, and Check D now has a summary line.
+  - Review questions no longer repeat the check name ("commute: commute: …").
+
+**How the pieces connect**
+In development the browser only talks to Vite (port 5173), which forwards `/api/*` to FastAPI (port 8000), so no cross-origin requests happen. The check-in screen watches the phone's GPS and shows the distance to the agency's pin before the upload. It's the same haversine formula the backend uses, but the backend's measurement is the one that counts. If location is blocked, the photo's EXIF GPS is used.
+
+**Verified in a browser** (the in-app browser; real Groq; demo routes and PayPal; a scratch database):
+1. QuickCash signs in → both mandates with the owner's limits, trust 100.
+2. Start a listing → check-in screen. Location was blocked in the pane, so the EXIF path was used: "Check-in · GPS exif". A non-image upload showed the backend's message: "checkin.jpg: not a readable image".
+3. Typed the dishonest ad → **pre-check**: Groq found "2 min walking to Indiranagar Metro" in the title, with 6 suggestions, nothing saved.
+4. Submit → **NEEDS FIX**, with six problems, each with a fix, and the Karnataka advisory.
+5. Fix and resubmit (the form was prefilled with version 1) → **LIVE**: share link, "Due in 7 days".
+6. Tenant page: move-in ₹1,40,000, both commute claims checked at 8:30 AM. "Check it" → genuine. The rent was then edited in the database → "Changed after it was checked · ad rent: signed 35000.00, now 30000.00".
+7. Manager: flats table, mandate form, owner-photo upload (the thumbnail loads through `/api/public/photos/…`), review queue → approve with a note → the listing goes LIVE.
+8. Light theme at phone width: the manager menu stacks, the table scrolls inside its box.
+
+**Bugs found and fixed in that run**
+- Approving a review crashed the screen. The decided item vanished from the reloaded queue while it was still selected. The detail panel now renders only an item that is in the current queue, and an error boundary catches any future crash.
+- The menu's review badge stayed at 1 after approval. The review page now passes its live count to the layout.
+- A status pill stretched across its whole card. Fixed in CSS.
+
+**Not done**
+- No automated frontend tests. `npm run build` runs the strict TypeScript check and a production build.
+- An edited LIVE listing can't be resubmitted yet (the backend returns 409), so the live screen offers share, confirm and rented, not edit.

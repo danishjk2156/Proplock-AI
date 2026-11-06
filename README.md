@@ -63,6 +63,24 @@ Optional background worker (retries PayPal publishing, expires listings that wer
 .venv/Scripts/python -m app.services.outbox
 ```
 
+### The web app (Node 20+)
+
+With the backend running on port 8000, from `frontend/`:
+
+```bash
+npm install
+```
+```bash
+npm run dev
+```
+Open http://localhost:5173 and paste a key from `demo_keys.json`. A broker key opens the broker app; the manager key opens the agency desk. Vite forwards `/api/*` to the backend, so no CORS setup is needed in development. A deployed build sets `VITE_API_BASE` to the API's URL, and the backend's `CORS_ORIGINS` must list the site's origin.
+
+| Who | Screens |
+|---|---|
+| Broker (phone-first) | My listings · check-in photo (GPS distance to the flat) · write the ad with pre-check · audit result with fixes · live listing (share, "still available", rented) |
+| Manager (web) | Flats & mandates (register a flat, owner photos, give or revoke mandates) · review queue (approve or send back, with a note) |
+| Tenant (no login) | `/l/{listing id}`: the verified listing and move-in total · `/v/{audit id}`: is this genuine? |
+
 ## The whole story in one command
 
 ```bash
@@ -116,6 +134,9 @@ backend/
   alembic/      migrations
   scripts/      demo, spike_groq, spike_paypal
   tests/        unit/ and api/; no test calls the network
+frontend/      Vite + React + TypeScript single-page app
+  src/pages/    broker/, manager/, public/ screens
+  src/api.ts    fetch wrapper (sends X-API-Key, shows the backend's error messages)
 ```
 
 ## Tests
@@ -123,6 +144,10 @@ backend/
 ```bash
 .venv/Scripts/python -m pytest -q
 ```
+```bash
+npm run build
+```
+(from `frontend/`: a strict TypeScript check plus a production build)
 
 ## Known limits
 
@@ -130,4 +155,6 @@ backend/
 - **The Tamil Nadu deposit cap is unverified:** it is labelled "not yet verified against the official text" until someone checks the gazette by hand. Karnataka's limits are PropLock policy, not law.
 - **Check-in GPS can be faked:** it comes from the upload request (or the photo's EXIF data), so an API client can send any coordinates until the frontend has its own camera page.
 - **Single-process limits:** the pre-check rate limit (10/min per broker) is kept in memory, and photo-reuse detection scans every photo. Both are fine for a demo, not for scale.
-- **No frontend, and Features 2–4 are not built.**
+- **Sign-in is an API key:** the web app keeps it in the browser's local storage. Fine for a demo, but a real login would use a session cookie.
+- **The frontend has no automated tests yet:** it was checked by hand in a browser (see the build log).
+- **Features 2–4 are not built.** The tenant page shows "Book a visit" as coming next.

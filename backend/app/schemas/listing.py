@@ -70,3 +70,52 @@ class PrecheckOut(BaseModel):
     commute_claims: list[ClaimedCommute]
     suggestions: list[str]
     note: str = "Photos are checked only on submit. Nothing was saved."
+
+
+class BrokerMandateOut(BaseModel):
+    """A flat this broker may list, with the owner's limits and its verified pin."""
+
+    mandate_id: str
+    property_id: str
+    address: str
+    city: str
+    state: str
+    furnishing: Furnishing
+    latitude: Decimal
+    longitude: Decimal
+    min_rent: Decimal
+    max_rent: Decimal
+    max_deposit: Decimal
+    max_brokerage_months: Decimal
+    valid_until: datetime
+    listing_id: str | None  # the broker's most recent listing under this mandate, if any
+
+
+class AdDraft(BaseModel):
+    """The latest submitted version's content, to prefill an edit."""
+
+    title: str
+    description: str
+    rent: Decimal
+    deposit: Decimal
+    brokerage_fee: Decimal
+    furnishing: Furnishing
+    commute_claims: list[CommuteClaimIn]
+
+
+class BrokerListingOut(BaseModel):
+    id: str
+    property_id: str
+    address: str
+    status: ListingStatus
+    version_no: int | None
+    audit_id: str | None
+    audit_status: str | None
+    problems: int  # failed comparisons in the latest audit
+    open_questions: int  # comparisons that couldn't be made
+    photos: int
+    has_checkin: bool
+    last_confirmed_at: datetime | None
+    expires_at: datetime | None
+    created_at: datetime
+    ad: AdDraft | None

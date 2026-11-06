@@ -14,6 +14,7 @@ from app.db.base import get_session
 from app.db.models import (
     Audit,
     AuditStatus,
+    BaselinePhoto,
     Listing,
     ListingVersion,
     Mandate,
@@ -199,3 +200,12 @@ def decide_review(
         session.refresh(audit)
         session.refresh(listing)
     return ReviewOut(audit_id=audit.id, audit_status=audit.status, listing_status=listing.status)
+
+
+@router.get("/properties/{property_id}/photos", response_model=list[BaselinePhotoOut])
+def list_baseline_photos(property_id: str, _: User = Depends(manager_only), session: Session = Depends(get_session)):
+    if session.get(Property, property_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Property {property_id} not found")
+    return session.scalars(
+        select(BaselinePhoto).where(BaselinePhoto.property_id == property_id).order_by(BaselinePhoto.captured_at)
+    ).all()

@@ -18,3 +18,7 @@ backend/demo_keys.json
 
 # Uploaded photos
 backend/uploads/
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/

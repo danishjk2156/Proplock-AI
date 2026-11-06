@@ -43,7 +43,7 @@ def test_queue_lists_what_could_not_be_checked(client, keys, in_review):
 
     assert (item["audit_id"], item["listing_id"], item["broker_name"]) == (audit_id, listing_id, "Rajesh")
     [question] = item["open_questions"]
-    assert question.startswith("commute: commute: metro (walking): No route data")
+    assert question.startswith("commute: metro (walking): No route data")
 
 
 def test_brokers_cannot_see_or_decide_reviews(client, keys, in_review):

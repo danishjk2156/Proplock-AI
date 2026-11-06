@@ -264,5 +264,6 @@ def open_questions(report: AuditReport) -> list[str]:
         rows = [e for e in check.evidence if e.ok is None]
         if not rows:
             questions.append(f"{check.check}: {check.summary}")
-        questions += [f"{check.check}: {e.field}: {e.note}" for e in rows]
+        # Evidence fields may already start with the check name ("commute: metro (walking)").
+        questions += [f"{check.check}: {e.field.removeprefix(f'{check.check}: ')}: {e.note}" for e in rows]
     return questions

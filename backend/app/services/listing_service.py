@@ -10,7 +10,21 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Audit, AuditStatus, BaselinePhoto, Listing, ListingStatus, ListingVersion, Mandate, User
+from app.db.models import (
+    Audit,
+    AuditStatus,
+    BaselinePhoto,
+    ClaimSource,
+    CommuteClaim,
+    Listing,
+    ListingPhoto,
+    ListingStatus,
+    ListingVersion,
+    Mandate,
+    PhotoKind,
+    Property,
+    User,
+)
 from app.schemas.audit import AuditReport
 from app.services import trust
 from app.services.audit_service import ListingConflict, NoMandate, _is_usable
@@ -133,3 +147,94 @@ def public_view(session: Session, listing: Listing) -> dict | None:
         "expires_at": expires_at(listing),
         "version_no": version.version_no,
     }
+
+
+def broker_mandates(session: Session, broker: User) -> list[dict]:
+    now = datetime.now(UTC)
+    mandates = session.scalars(
+        select(Mandate).where(Mandate.broker_id == broker.id).order_by(Mandate.created_at)
+    ).all()
+    out = []
+    for mandate in mandates:
+        if not (mandate.status.value == "ACTIVE" and mandate.valid_until > now):
+            continue
+        prop = session.get(Property, mandate.property_id)
+        listing = session.scalar(
+            select(Listing).where(Listing.mandate_id == mandate.id).order_by(Listing.created_at.desc())
+        )
+        out.append({
+            "mandate_id": mandate.id,
+            "property_id": prop.id,
+            "address": prop.address,
+            "city": prop.city,
+            "state": prop.state,
+            "furnishing": prop.furnishing,
+            "latitude": prop.latitude,
+            "longitude": prop.longitude,
+            "min_rent": mandate.min_rent,
+            "max_rent": mandate.max_rent,
+            "max_deposit": mandate.max_deposit,
+            "max_brokerage_months": mandate.max_brokerage_months,
+            "valid_until": mandate.valid_until,
+            "listing_id": listing.id if listing else None,
+        })
+    return out
+
+
+def broker_listing_view(session: Session, listing: Listing) -> dict:
+    prop = session.get(Property, listing.property_id)
+    found = latest_audit(session, listing)
+    version, audit = found if found else (None, None)
+    problems = questions = 0
+    if audit:
+        report = AuditReport.model_validate_json(audit.report_json)
+        rows = [e for c in report.checks for e in c.evidence]
+        problems = sum(e.ok is False for e in rows)
+        questions = sum(e.ok is None for e in rows)
+    photos = session.scalars(
+        select(ListingPhoto).where(ListingPhoto.listing_id == listing.id, ListingPhoto.removed_at.is_(None))
+    ).all()
+    ad = None
+    if version is None:
+        version = session.scalar(
+            select(ListingVersion)
+            .where(ListingVersion.listing_id == listing.id)
+            .order_by(ListingVersion.version_no.desc())
+        )
+    if version is not None:
+        claims = session.scalars(
+            select(CommuteClaim).where(CommuteClaim.version_id == version.id, CommuteClaim.source == ClaimSource.FORM)
+        ).all()
+        ad = {
+            "title": version.title,
+            "description": version.description,
+            "rent": version.rent,
+            "deposit": version.deposit,
+            "brokerage_fee": version.brokerage_fee,
+            "furnishing": version.furnishing,
+            "commute_claims": [{"destination": c.destination, "minutes": c.minutes, "mode": c.mode} for c in claims],
+        }
+    return {
+        "id": listing.id,
+        "property_id": listing.property_id,
+        "address": f"{prop.address}, {prop.city}",
+        "status": listing.status,
+        "version_no": version.version_no if version else None,
+        "audit_id": audit.id if audit else None,
+        "audit_status": audit.status.value if audit else None,
+        "problems": problems,
+        "open_questions": questions,
+        "photos": len(photos),
+        "has_checkin": any(p.kind is PhotoKind.CHECKIN for p in photos),
+        "last_confirmed_at": listing.last_confirmed_at,
+        "expires_at": expires_at(listing),
+        "created_at": listing.created_at,
+        "ad": ad,
+    }
+
+
+def broker_listings(session: Session, broker: User) -> list[dict]:
+    listings = session.scalars(
+        select(Listing).where(Listing.broker_id == broker.id).order_by(Listing.created_at.desc())
+    ).all()
+    return [broker_listing_view(session, listing) for listing in listings]

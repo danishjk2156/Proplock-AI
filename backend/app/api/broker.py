@@ -16,6 +16,8 @@ from app.config import get_upload_dir
 from app.db.base import get_session
 from app.db.models import Listing, ListingPhoto, PhotoKind, Role, User
 from app.schemas.listing import (
+    BrokerListingOut,
+    BrokerMandateOut,
     ListingCreate,
     ListingOut,
     ListingSubmit,
@@ -174,3 +176,19 @@ def confirm_availability(listing_id: str, broker: User = Depends(broker_only), s
 @router.post("/listings/{listing_id}/mark-rented", response_model=ListingOut)
 def mark_rented(listing_id: str, broker: User = Depends(broker_only), session: Session = Depends(get_session)):
     return _listing_action(session, broker, listing_id, listing_service.mark_rented)
+
+
+@router.get("/mandates", response_model=list[BrokerMandateOut])
+def my_mandates(broker: User = Depends(broker_only), session: Session = Depends(get_session)):
+    """Flats this broker may list right now (active, unexpired mandates)."""
+    return listing_service.broker_mandates(session, broker)
+
+
+@router.get("/listings", response_model=list[BrokerListingOut])
+def my_listings(broker: User = Depends(broker_only), session: Session = Depends(get_session)):
+    return listing_service.broker_listings(session, broker)
+
+
+@router.get("/listings/{listing_id}", response_model=BrokerListingOut)
+def my_listing(listing_id: str, broker: User = Depends(broker_only), session: Session = Depends(get_session)):
+    return listing_service.broker_listing_view(session, _own_listing(session, broker, listing_id))
