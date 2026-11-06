@@ -162,7 +162,11 @@ def broker_mandates(session: Session, broker: User) -> list[dict]:
         listing = session.scalar(
             select(Listing).where(Listing.mandate_id == mandate.id).order_by(Listing.created_at.desc())
         )
+        photo = session.scalar(
+            select(BaselinePhoto).where(BaselinePhoto.property_id == prop.id).order_by(BaselinePhoto.captured_at)
+        )
         out.append({
+            "photo_url": f"/public/photos/{photo.id}" if photo else None,
             "mandate_id": mandate.id,
             "property_id": prop.id,
             "address": prop.address,

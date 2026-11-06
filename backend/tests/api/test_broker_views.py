@@ -27,7 +27,17 @@ def test_broker_sees_only_their_own_mandates_with_the_pin(client, keys):
     assert [m["property_id"] for m in rajesh] == ["PROP-BLR-001"]
     assert sorted(m["property_id"] for m in quickcash) == ["PROP-BLR-001", "PROP-CHN-002"]
     [m] = rajesh
-    assert (m["max_rent"], m["latitude"], m["listing_id"]) == ("35000.00", "12.9718910", None)
+    assert (m["max_rent"], m["latitude"], m["listing_id"], m["photo_url"]) == ("35000.00", "12.9718910", None, None)
+
+
+def test_mandate_card_shows_the_flats_first_owner_photo(client, keys):
+    client.post("/manager/properties/PROP-BLR-001/photos", files=[("files", ("o.jpg", photo_bytes(91), "image/jpeg"))],
+                headers=keys["manager"])
+
+    [m] = client.get("/broker/mandates", headers=keys["broker_rajesh"]).json()
+
+    assert m["photo_url"].startswith("/public/photos/")
+    assert client.get(m["photo_url"]).status_code == 200
 
 
 def test_listing_shows_up_with_its_latest_audit_and_draft(client, keys):

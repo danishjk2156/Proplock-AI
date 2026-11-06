@@ -89,6 +89,7 @@ class BrokerMandateOut(BaseModel):
     max_brokerage_months: Decimal
     valid_until: datetime
     listing_id: str | None  # the broker's most recent listing under this mandate, if any
+    photo_url: str | None = None  # the flat's first owner photo, for the card
 
 
 class AdDraft(BaseModel):

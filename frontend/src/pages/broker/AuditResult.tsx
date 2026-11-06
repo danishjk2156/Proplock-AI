@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../api";
-import { AppBar, CheckReport, ErrorBox, Loading, Pill, useLoad } from "../../components";
+import { AppBar, CheckReport, ErrorBox, Loading, Pill, Ring, useLoad } from "../../components";
 import type { AuditOut } from "../../types";
 
 const HEADLINE: Record<string, (n: number) => string> = {
@@ -20,19 +20,29 @@ export default function AuditResult() {
 
   const r = audit.report;
   const problems = r.checks.flatMap((c) => c.evidence).filter((e) => e.ok === false).length;
+  const passed = r.checks.filter((c) => c.verdict === "PASS").length;
   const listingId = r.listing_id;
   return (
     <div className="phone">
       <AppBar title={`Audit result · version ${r.version_no}`} back="/b" />
       <main className="content">
-        <div className="card strong">
-          <Pill status={audit.status} />
-          <h1 style={{ fontSize: 18 }}>{(HEADLINE[audit.status] ?? (() => audit.status))(problems)}</h1>
+        <div className="card">
+          <div className="row" style={{ gap: 14 }}>
+            <Ring value={passed} max={r.checks.length} size={64} label={`${passed} of ${r.checks.length} checks passed`} />
+            <div className="stack" style={{ gap: 4, flex: 1 }}>
+              <Pill status={audit.status} />
+              <span className="small muted">{passed} of {r.checks.length} checks passed</span>
+            </div>
+          </div>
+          <h1 style={{ fontSize: 20 }}>{(HEADLINE[audit.status] ?? (() => audit.status))(problems)}</h1>
           <p className="small muted">
             {audit.status === "NEEDS_FIX" && "Fix them and submit again. This version stays on record as signed evidence."}
             {audit.status === "IN_REVIEW" && "Nothing is wrong, but some things couldn’t be checked automatically. You’ll see the decision here."}
             {audit.status === "REJECTED" && "Fix the ad and submit again."}
-            {(audit.status === "VERIFIED" || audit.status === "PENDING_MINT") && "Every check passed."}
+            {(audit.status === "VERIFIED" || audit.status === "PENDING_MINT") &&
+              (passed === r.checks.length
+                ? "Every check passed."
+                : "Approved by the agency after they checked by hand what couldn’t be checked automatically.")}
           </p>
         </div>
 

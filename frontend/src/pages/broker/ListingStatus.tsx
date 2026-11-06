@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { api } from "../../api";
-import { AppBar, ErrorBox, Loading, Pill, useLoad } from "../../components";
+import { AppBar, ErrorBox, Icon, Loading, Pill, Ring, useLoad } from "../../components";
 import { daysUntil, rupees } from "../../format";
 import type { BrokerListing } from "../../types";
 
@@ -59,11 +59,17 @@ export default function ListingStatusPage() {
         <div className="card">
           <div className="row">
             <Pill status={listing.status} />
-            <span className="small muted">Verified version {listing.version_no} · signed</span>
+            <span className="small muted">Version {listing.version_no} · signed</span>
           </div>
-          <h1 style={{ fontSize: 18 }}>{listing.ad?.title}</h1>
+          <h1 style={{ fontSize: 20 }}>{listing.ad?.title}</h1>
           {listing.ad && (
-            <span className="small muted">{rupees(listing.ad.rent)}/month · {listing.ad.furnishing} · {listing.address}</span>
+            <>
+              <span className="price">{rupees(listing.ad.rent)} <small>/ month</small></span>
+              <div className="chips">
+                <span className="chip"><Icon name="sofa" size={15} />{listing.ad.furnishing}</span>
+                <span className="chip"><Icon name="pin" size={15} />{listing.address}</span>
+              </div>
+            </>
           )}
           {listing.status === "VERIFIED" && (
             <p className="small">Publishing to PayPal: it goes live as soon as the product is created.</p>
@@ -86,16 +92,19 @@ export default function ListingStatusPage() {
         )}
 
         {(live || listing.status === "EXPIRED") && (
-          <section className="card strong">
-            <div className="between">
-              <strong>Still available?</strong>
-              <strong className="small">
-                {listing.status === "EXPIRED" ? "Expired" : days !== null && days <= 0 ? "Due today" : `Due in ${days} days`}
-              </strong>
+          <section className="card">
+            <div className="row" style={{ alignItems: "center", gap: 14 }}>
+              <Ring value={live ? Math.max(0, CONFIRM_DAYS - elapsed) : 0} max={CONFIRM_DAYS} size={64}
+                label={listing.status === "EXPIRED" ? "Expired" : `${Math.max(0, CONFIRM_DAYS - elapsed)} days left`} />
+              <div className="stack" style={{ gap: 2, flex: 1 }}>
+                <h2>Still available?</h2>
+                <span className="small muted">
+                  {listing.status === "EXPIRED" ? "Expired: confirm to bring it back" : days !== null && days <= 0 ? "Due today" : `Days left before it expires`}
+                </span>
+              </div>
             </div>
-            {live && <div className="progress" aria-hidden="true"><div style={{ width: `${(elapsed / CONFIRM_DAYS) * 100}%` }} /></div>}
             <p className="small muted">Confirm every 7 days. If you don’t, the listing expires and you lose 3 trust points.</p>
-            <button className="btn" onClick={() => act("confirm-availability")}>Yes, still available</button>
+            <button className="btn primary" onClick={() => act("confirm-availability")}>Yes, still available</button>
           </section>
         )}
 

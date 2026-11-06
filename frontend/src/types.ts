@@ -90,6 +90,7 @@ export interface BrokerMandate {
   max_brokerage_months: string;
   valid_until: string;
   listing_id: string | null;
+  photo_url: string | null;
 }
 
 export interface BrokerListing {

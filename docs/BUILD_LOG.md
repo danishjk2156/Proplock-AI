@@ -685,3 +685,37 @@ In development the browser only talks to Vite (port 5173), which forwards `/api/
 **Not done**
 - No automated frontend tests. `npm run build` runs the strict TypeScript check and a production build.
 - An edited LIVE listing can't be resubmitted yet (the backend returns 409), so the live screen offers share, confirm and rented, not edit.
+
+---
+
+## Frontend restyle: "verified green" (2026-11-06)
+
+**Where the ideas came from**
+I browsed Pinterest (signed in, in Chrome) for "real estate app ui design" and "property management dashboard ui". The same patterns kept coming back, so I adapted them rather than copying any single design:
+- photo-first listing cards with large rounded corners and chips laid over the image (furnishing, city);
+- a personal greeting header ("Good evening, Rajesh") with an avatar;
+- green as the trust colour, with dark pill-shaped buttons;
+- soft-tinted KPI tiles with big numbers, and ring charts;
+- dashboards with a light icon side menu, where the active item is filled.
+
+**What changed**
+- `src/styles.css`, rewritten:
+  - warm off-white ground, white cards with a soft shadow, 20 px radius, pill buttons and chips;
+  - forest green `#1e5b43` as the accent (mint `#6fd1a4` in the dark theme);
+  - Plus Jakarta Sans for headings, Inter for body text.
+  - Statuses still differ by shape and lightness: LIVE/VERIFIED filled green with a check, PASS soft green, FAIL dark ink with a ✗, NEEDS FIX outlined, CAN'T CHECK dashed amber.
+- `components.tsx`: a `Ring` chart, eight new icons (house, walk, car, train, sofa, wallet, calendar, grid, inbox), and pills with icons.
+- Screens:
+  - broker home: greeting and trust ring, KPI tiles (live / need a fix / in review), photo-first flat cards;
+  - tenant page: full-bleed hero with a "Verified by PropLock" chip, big price, feature chips, commute rows with icons and a "CHECKED" pill, a broker card with a trust ring, and a sticky "Book a visit" bar;
+  - live listing: the 7-day countdown is now a ring;
+  - audit result: an "N of 5 checks passed" ring;
+  - manager: icon side menu and KPI tiles (flats, active mandates, brokers, average trust).
+- Backend: `GET /broker/mandates` now also returns `photo_url`, the flat's first owner photo, so flat cards can show it. One new test (267 in total).
+
+**Checked in a browser** (scratch database), in light and dark, at phone width: the tenant page, broker home, live listing, audit result and manager flats. Fixed along the way:
+- the hero's photo chip collided with the rounded content sheet;
+- the furnishing icon read as a car;
+- long address chips ran off the screen (chips now wrap their text);
+- pills stretched inside stacked layouts;
+- a manager-approved audit said "Every check passed" when one check couldn't run. It now says the agency approved it after checking by hand.

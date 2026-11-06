@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import { api } from "../../api";
 import { useAuth } from "../../auth";
-import { useLoad } from "../../components";
+import { Icon, useLoad } from "../../components";
 import type { ReviewItem } from "../../types";
 
 /** `reviewCount` lets the review page keep the badge in step with its own (reloading) queue. */
@@ -13,16 +13,23 @@ export default function ManagerLayout({ children, reviewCount }: { children: Rea
   return (
     <div className="web">
       <nav aria-label="Agency" className="web-nav">
-        <div className="stack" style={{ gap: 2, padding: "0 12px 16px" }}>
-          <strong style={{ fontSize: 18 }}>PropLock</strong>
-          <span className="small muted">{me?.name}</span>
+        <div className="brand">
+          <span className="avatar" aria-hidden="true"><Icon name="shield" size={22} /></span>
+          <div className="stack" style={{ gap: 0 }}>
+            <strong style={{ fontFamily: "var(--display)", fontSize: 18 }}>PropLock</strong>
+            <span className="tiny muted">{me?.name}</span>
+          </div>
         </div>
-        <NavLink to="/m" end className={({ isActive }) => (isActive ? "active" : "")}>Flats &amp; mandates</NavLink>
-        <NavLink to="/m/reviews" className={({ isActive }) => (isActive ? "active" : "")}>
-          Review queue
-          {waiting > 0 && <span className="pill solid">{waiting}</span>}
+        <NavLink to="/m" end className={({ isActive }) => (isActive ? "active" : "")}>
+          <Icon name="grid" size={19} /> Flats &amp; mandates
         </NavLink>
-        <button className="btn ghost" style={{ justifyContent: "flex-start", marginTop: "auto" }} onClick={signOut}>Sign out</button>
+        <NavLink to="/m/reviews" className={({ isActive }) => (isActive ? "active" : "")}>
+          <Icon name="inbox" size={19} /> Review queue
+          {waiting > 0 && <span className="pill solid count">{waiting}</span>}
+        </NavLink>
+        <button className="btn ghost" style={{ justifyContent: "flex-start", marginTop: "auto" }} onClick={signOut}>
+          <Icon name="out" size={19} /> Sign out
+        </button>
       </nav>
       <main className="web-main">{children}</main>
     </div>

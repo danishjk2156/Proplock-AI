@@ -37,7 +37,14 @@ export default function ManagerFlats() {
         <button className="btn primary" onClick={() => setShowNew((v) => !v)}>{showNew ? "Close" : "Register a flat"}</button>
       </div>
 
-      {showNew && <RegisterFlat onDone={(id) => { setShowNew(false); flats.reload(); setSelected(id); }} />}
+      <section className="kpis" aria-label="At a glance">
+        <div className="stat tint"><span className="n">{flats.data?.length ?? "–"}</span><span className="l">Flats registered</span></div>
+        <div className="stat"><span className="n">{(mandates.data ?? []).filter((m) => m.status === "ACTIVE").length}</span><span className="l">Active mandates</span></div>
+        <div className="stat"><span className="n">{brokers.data?.length ?? "–"}</span><span className="l">Brokers</span></div>
+        <div className="stat"><span className="n">{brokers.data?.length ? Math.round(brokers.data.reduce((s, b) => s + b.trust_score, 0) / brokers.data.length) : "–"}</span><span className="l">Average broker trust</span></div>
+      </section>
+
+      {showNew &&<RegisterFlat onDone={(id) => { setShowNew(false); flats.reload(); setSelected(id); }} />}
 
       {flats.loading && !flats.data && <Loading />}
       <ErrorBox error={flats.error ?? brokers.error ?? mandates.error} />

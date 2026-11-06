@@ -15,7 +15,38 @@ const PATHS: Record<string, ReactNode> = {
   home: <path d="M3 10.5 12 3l9 7.5V21H3z" />,
   out: (<><path d="M15 4h4v16h-4" /><path d="M10 8l-4 4 4 4M6 12h10" /></>),
   x: <path d="M6 6l12 12M18 6 6 18" />,
+  house: (<><path d="M3 11 12 4l9 7" /><path d="M5 10v10h14V10" /><path d="M10 20v-5h4v5" /></>),
+  walk: (<><circle cx="13" cy="4.5" r="1.8" /><path d="M10 21l2-6 3 3v3M8 12l3-4 3 2 3 1M12 8l-1 6" /></>),
+  car: (<><path d="M5 16V11l2-5h10l2 5v5" /><path d="M3 16h18v3H3z" /><circle cx="7.5" cy="13" r="1" /><circle cx="16.5" cy="13" r="1" /></>),
+  train: (<><rect x="6" y="3" width="12" height="13" rx="3" /><path d="M6 10h12M9 20l-2 1M15 20l2 1M9 16l-1 4M15 16l1 4" /></>),
+  sofa: (<><path d="M3 18V7M21 18v-5a3 3 0 0 0-3-3h-8v6" /><path d="M3 13h18" /><circle cx="6.5" cy="10.5" r="1.8" /></>),
+  wallet: (<><rect x="3" y="6" width="18" height="13" rx="3" /><path d="M3 10h18M16 14.5h2" /></>),
+  calendar: (<><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></>),
+  share: (<><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="18" cy="18" r="2.5" /><path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6" /></>),
+  grid: (<><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></>),
+  inbox: (<><path d="M4 13 6 5h12l2 8v6H4z" /><path d="M4 13h5l1 2h4l1-2h5" /></>),
 };
+
+export const MODE_ICON: Record<string, string> = { walking: "walk", driving: "car", transit: "train" };
+
+/** A ring chart for one value out of a maximum (trust score, days left). Decorative: the number is in the text. */
+export function Ring({ value, max, size = 56, label }: { value: number; max: number; size?: number; label: string }) {
+  const r = (size - 8) / 2;
+  const c = 2 * Math.PI * r;
+  const share = Math.max(0, Math.min(1, value / max));
+  return (
+    <div style={{ position: "relative", width: size, height: size, flex: "none" }} role="img" aria-label={label}>
+      <svg width={size} height={size} aria-hidden="true">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-2)" strokeWidth="6" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={`${share * c} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+      </svg>
+      <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", font: `800 ${Math.round(size / 3.6)}px var(--display)` }}>
+        {value}
+      </span>
+    </div>
+  );
+}
 
 export function Icon({ name, size = 22 }: { name: keyof typeof PATHS | string; size?: number }) {
   return (
@@ -38,13 +69,15 @@ const PILL: Record<string, { label: string; style: string }> = {
   EXPIRED: { label: "EXPIRED", style: "grey" },
   RENTED: { label: "RENTED", style: "grey" },
   PASS: { label: "PASS", style: "thin" },
-  FAIL: { label: "FAIL", style: "solid" },
+  FAIL: { label: "FAIL", style: "ink" },
   UNVERIFIABLE: { label: "CAN’T CHECK", style: "dashed" },
 };
+const PILL_ICON: Record<string, string> = { LIVE: "check", VERIFIED: "check", PASS: "check", FAIL: "x" };
 
 export function Pill({ status }: { status: ListingStatus | string }) {
   const p = PILL[status] ?? { label: status, style: "grey" };
-  return <span className={`pill ${p.style}`}>{p.label}</span>;
+  const icon = PILL_ICON[status];
+  return <span className={`pill ${p.style}`}>{icon && <Icon name={icon} size={12} />}{p.label}</span>;
 }
 
 // ---------- chrome ----------

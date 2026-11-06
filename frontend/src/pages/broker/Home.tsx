@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api } from "../../api";
+import { api, apiUrl } from "../../api";
 import { useAuth } from "../../auth";
-import { AppBar, ErrorBox, Icon, Loading, Pill, useLoad } from "../../components";
+import { ErrorBox, Icon, Loading, Pill, Ring, useLoad } from "../../components";
 import { daysUntil, plain, rupees, shortDate } from "../../format";
 import type { BrokerListing, BrokerMandate, ListingOutLite } from "./shared";
 
@@ -27,6 +27,11 @@ function listingHint(l: BrokerListing): string {
     default:
       return l.status;
   }
+}
+
+function greeting(): string {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
 export default function BrokerHome() {
@@ -56,57 +61,83 @@ export default function BrokerHome() {
     }
   }
 
+  const rows = listings.data ?? [];
+  const count = (...s: string[]) => rows.filter((l) => s.includes(l.status)).length;
+
   return (
     <div className="phone">
-      <AppBar
-        title="PropLock"
-        subtitle={me?.agency ?? undefined}
-        right={
-          <div className="row" style={{ gap: 6 }}>
-            <span className="chip" title="Trust score">Trust {me?.trust_score}</span>
-            <button className="icon-btn" aria-label="Sign out" onClick={signOut}><Icon name="out" /></button>
-          </div>
-        }
-      />
+      <header className="hello">
+        <span className="avatar" aria-hidden="true">{me?.name.slice(0, 1)}</span>
+        <div className="who">
+          <p>{greeting()}</p>
+          <h1>{me?.name}</h1>
+        </div>
+        <Ring value={me?.trust_score ?? 0} max={120} size={52} label={`Trust score ${me?.trust_score}`} />
+        <button className="icon-btn" aria-label="Sign out" onClick={signOut}><Icon name="out" size={20} /></button>
+      </header>
+
       <main className="content">
+        <section className="stats" aria-label="Your listings at a glance">
+          <div className="stat tint"><span className="n">{count("LIVE", "VERIFIED")}</span><span className="l">Live</span></div>
+          <div className="stat warn"><span className="n">{count("NEEDS_FIX")}</span><span className="l">Need a fix</span></div>
+          <div className="stat"><span className="n">{count("IN_REVIEW")}</span><span className="l">In review</span></div>
+        </section>
+
         <ErrorBox error={error} />
+
         <section className="stack">
-          <h2 className="section-label">Flats you can list</h2>
-          {mandates.loading && <Loading />}
+          <div className="between">
+            <h2 className="section-label">Flats you can list</h2>
+            {mandates.data && <span className="small muted">{mandates.data.length} mandate{mandates.data.length === 1 ? "" : "s"}</span>}
+          </div>
+          {mandates.loading && !mandates.data && <Loading />}
           <ErrorBox error={mandates.error} />
           {mandates.data?.length === 0 && <p className="muted small">No active mandates. Ask the agency desk to give you one.</p>}
           {mandates.data?.map((m) => (
-            <div key={m.mandate_id} className="card">
-              <div className="row" style={{ alignItems: "flex-start" }}>
-                <div className="thumb">Photo</div>
-                <div className="stack" style={{ gap: 2, minWidth: 0 }}>
-                  <strong>{m.address}</strong>
-                  <span className="small muted">{m.property_id} · {m.city} · {m.furnishing}</span>
+            <article key={m.mandate_id} className="card photo-card">
+              <div className="media">
+                {m.photo_url ? <img src={apiUrl(m.photo_url)} alt={`Owner’s photo of ${m.address}`} /> : <Icon name="house" size={44} />}
+                <div className="over tl"><span className="glass">{m.furnishing}</span></div>
+                <div className="over br"><span className="glass">{m.city}</span></div>
+              </div>
+              <div className="body">
+                <div className="stack" style={{ gap: 2 }}>
+                  <h3>{m.address}</h3>
+                  <span className="small muted">{m.property_id} · mandate until {shortDate(m.valid_until)}</span>
                 </div>
+                <div className="between">
+                  <span className="price">{rupees(m.min_rent)}–{plain(m.max_rent)} <small>/ month</small></span>
+                </div>
+                <div className="chips">
+                  <span className="chip"><Icon name="wallet" size={15} />Deposit ≤ {rupees(m.max_deposit)}</span>
+                  <span className="chip">Brokerage ≤ {Number(m.max_brokerage_months)} mo</span>
+                </div>
+                <button className="btn primary" onClick={() => start(m)} disabled={busy === m.mandate_id}>
+                  {busy === m.mandate_id ? "Opening…" : "Start a listing"}
+                </button>
               </div>
-              <div className="limits">
-                Owner’s limits: rent {rupees(m.min_rent)}–{plain(m.max_rent)} · deposit up to {rupees(m.max_deposit)} ·
-                brokerage up to {Number(m.max_brokerage_months)} month · mandate until {shortDate(m.valid_until)}
-              </div>
-              <button className="btn primary" onClick={() => start(m)} disabled={busy === m.mandate_id}>
-                {busy === m.mandate_id ? "Opening…" : "Start a listing"}
-              </button>
-            </div>
+            </article>
           ))}
         </section>
 
         <section className="stack">
           <h2 className="section-label">Your listings</h2>
-          {listings.loading && <Loading />}
+          {listings.loading && !listings.data && <Loading />}
           <ErrorBox error={listings.error} />
-          {listings.data?.length === 0 && <p className="muted small">No listings yet.</p>}
-          {listings.data?.map((l) => (
+          {rows.length === 0 && listings.data && <p className="muted small">No listings yet.</p>}
+          {rows.map((l) => (
             <Link key={l.id} to={`/b/listings/${l.id}`} className={`card${l.status === "DRAFT" ? " dashed" : ""}`}>
-              <div className="between">
-                <strong>{l.ad?.title ?? l.address}</strong>
-                <Pill status={l.status} />
+              <div className="row" style={{ alignItems: "flex-start" }}>
+                <div className="thumb" aria-hidden="true"><Icon name="house" size={24} /></div>
+                <div className="stack" style={{ gap: 4, flex: 1, minWidth: 0 }}>
+                  <div className="between" style={{ alignItems: "flex-start" }}>
+                    <strong>{l.ad?.title ?? l.address}</strong>
+                    <Pill status={l.status} />
+                  </div>
+                  <span className="small muted">{listingHint(l)}</span>
+                  {l.ad && <span className="small"><strong>{rupees(l.ad.rent)}</strong><span className="muted"> / month · v{l.version_no}</span></span>}
+                </div>
               </div>
-              <span className="small muted">{listingHint(l)}</span>
             </Link>
           ))}
         </section>
