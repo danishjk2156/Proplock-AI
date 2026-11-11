@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     paypal_client_id: str | None = None
     paypal_client_secret: str | None = None
     paypal_api_base: str = "https://api-m.sandbox.paypal.com"
+    # Feature 4: the webhook id PayPal shows for our listener; without it no webhook is trusted.
+    paypal_webhook_id: str | None = None
+    # USD in the sandbox: PayPal has no domestic INR between Indian accounts (₹ is shown as framing).
+    invoice_currency: str = "USD"
+    invoice_due_days: int = 7
+    # Reminder days relative to the due date; at most three are ever sent.
+    invoice_reminder_offsets: str = "-1,1,3"
 
     @model_validator(mode="after")
     def _real_secret_outside_development(self) -> "Settings":

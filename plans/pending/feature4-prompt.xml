@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Implementation prompt for Feature 4 of PropLock AI.
+  Give this whole file to a coding agent working in the repository root, on branch
+  feature/4-invoice-ledger. The human-readable plan is plans/pending/feature4-invoice-ledger.md.
+-->
+<task id="proplock-feature4" branch="feature/4-invoice-ledger">
+
+  <role>
+    You are a senior Python and TypeScript engineer extending PropLock AI, a FastAPI + React app built for the
+    PayPal AI Hackathon. You write small, tested, honest code that matches the existing codebase's style.
+  </role>
+
+  <goal>
+    Build Feature 4, "Token-to-Invoice Ledger &amp; Dispute Defense Copilot": when a tenant locks a flat, create a
+    PayPal invoice for the security deposit and brokerage with the captured visit token already deducted; record
+    every money event in an append-only ledger shown in an AG Grid cockpit; send reminders; answer plain-English
+    questions about the ledger; and draft dispute responses from evidence PropLock already holds.
+  </goal>
+
+  <context>
+    <repository>
+      <backend path="backend/">FastAPI, SQLAlchemy 2, Alembic, Pydantic v2, LangGraph, Groq SDK, httpx, pytest. Python 3.11 venv at backend/.venv.</backend>
+      <frontend path="frontend/">Vite + React 18 + TypeScript (strict) + React Router 6, plain CSS ("verified green" design system in src/styles.css).</frontend>
+      <read_first>
+        <file>README.md</file>
+        <file>plans/pending/feature4-invoice-ledger.md</file>
+        <file>plans/pending/feature1-rebuild.md</file>
+        <file>docs/BUILD_LOG.md</file>
+        <file>backend/app/adapters/paypal.py</file>
+        <file>backend/app/services/outbox.py</file>
+        <file>backend/app/domain/signing.py</file>
+        <file>backend/app/db/models.py</file>
+        <file>backend/tests/conftest.py</file>
+        <file>frontend/src/api.ts</file>
+        <file>frontend/src/components.tsx</file>
+      </read_first>
+    </repository>
+
+    <reuse>
+      <item name="PayPal OAuth and errors">backend/app/adapters/paypal.py: PayPalCatalog._access_token, PayPalError(status, debug_id), the Fake/Demo/Unconfigured twin pattern and get_paypal().</item>
+      <item name="Outbox">backend/app/services/outbox.py: commit the intent first, then call PayPal from a job; claim with an atomic UPDATE lease; backoff; fixed PayPal-Request-Id so retries are idempotent.</item>
+      <item name="Signing">backend/app/domain/signing.py: canonical_json + HMAC with AUDIT_SECRET. Sign invoice bodies the same way.</item>
+      <item name="Verified terms">Each Feature 1 audit's report_json holds terms.deposit and terms.brokerage_fee for that listing version. Invoices must match them.</item>
+      <item name="LLM adapter">backend/app/adapters/llm.py: Groq JSON mode + Pydantic validation + one retry; FakeLLM for tests.</item>
+      <item name="Trust">backend/app/services/trust.py: record(session, broker_id, event, audit_id).</item>
+      <item name="Frontend">api.ts (X-API-Key, readable errors), components.tsx (Pill, Ring, Icon, useLoad, CheckReport), styles.css tokens.</item>
+    </reuse>
+
+    <dependency name="Feature 3 (visit escrow)" status="not built">
+      Feature 4 consumes HOLD_AUTHORIZED, HOLD_CAPTURED and HOLD_VOIDED events. Define that contract as a Pydantic
+      LedgerEvent and add a dev-only endpoint POST /dev/ledger/simulate-capture (MANAGER role, allowed only when
+      DEMO_MODE=true) so Feature 4 can be built and demoed before Feature 3 exists.
+    </dependency>
+
+    <paypal_apis environment="sandbox">
+      <api name="Invoicing v2">generate-next-invoice-number, create draft invoice, send, remind, cancel, get, generate-qr-code. Confirm the exact request shapes, including the invoice-level discount, in the Phase 0 spike before relying on them.</api>
+      <api name="Webhooks">verify every event with POST /v1/notifications/verify-webhook-signature using PAYPAL_WEBHOOK_ID.</api>
+      <api name="Customer Disputes v1">list/get disputes, provide-evidence.</api>
+      <api name="MCP (optional)">@paypal/agent-toolkit, read-only tools only (list/get invoice).</api>
+      <currency>Use USD in the sandbox; PayPal does not support domestic INR between Indian accounts.</currency>
+    </paypal_apis>
+  </context>
+
+  <architecture>
+    <tables>
+      <table name="closings">id, listing_id, version_id, audit_id, tenant_name, tenant_email, status OPEN|INVOICED|PAID|CANCELLED|DISPUTED, created_at</table>
+      <table name="ledger_entries">id, closing_id, kind, amount Numeric(12,2), currency, direction in|out|info, paypal_ref, idempotency_key UNIQUE, occurred_at, source feature3|webhook|api|manual, raw_json</table>
+      <table name="invoices">id, closing_id, paypal_invoice_id UNIQUE, number, items_json, deposit, brokerage, token_deduction, total, currency, status, due_date, sent_at, paid_at, reminders_sent, signature</table>
+      <table name="webhook_events">paypal_event_id PK, event_type, verified, received_at, processed_at, error</table>
+      <table name="disputes">id, paypal_dispute_id UNIQUE, closing_id, reason, amount, status, evidence_pack_json, draft_response, approved_by, submitted_at</table>
+    </tables>
+    <money_rules>
+      <rule>invoice.total = deposit + brokerage - token_captured, never negative.</rule>
+      <rule>deposit and brokerage must equal the signed audit's terms for that version; a different amount requires a MANAGER override with a note, recorded as a ledger entry.</rule>
+      <rule>The token appears as an invoice-level discount labelled with the PayPal capture id.</rule>
+      <rule>Balances are derived from ledger entries; never store a running balance.</rule>
+    </money_rules>
+    <modules>
+      <module path="backend/app/domain/ledger.py">LedgerEvent, entry kinds, balance()</module>
+      <module path="backend/app/domain/invoice_rules.py">build_invoice_draft(audit_report, token) and its validation</module>
+      <module path="backend/app/adapters/paypal_invoicing.py">PayPalInvoicing + FakeInvoicing + DemoInvoicing (FAKE-INV- ids) + get_invoicing()</module>
+      <module path="backend/app/services/ledger_service.py">record (idempotent), entries, balances</module>
+      <module path="backend/app/services/closing_service.py">close listing → closing + ledger + outbox jobs in one commit</module>
+      <module path="backend/app/api/webhooks.py">POST /webhooks/paypal</module>
+      <module path="backend/app/agents/ledger_copilot.py">NL question → validated LedgerQuery (read-only)</module>
+      <module path="backend/app/agents/dispute_copilot.py">evidence pack → cited draft</module>
+      <module path="frontend/src/pages/ledger/">AG Grid cockpit, invoice drawer, dispute review</module>
+    </modules>
+  </architecture>
+
+  <phases>
+    <phase n="0" name="Spike and contract">
+      <step id="0.1">scripts/spike_invoicing.py: create, send, get, QR code and cancel one sandbox invoice with a discount; exit 0 ok, 1 failed, 2 no keys. Record the real JSON shapes in docs/BUILD_LOG.md.</step>
+      <step id="0.2">LedgerEvent contract and POST /dev/ledger/simulate-capture (MANAGER, DEMO_MODE only).</step>
+    </phase>
+    <phase n="1" name="Ledger">
+      <step id="1.1">Models and one Alembic migration for the five tables; upgrade/downgrade test; CHECK-constrained enums.</step>
+      <step id="1.2">ledger_service.record is idempotent by idempotency_key; no update or delete code paths; corrections are reversing entries.</step>
+    </phase>
+    <phase n="2" name="Closing to invoice">
+      <step id="2.1">invoice_rules: draft from the signed audit and captured token; reject mismatched amounts and negative totals.</step>
+      <step id="2.2">PayPal invoicing adapter with PayPal-Request-Id; PayPalError with debug_id; Fake and Demo twins; mock-HTTP tests.</step>
+      <step id="2.3">POST /broker/listings/{id}/close → closing + ledger entry + create_invoice job in one commit; job chain create → send; invoice body HMAC-signed.</step>
+    </phase>
+    <phase n="3" name="Webhooks">
+      <step id="3.1">POST /webhooks/paypal: verify signature, store raw event, dedupe by event id, update invoice/closing and write ledger entries.</step>
+    </phase>
+    <phase n="4" name="Cockpit">
+      <step id="4.1">GET /ledger (broker: own closings; manager: all) and GET /closings/{id}.</step>
+      <step id="4.2">AG Grid Community cockpit: status renderers matching existing pills, money columns, grouping by closing, quick filter, invoice drawer with PayPal link and QR; card fallback at phone width; light and dark.</step>
+    </phase>
+    <phase n="5" name="Reminders">
+      <step id="5.1">Outbox reminder jobs at due-1, due+1, due+3 days; max 3; stop when paid; each reminder is an info ledger entry.</step>
+    </phase>
+    <phase n="6" name="Ledger copilot">
+      <step id="6.1">Groq JSON mode → LedgerQuery (allowed fields and operators, max 500 rows), one retry, refuse write intents; answer quotes the rows used.</step>
+    </phase>
+    <phase n="7" name="Dispute defense">
+      <step id="7.1">Evidence pack from the signed audit (+ /verify result), check-in proof, invoice and payment trail, trust history; every item has a source id.</step>
+      <step id="7.2">LLM draft that cites ids; MANAGER approves; outbox submits evidence; status from webhooks.</step>
+    </phase>
+    <phase n="8" name="Demo and docs">
+      <step id="8.1">scripts/demo_feature4.py: simulated capture → invoice with token deducted → sent → paid webhook → ledger PAID → dispute → evidence pack → approved response. README section and screenshots.</step>
+    </phase>
+    <hackathon_cut deadline="2026-11-12">0.2, 1.1, 1.2, 2.1, 2.2 (Fake and Demo first), 2.3, 4.1, 4.2 (grid only). Everything else is roadmap.</hackathon_cut>
+  </phases>
+
+  <constraints>
+    <must>Work on branch feature/4-invoice-ledger. One commit per step, conventional message, ending with the attribution line the environment gives you.</must>
+    <must>Every PayPal call goes through the outbox with a fixed PayPal-Request-Id; every money event becomes a ledger entry.</must>
+    <must>Money is Decimal / Numeric(12,2) end to end and travels as strings in JSON.</must>
+    <must>Tests never touch the network: Fake adapters and httpx.MockTransport only. Keep the existing 280+ tests green.</must>
+    <must>Each step ends with its tests passing and a docs/BUILD_LOG.md entry: what changed, why, key idea, how to see it, what was verified.</must>
+    <must>Match existing code: short docstrings that say why, the same naming, Pydantic schemas in app/schemas, endpoints that map service exceptions to 403/404/409/422.</must>
+    <never>Never update or delete a ledger entry.</never>
+    <never>Never let an LLM call a tool that moves money, sends an invoice or submits dispute evidence; LLM output is drafts and query objects only.</never>
+    <never>Never mark anything paid from an unverified webhook.</never>
+    <never>Never invent a PayPal id outside DEMO_MODE; demo ids are visibly prefixed FAKE-.</never>
+    <never>Never commit secrets: keys stay in backend/.env (PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID).</never>
+    <never>Never push, open a PR or merge unless the user asks.</never>
+  </constraints>
+
+  <acceptance>
+    <check>Locking a verified listing with a simulated $15 capture creates exactly one invoice whose total is deposit + brokerage - 15, even if the worker runs twice.</check>
+    <check>An invoice amount that differs from the signed audit is refused unless a manager override with a note exists.</check>
+    <check>A replayed or unverified webhook changes nothing; a verified INVOICING.INVOICE.PAID marks the invoice and closing PAID once.</check>
+    <check>The ledger cockpit's totals equal the sum of ledger entries for every closing.</check>
+    <check>"Which deposits are unpaid after 3 days?" returns the right rows; "cancel all invoices" is refused.</check>
+    <check>A dispute produces an evidence pack whose every claim cites a record id, and nothing is submitted without approval.</check>
+    <check>backend: .venv/Scripts/python -m pytest -q passes; frontend: npm run build passes.</check>
+  </acceptance>
+
+  <workflow>
+    <step>Read the files in read_first. Restate the plan in five lines and list any decision marked (proposed) in the plan; ask the user to confirm them before Phase 1.</step>
+    <step>Work phase by phase in order. Before each step, say what you will build; after it, run the tests, write the BUILD_LOG entry, and commit.</step>
+    <step>If a PayPal response shape differs from the plan, follow the real API, update the plan file, and note it in BUILD_LOG.</step>
+    <step>When blocked by a missing key or an unbuilt dependency, use the Fake/Demo path, say so, and keep going.</step>
+    <step>Finish with a short report: what is done and verified, what is not, and the commands to run the demo.</step>
+  </workflow>
+
+  <output_format>
+    Short progress notes in plain English. Code in the repository, not in chat. Final report: done and verified,
+    not done, how to run, open questions.
+  </output_format>
+</task>
