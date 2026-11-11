@@ -4,7 +4,7 @@ Source of truth: `docs/PropLock_Solution_Overview.pdf` §3.1 and the PropLock AI
 Branch: `feature/4-invoice-ledger` (from `main` at `36b37ab`).
 Implementation prompt for a coding agent: [`feature4-prompt.xml`](feature4-prompt.xml).
 
-Status: **DRAFT 2026-11-11, not approved.** Decisions marked *(proposed)* need a yes before Phase 1.
+Status: **BUILT 2026-11-11.** Proposed decisions D1-D10 taken as written. All phases done on Fake/Demo PayPal; the real Invoicing spike is blocked (403, see Progress).
 
 > **Deadline:** hackathon submissions close **12 November 2026**. The full plan below is several days of work. §7 "Hackathon cut" lists the smallest slice that demos the idea in about a day; everything else is roadmap.
 
@@ -220,12 +220,20 @@ That demos: simulated capture → invoice with the token deducted → ledger in 
 
 | Phase | Status |
 |---|---|
-| 0 Spike + contract | not started |
-| 1 Ledger | not started |
-| 2 Closing → invoice | not started |
-| 3 Webhooks | not started |
-| 4 Cockpit | not started |
-| 5 Reminders | not started |
-| 6 Ledger copilot | not started |
-| 7 Dispute defense | not started |
-| 8 Demo + docs | not started |
+| 0 Spike + contract | **done, real spike blocked**: sandbox keys work for Catalog, but Invoicing returns 403 NOT_AUTHORIZED (enable *Invoicing* on the sandbox app). LedgerEvent contract + DEMO_MODE simulate-capture |
+| 1 Ledger | **done**: 5 tables + migration; append-only enforced by ORM listeners; idempotent record(); derived balances |
+| 2 Closing → invoice | **done**: invoice from the signed audit minus the token, manager override with note, signed invoice, outbox create → send with fixed request ids |
+| 3 Webhooks | **done**: verified via PayPal (demo HMAC in DEMO_MODE), raw events stored, deduped by event id and ledger key |
+| 4 Cockpit | **done**: AG Grid Community, closings + money-event views, drawer, cards on phones, light/dark |
+| 5 Reminders | **done**: due-1/+1/+3, max 3, none once paid |
+| 6 Ledger copilot | **done**: Groq to LedgerQuery, write intents refused by rule and by the model; real spike 10/10 |
+| 7 Dispute defense | **done**: evidence pack with source ids, citation-checked draft (template fallback), approval before submit |
+| 8 Demo + docs | **done**: `scripts/demo_feature4.py` (online + `--offline`), README section, BUILD_LOG |
+
+### Deviations from the plan (follow the real API when the spike runs)
+
+- **Row grouping** is AG Grid Enterprise-only, so the cockpit shows closings and money events as two views plus a detail drawer.
+- **Token label:** Invoicing v2's invoice discount has no label field, so the capture id is written in the invoice note.
+- **Invoice number** is ours (`PL-xxxxxxxx`), not `generate-next-invoice-number`, so retries always send the same number.
+- **POST /closings/{id}/refresh** was added: it reads the invoice from PayPal directly, so PAID can be shown without a public webhook URL (deduplicated with the webhook).
+- **Disputes simulate** (`POST /dev/disputes/simulate`, DEMO_MODE) was added so the dispute screen can be demoed.

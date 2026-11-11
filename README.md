@@ -1,9 +1,11 @@
-# PropLock AI: Feature 1, Listing Audit & Commute-Truth Agent
+# PropLock AI: Listing Audit (Feature 1) and Invoice Ledger (Feature 4)
 
 PropLock checks a broker's rental ad against facts the broker can't change before it goes live.
 It checks the owner's agreed terms, rush-hour routes, state deposit rules, and photos taken at the flat.
 It then signs the result and publishes the verified listing as a **PayPal Catalog product**.
-Features 2–4 (AI qualification, the ₹500 visit hold, invoicing) build on this verified listing; they are designed, not built.
+
+**Feature 4** closes the deal on that verified listing. When a tenant locks the flat, a **PayPal invoice** goes out for the verified deposit and brokerage, minus the visit token already captured. Every money event lands in an **append-only ledger** shown in an AG Grid cockpit that you can question in plain English. When a payer disputes, a copilot drafts a cited response from PropLock's own signed records, and a person approves it.
+Features 2–3 (AI qualification, the ₹500 visit hold) are designed, not built; Feature 4 takes a simulated visit token in demo mode until Feature 3 exists.
 
 Built for the PayPal AI Hackathon. Background: [docs/PropLock_Solution_Overview.pdf](docs/PropLock_Solution_Overview.pdf).
 Step-by-step build notes: [docs/BUILD_LOG.md](docs/BUILD_LOG.md).
@@ -112,6 +114,46 @@ On a throwaway database, the demo runs these steps and prints each result:
 
 The script exits non-zero if any step behaves differently. Add `--offline` to skip Groq.
 
+## Feature 4: from locked flat to paid invoice
+
+```text
+Feature 3 visit hold (simulated: POST /dev/ledger/simulate-capture, DEMO_MODE)
+        │ HOLD_CAPTURED $15
+        ▼
+close the LIVE listing ──► invoice = signed deposit + signed brokerage − token
+        │                  (other amounts: manager override + note, recorded)
+        │  one commit: closing + signed invoice + ledger entry + outbox job
+        ▼
+outbox ──► PayPal: create → send → reminders (due−1, +1, +3; none once paid)
+        ▼
+verified webhook / "Check PayPal now" ──► INVOICE_PAID, once ──► closing PAID
+        ▼
+dispute webhook ──► evidence pack (audit, check-in, invoice, ledger, trust; each with a source id)
+                ──► cited draft (Groq, else a template) ──► manager approves the text ──► PayPal
+```
+
+The rules: the ledger is append-only (the ORM refuses updates and deletes); balances are summed from entries, never stored; every PayPal call goes through the outbox with a fixed `PayPal-Request-Id`; an unverified webhook changes nothing; the LLM only writes query objects and drafts, never a money-moving call.
+
+```bash
+.venv/Scripts/python -m scripts.demo_feature4
+```
+Runs the whole story on a throwaway database, using demo PayPal invoicing (`FAKE-INV-` ids) and webhooks signed by the script. Add `--offline` to skip Groq.
+
+| Who | Screens |
+|---|---|
+| Manager | **Money ledger** (`/m/ledger`): KPIs, AG Grid of closings and money events, "Ask the ledger", invoice drawer (breakdown, pay link, QR, timeline, cancel), close a flat with an optional override · **Disputes** (`/m/disputes`): evidence pack, draft, approve |
+| Broker | **My money ledger** (`/b/ledger`, the ledger icon on the home screen): own closings only; close a flat with a captured token |
+
+| API | |
+|---|---|
+| Broker | `POST /broker/listings/{id}/close` |
+| Manager | `POST /manager/listings/{id}/close` (override) · `POST /closings/{id}/cancel` · `GET /manager/disputes` · `POST /manager/disputes/{id}/draft` · `POST …/approve` |
+| Both | `GET /ledger` · `GET /ledger/closable` · `GET /closings/{id}` · `POST /closings/{id}/refresh` · `GET /closings/{id}/qr` · `POST /ledger/copilot` |
+| PayPal | `POST /webhooks/paypal` |
+| Demo only | `POST /dev/ledger/simulate-capture` · `POST /dev/disputes/simulate` |
+
+Spikes: `python -m scripts.spike_invoicing` (real sandbox invoice) and `python -m scripts.spike_ledger_copilot` (10 questions through Groq).
+
 ## Configuration
 
 | Variable | Needed for | Without it |
@@ -121,7 +163,9 @@ The script exits non-zero if any step behaves differently. Add `--offline` to sk
 | `MAPS_PROVIDER=osm` | real routes from OpenStreetMap: free, no key or card | — (default `auto`: Google if keyed, else the demo table in `DEMO_MODE`) |
 | `GOOGLE_MAPS_API_KEY` | real rush-hour routes with live traffic (Routes API, needs billing) | `DEMO_MODE` route table, else UNVERIFIABLE |
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | sandbox Catalog products | `DEMO_MODE` `FAKE-` ids, else the listing waits as VERIFIED |
-| `DEMO_MODE` | demo route table and fake PayPal ids | off: missing services are UNVERIFIABLE |
+| `DEMO_MODE` | demo route table and fake PayPal ids; Feature 4's simulated visit token and demo-signed webhooks | off: missing services are UNVERIFIABLE |
+| `PAYPAL_WEBHOOK_ID` | trusting PayPal webhooks (verified with PayPal) | every webhook is rejected (in `DEMO_MODE`, only script-signed ones pass) |
+| `INVOICE_CURRENCY`, `INVOICE_DUE_DAYS`, `INVOICE_REMINDER_OFFSETS` | Feature 4 invoices | `USD`, 7 days, `-1,1,3` |
 | `AUDIT_SECRET` | signing audits | dev default (refused when `APP_ENV=production`) |
 | `DATABASE_URL`, `UPLOAD_DIR` | storage | `sqlite:///./proplock.db`, `uploads/` |
 
@@ -175,4 +219,7 @@ npm run build
 - **Single-process limits:** the pre-check rate limit (10/min per broker) is kept in memory, and photo-reuse detection scans every photo. Both are fine for a demo, not for scale.
 - **Sign-in is an API key:** the web app keeps it in the browser's local storage. Fine for a demo, but a real login would use a session cookie.
 - **The frontend has no automated tests yet:** it was checked by hand in a browser (see the build log).
-- **Features 2–4 are not built.** The tenant page shows "Book a visit" as coming next.
+- **Features 2–3 are not built.** The tenant page shows "Book a visit" as coming next; Feature 4 uses a simulated visit token in `DEMO_MODE`.
+- **Feature 4 has not reached the real PayPal Invoicing API:** the sandbox app returns 403 NOT_AUTHORIZED for Invoicing until the *Invoicing* feature is switched on for it in the PayPal developer dashboard. The adapter is tested against a mock server, and the demo uses `FAKE-INV-` invoices. Webhooks need a public URL and `PAYPAL_WEBHOOK_ID`; until then, "Check PayPal now" reads the invoice status directly.
+- **Invoices are in USD** in the sandbox (PayPal has no domestic INR between Indian accounts), using the ₹ figures verified in the listing.
+- **AG Grid Community has no row grouping**, so closings and their money events are two views plus a detail drawer.

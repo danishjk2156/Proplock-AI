@@ -753,3 +753,66 @@ Walking isn't affected by traffic, so walking claims (the most common lie, "2 mi
 | Indiranagar flat | a made-up place | walking | — | "no place called … found near the flat" |
 
 **Demo note:** with OSM on, the honest demo ad's "25 min drive to Bagmane Tech Park" goes to a manager, because a driving time can't be confirmed for rush hour. Leave drive claims out of a demo ad, or approve it in the review queue. `scripts/demo.py` always uses the demo table and is unaffected.
+
+---
+
+## Feature 4: Token-to-Invoice Ledger & Dispute Defense Copilot (2026-11-11)
+
+Plan: [plans/pending/feature4-invoice-ledger.md](../plans/pending/feature4-invoice-ledger.md). Branch `feature/4-invoice-ledger`. All phases built: the hackathon cut plus webhooks, reminders, the copilot and disputes. Proposed decisions D1–D10 were taken as written.
+
+### Phase 0: spike and contract
+**What changed**
+- `app/adapters/paypal_invoicing.py`: Invoicing v2 (create, send, remind, cancel, get, QR), webhook verification (`verify-webhook-signature`), and Disputes `provide-evidence`. It reuses `PayPalCatalog`'s OAuth token cache and `PayPalError(status, debug_id)`. Twins: `DemoInvoicing` (`FAKE-INV-` ids, DEMO_MODE only), `FakeInvoicing` (tests), `UnconfiguredInvoicing` (every call raises, so a job waits).
+- `scripts/spike_invoicing.py`: create (twice with one request id), read back the discount and total, send, QR, cancel.
+- `app/domain/ledger.py`: `LedgerEvent`, the Feature 3 contract (`HOLD_AUTHORIZED / HOLD_CAPTURED / HOLD_VOIDED`, idempotency key `f3:{kind}:{paypal_ref}`). `POST /dev/ledger/simulate-capture` (manager, DEMO_MODE only) feeds it until Feature 3 exists.
+
+**Verified with real calls:** the sandbox keys work (the Catalog spike passes), but Invoicing answers **403 NOT_AUTHORIZED** (debug id `f679146c55e7e`): the sandbox app has no Invoicing permission. **To unblock:** developer.paypal.com → Apps & Credentials → the sandbox app → Features → tick **Invoicing**, then run `python -m scripts.spike_invoicing`. Until then everything runs on the Fake/Demo twins, and the real adapter is tested against a mock HTTP server.
+
+**Shapes chosen while the spike is blocked (follow the real API if they differ):**
+- The token is an invoice-level discount: `amount.breakdown.discount.invoice_discount.amount`. That object has no label, so the capture id goes in `detail.note`.
+- We set the invoice number ourselves (`PL-{first 8 of our invoice id}`) instead of calling `generate-next-invoice-number`. A retried job then always sends the same number, and PayPal refuses a duplicate number as a second guard.
+
+### Phase 1: the ledger
+- Five tables, one migration (`246a7d80ba6c`): `closings`, `ledger_entries`, `invoices`, `webhook_events`, `disputes`. `outbox_jobs` gains `ref_id`, and `audit_id` becomes optional (the downgrade deletes Feature 4 jobs first).
+- **Append-only is enforced, not just promised:** SQLAlchemy `before_update` / `before_delete` listeners raise `LedgerIsAppendOnly`. Corrections are new `REVERSAL` entries.
+- `ledger_service.record()` is idempotent by `idempotency_key` (UNIQUE in the database too). The same key with a different amount raises `LedgerConflict`.
+- **Key idea, derived balances:** `balance = Σ in − Σ out`. Holds, drafts and reminders are `info` and count for nothing. A closing's balance includes the Feature 3 capture it deducted, which was recorded before the closing existed.
+
+### Phase 2: closing → invoice
+- `domain/invoice_rules.py`: deposit and brokerage must equal the signed audit's `terms`. A different amount needs a manager `Override` with a note, which is recorded as an `AMOUNT_OVERRIDE` entry. A negative total is refused (the refund flow is not built).
+- `closing_service.close_listing()`: a LIVE listing whose latest audit is VERIFIED **and** passes its signature check, plus an unused captured hold in the invoice currency. One commit holds the closing, an HMAC-signed invoice (`signing.sign_data`), the `INVOICE_PREPARED` entry, the listing → RENTED and a `create_invoice` job.
+- `services/invoice_jobs.py` runs on the generalised outbox (handlers by kind, same lease and backoff). Request ids come from our own rows: `create-{invoice}`, `send-{invoice}`, `remind-{job}`, `cancel-{invoice}`, `evidence-{dispute}`. The create job re-checks the invoice signature first, so a tampered row is refused (FAILED) and never sent.
+- Endpoints: `POST /broker/listings/{id}/close`, `POST /manager/listings/{id}/close` (override), `GET /ledger`, `GET /ledger/closable`, `GET /closings/{id}`, `POST /closings/{id}/refresh` (reads PayPal directly; a payment read from the API is trusted and deduplicated with the webhook), `POST /closings/{id}/cancel` (manager), `GET /closings/{id}/qr`.
+
+### Phase 3: webhooks
+- `POST /webhooks/paypal`: the raw event is stored first; verification goes through PayPal (`PAYPAL_WEBHOOK_ID`); an unverified event returns 400, stays stored with `verified=false` and changes nothing. An event id that was already applied is a duplicate, and ledger keys (`inv-paid:{paypal id}`) also stop the same payment from counting twice under a new event id.
+- Handlers: invoice PAID / CANCELLED / REFUNDED; dispute CREATED / UPDATED / RESOLVED.
+- DEMO_MODE without a webhook id uses `DemoWebhookVerifier`: it accepts only events HMAC-signed with `AUDIT_SECRET` (the demo script signs them). Outside demo mode, with no webhook id, every event is rejected.
+
+### Phase 4: the cockpit
+- AG Grid Community 33.3.2 (MIT, no key), themed with the app's own CSS tokens, so light and dark both work. Two views: Closings (one row per locked flat: gross, token, received, outstanding, reminders) and All money events, with a quick filter.
+- Below 760 px the grid becomes cards (checked at 375 px: no horizontal scroll).
+- Drawer: invoice breakdown, signature status, tenant pay link, QR, a ledger timeline, "Check PayPal now", cancel (manager), and "Simulate a dispute" (demo).
+- Close-a-flat panel: pick a LIVE listing and an unused hold. A manager can override amounts with a note.
+- **Deviation:** row grouping is an AG Grid *Enterprise* feature, so closings and their entries are separate views plus a drawer rather than grouped rows.
+
+### Phase 5: reminders
+At `due − 1`, `due + 1` and `due + 3` days (`INVOICE_REMINDER_OFFSETS`), at most 3. A reminder job for a paid or cancelled invoice ends without calling PayPal. Each reminder is an `info` ledger entry. Tested with a fake clock.
+
+### Phase 6: the ledger copilot
+- The question goes to Groq JSON mode, which returns a `LedgerQuery`: target closings or entries, allowed fields and operators only, ≤ 500 rows. It is validated, with one retry. Our code runs it over the rows the caller can already see, and the answer text is written by code from those rows.
+- Write requests ("cancel…", "refund…", "please send…") are refused by a rule before the model is asked, and the model can refuse as well. The copilot has no write path at all.
+- **Real Groq spike** (`scripts/spike_ledger_copilot.py`, `openai/gpt-oss-120b`): 10/10. Eight questions gave sensible queries; "weather in Bengaluru" and "zero out every unpaid balance" were refused.
+
+### Phase 7: dispute defense
+- Evidence pack, from our records only: the dispute, the signed audit with a live `/verify`-style mismatch check, the broker's check-in photo, the invoice with its signature status, every ledger entry, and the broker's trust history. Each item has a `source_id`. Missing evidence is listed as missing (the Feature 3 visit check-in).
+- The draft must cite `[source_id]`s that exist in the pack; otherwise it gets one retry, then a template built from the same facts (labelled `template (…)`). Only `POST /manager/disputes/{id}/approve` with the exact text queues `submit_dispute_evidence`. The job refuses to run without `approved_by`.
+- **Seen in the real run:** every citation in Groq's draft was valid, but one sentence listed the rent beside the invoice amounts (rent is not invoiced). Citations prove where a fact came from, not that the wording is right. That is why a person approves the text.
+
+### Phase 8: demo
+`python -m scripts.demo_feature4` (add `--offline` to skip Groq) runs ten steps on a throwaway database. Both modes pass: total 104,985.00; one create and one send after two extra worker runs; forged webhook 400; PAID once; received 105,000.00; copilot refusal and answer; dispute pack, draft, approval, submission.
+
+### Verified
+- `pytest`: all green (the 280 existing tests plus the new Feature 4 ones); `npm run build` passes.
+- Checked in the browser against a scratch DEMO_MODE database (light and dark, desktop and 375 px): close-a-flat → invoice drawer ($70,000 + $35,000 − $15 = $104,985), QR, a copilot question answered by real Groq, simulated dispute → Groq draft with 11 valid citations → approved → submitted. No console errors.
+- **Not verified:** any real Invoicing or Disputes call (blocked by the 403 above), a real webhook delivery (needs a public URL and `PAYPAL_WEBHOOK_ID`).
