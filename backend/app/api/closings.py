@@ -11,13 +11,15 @@ from app.adapters.paypal_invoicing import Invoicing, get_invoicing, png_data_url
 from app.auth import current_user, require_role
 from app.config import get_settings
 from app.db.base import get_session
-from app.db.models import Closing, Invoice, InvoiceStatus, LedgerSource, Listing, Role, User
+from app.db.models import Closing, Invoice, InvoiceStatus, LedgerEntry, LedgerSource, Listing, ListingStatus, Role, User
 from app.domain.invoice_rules import InvoiceRefused
 from app.domain.ledger import EntryKind, LedgerEvent
 from app.agents import ledger_copilot as ledger_copilot_agent
 from app.agents.ledger_copilot import QueryLLM, get_query_llm
 from app.services.rate_limit import RateLimiter
 from app.schemas.closing import (
+    ClosableListing,
+    HoldOut,
     CloseIn,
     CopilotIn,
     CopilotOut,
@@ -81,6 +83,39 @@ def manager_close(
     if listing is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Listing not found")
     return _close(session, manager, listing, body, invoicing, is_manager=True)
+
+
+@router.get("/ledger/config")
+def ledger_config(_: User = Depends(current_user)) -> dict:
+    """What the cockpit needs to label things honestly: demo mode, and the invoice currency."""
+    settings = get_settings()
+    return {"demo_mode": settings.demo_mode, "currency": settings.invoice_currency}
+
+
+@router.get("/ledger/closable", response_model=list[ClosableListing])
+def closable(user: User = Depends(current_user), session: Session = Depends(get_session)):
+    """LIVE listings the caller may close (brokers: their own), each with its unused captured holds."""
+    q = select(Listing).where(Listing.status == ListingStatus.LIVE).order_by(Listing.created_at.desc())
+    if user.role is Role.BROKER:
+        q = q.where(Listing.broker_id == user.id)
+    used = set(session.scalars(select(Closing.capture_ref)))
+    out = []
+    for listing in session.scalars(q):
+        try:
+            audit, version, report = closing_service.verified_audit(session, listing)
+        except ClosingConflict:
+            continue
+        holds = session.scalars(select(LedgerEntry).where(
+            LedgerEntry.listing_id == listing.id, LedgerEntry.kind == EntryKind.HOLD_CAPTURED
+        ).order_by(LedgerEntry.occurred_at.desc()))
+        out.append(ClosableListing(
+            listing_id=listing.id, property_id=listing.property_id, title=version.title,
+            broker_name=session.get(User, listing.broker_id).name, deposit=report.terms.deposit,
+            brokerage=report.terms.brokerage_fee, audit_id=audit.id,
+            holds=[HoldOut(capture_ref=h.paypal_ref, amount=h.amount, currency=h.currency, occurred_at=h.occurred_at)
+                   for h in holds if h.paypal_ref not in used],
+        ))
+    return out
 
 
 @router.get("/ledger", response_model=LedgerOut)

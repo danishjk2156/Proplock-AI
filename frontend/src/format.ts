@@ -66,3 +66,23 @@ export function readable(value: string): string {
 }
 
 export const MODE_WORDS: Record<string, string> = { walking: "walk", driving: "drive", transit: "by transit" };
+
+// Dollars get US digit grouping (104,985.00); rupee figures elsewhere keep the Indian style.
+const money2 = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Feature 4 amounts: the sandbox invoices in USD, so the currency is always shown with the number. */
+export function money(value: string | number | null | undefined, currency = "USD"): string {
+  if (value === null || value === undefined || value === "") return "—";
+  return `${currency === "USD" ? "$" : `${currency} `}${money2.format(Number(value))}`;
+}
+
+export function dateTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+/** "INVOICE_PAID" → "Invoice paid" */
+export function kindLabel(kind: string): string {
+  const s = kind.toLowerCase().replace(/_/g, " ");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}

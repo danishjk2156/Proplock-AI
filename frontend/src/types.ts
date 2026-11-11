@@ -212,3 +212,124 @@ export interface ReviewItem {
   created_at: string;
   open_questions: string[];
 }
+
+// ---------- Feature 4: closings, invoices, ledger, disputes ----------
+export type ClosingStatus = "OPEN" | "INVOICED" | "PAID" | "CANCELLED" | "DISPUTED";
+export type InvoiceStatus = "PENDING" | "DRAFT" | "SENT" | "PAID" | "CANCELLED" | "REFUNDED";
+export type DisputeStatus = "OPEN" | "APPROVED" | "SUBMITTED" | "RESOLVED";
+
+export interface LedgerEntry {
+  id: string;
+  listing_id: string;
+  closing_id: string | null;
+  kind: string;
+  amount: string;
+  currency: string;
+  direction: "in" | "out" | "info";
+  paypal_ref: string | null;
+  source: "feature3" | "webhook" | "api" | "manual";
+  note: string | null;
+  occurred_at: string;
+}
+
+export interface InvoiceOut {
+  id: string;
+  number: string;
+  paypal_invoice_id: string | null;
+  status: InvoiceStatus;
+  deposit: string;
+  brokerage: string;
+  token_deduction: string;
+  total: string;
+  currency: string;
+  due_date: string;
+  sent_at: string | null;
+  paid_at: string | null;
+  reminders_sent: number;
+  payer_view_url: string | null;
+  override_note: string | null;
+  signature_valid: boolean;
+  demo: boolean;
+}
+
+export interface ClosingSummary {
+  id: string;
+  listing_id: string;
+  property_id: string;
+  title: string;
+  broker_name: string;
+  tenant_name: string;
+  tenant_email: string;
+  capture_ref: string;
+  audit_id: string;
+  status: ClosingStatus;
+  created_at: string;
+  currency: string;
+  gross: string;
+  received: string;
+  outstanding: string;
+  invoice: InvoiceOut | null;
+  dispute_status: DisputeStatus | null;
+  entry_count: number;
+}
+
+export interface ClosingDetail extends ClosingSummary {
+  entries: LedgerEntry[];
+}
+
+export interface LedgerOut {
+  closings: ClosingSummary[];
+  entries: LedgerEntry[];
+  totals: Record<string, string>;
+}
+
+export interface Hold {
+  capture_ref: string;
+  amount: string;
+  currency: string;
+  occurred_at: string;
+}
+
+export interface ClosableListing {
+  listing_id: string;
+  property_id: string;
+  title: string;
+  broker_name: string;
+  deposit: string;
+  brokerage: string;
+  audit_id: string;
+  holds: Hold[];
+}
+
+export interface CopilotOut {
+  answer: string;
+  refused: boolean;
+  query: Record<string, unknown> | null;
+  target: "closings" | "entries" | null;
+  rows: Record<string, unknown>[];
+  source: string;
+}
+
+export interface EvidenceItem {
+  source_id: string;
+  kind: string;
+  summary: string;
+  facts: Record<string, unknown>;
+}
+
+export interface DisputeOut {
+  id: string;
+  paypal_dispute_id: string;
+  closing_id: string | null;
+  reason: string;
+  amount: string;
+  currency: string;
+  status: DisputeStatus;
+  evidence_pack: { items: EvidenceItem[]; missing: string[] } | null;
+  draft_response: string | null;
+  draft_source: string | null;
+  final_response: string | null;
+  approved_by: string | null;
+  submitted_at: string | null;
+  created_at: string;
+}

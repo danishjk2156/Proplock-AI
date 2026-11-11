@@ -12,6 +12,8 @@ import ManagerFlats from "./pages/manager/Flats";
 import ManagerReviews from "./pages/manager/Reviews";
 import PublicListing from "./pages/public/PublicListing";
 import Verify from "./pages/public/Verify";
+import { BrokerLedger, ManagerLedger } from "./pages/ledger/Pages";
+import Disputes from "./pages/ledger/Disputes";
 import type { Role } from "./types";
 
 function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
@@ -33,10 +35,13 @@ export default function App() {
       <Route path="/b/listings/:listingId/checkin" element={<RequireRole role="BROKER"><Checkin /></RequireRole>} />
       <Route path="/b/listings/:listingId/ad" element={<RequireRole role="BROKER"><Draft /></RequireRole>} />
       <Route path="/b/audits/:auditId" element={<RequireRole role="BROKER"><AuditResult /></RequireRole>} />
+      <Route path="/b/ledger" element={<RequireRole role="BROKER"><BrokerLedger /></RequireRole>} />
 
       {/* Agency manager */}
       <Route path="/m" element={<RequireRole role="MANAGER"><ManagerFlats /></RequireRole>} />
       <Route path="/m/reviews" element={<RequireRole role="MANAGER"><ManagerReviews /></RequireRole>} />
+      <Route path="/m/ledger" element={<RequireRole role="MANAGER"><ManagerLedger /></RequireRole>} />
+      <Route path="/m/disputes" element={<RequireRole role="MANAGER"><Disputes /></RequireRole>} />
 
       {/* Public: no login */}
       <Route path="/l/:listingId" element={<PublicListing />} />

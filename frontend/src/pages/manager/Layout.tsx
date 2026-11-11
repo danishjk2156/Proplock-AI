@@ -27,6 +27,12 @@ export default function ManagerLayout({ children, reviewCount }: { children: Rea
           <Icon name="inbox" size={19} /> Review queue
           {waiting > 0 && <span className="pill solid count">{waiting}</span>}
         </NavLink>
+        <NavLink to="/m/ledger" className={({ isActive }) => (isActive ? "active" : "")}>
+          <Icon name="ledger" size={19} /> Money ledger
+        </NavLink>
+        <NavLink to="/m/disputes" className={({ isActive }) => (isActive ? "active" : "")}>
+          <Icon name="scale" size={19} /> Disputes
+        </NavLink>
         <button className="btn ghost" style={{ justifyContent: "flex-start", marginTop: "auto" }} onClick={signOut}>
           <Icon name="out" size={19} /> Sign out
         </button>

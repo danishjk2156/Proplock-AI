@@ -173,3 +173,16 @@ def test_qr_code(client, keys, demo_mode):
     body = closed(client, keys)
     qr = client.get(f"/closings/{body['id']}/qr", headers=keys["broker_rajesh"]).json()
     assert qr["data_url"].startswith("data:image/png;base64,")
+
+
+def test_closable_lists_live_listings_with_unused_holds(client, keys, demo_mode):
+    listing_id, audit_id = live_listing(client, keys)
+    ref = capture(client, keys, listing_id)
+
+    [row] = client.get("/ledger/closable", headers=keys["broker_rajesh"]).json()
+    assert (row["listing_id"], row["audit_id"], row["deposit"]) == (listing_id, audit_id, "70000.00")
+    assert [h["capture_ref"] for h in row["holds"]] == [ref]
+    assert client.get("/ledger/closable", headers=keys["broker_quickcash"]).json() == []
+
+    client.post(f"/broker/listings/{listing_id}/close", json={**TENANT, "capture_ref": ref}, headers=keys["broker_rajesh"])
+    assert client.get("/ledger/closable", headers=keys["manager"]).json() == []  # RENTED now

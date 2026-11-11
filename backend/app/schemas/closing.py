@@ -149,3 +149,23 @@ class CopilotOut(BaseModel):
     target: str | None
     rows: list[dict]
     source: str  # which model (or rule) produced the query
+
+
+class HoldOut(BaseModel):
+    capture_ref: str
+    amount: Decimal
+    currency: str
+    occurred_at: datetime
+
+
+class ClosableListing(BaseModel):
+    """A LIVE verified listing and the captured visit tokens not yet used by a closing."""
+
+    listing_id: str
+    property_id: str
+    title: str
+    broker_name: str
+    deposit: Decimal
+    brokerage: Decimal
+    audit_id: str
+    holds: list[HoldOut]

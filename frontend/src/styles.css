@@ -199,3 +199,29 @@ thead th { border-top: 0; }
 .table-box table { min-width: 760px; }
 tr.selected td { background: var(--accent-soft); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Feature 4: ledger cockpit ---------- */
+.wide { max-width: 1240px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 4px; gap: 4px; }
+.seg button { border: 0; background: transparent; color: var(--ink); font: 600 13px Inter, sans-serif; padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 36px; }
+.seg button[aria-selected="true"] { background: var(--surface); box-shadow: var(--shadow); }
+.linkish { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-align: left; }
+.answer { margin: 0 0 6px; white-space: pre-wrap; font: inherit; }
+.warn-text { color: var(--warn); }
+.drawer-scrim { position: fixed; inset: 0; z-index: 20; background: rgba(10, 16, 13, 0.4); display: flex; justify-content: flex-end; }
+.drawer { width: min(520px, 100%); height: 100%; overflow-y: auto; background: var(--bg); padding: 20px 16px 32px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow); }
+@media (min-width: 640px) { .drawer { padding: 24px; } }
+.sums { min-width: 0; font-size: 14px; }
+.sums td { padding: 8px 0; border-top: 1px solid var(--line); }
+.sums td:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sums tr:first-child td { border-top: 0; }
+.sums tr.total td { font-weight: 800; border-top: 2px solid var(--ink); font-family: var(--display); }
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.timeline li { padding: 10px 0 10px 14px; border-left: 3px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.timeline li.dir-in { border-left-color: var(--accent); }
+.timeline li.dir-out { border-left-color: var(--warn); }
+.timeline.card { padding: 8px 16px; }
+.evidence { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.evidence li { display: flex; gap: 10px; align-items: flex-start; }
+.evidence .chip { flex: none; padding: 3px 8px; font-weight: 500; }
+.kpis .stat .n { font-size: 20px; overflow-wrap: anywhere; }

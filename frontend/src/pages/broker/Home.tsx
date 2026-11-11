@@ -73,6 +73,7 @@ export default function BrokerHome() {
           <h1>{me?.name}</h1>
         </div>
         <Ring value={me?.trust_score ?? 0} max={120} size={52} label={`Trust score ${me?.trust_score}`} />
+        <Link className="icon-btn" aria-label="Money ledger" title="Money ledger" to="/b/ledger"><Icon name="ledger" size={20} /></Link>
         <button className="icon-btn" aria-label="Sign out" onClick={signOut}><Icon name="out" size={20} /></button>
       </header>
 
