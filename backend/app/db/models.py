@@ -1,4 +1,4 @@
-"""ORM tables for Feature 1.
+"""ORM tables for Feature 1 (listings and audits) and Feature 4 (closings, ledger, invoices).
 
 Money is Numeric(12, 2) -> Python Decimal (never float). Enums are stored as
 VARCHAR with a CHECK constraint so the same schema works on SQLite and Postgres.
@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
 
-from sqlalchemy import Enum, ForeignKey, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import Enum, ForeignKey, Numeric, String, Text, UniqueConstraint, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -251,12 +251,15 @@ class Audit(Base):
 
 
 class OutboxJob(Base):
-    """Work to do after the audit is safely saved (e.g. create the PayPal product), retried until done."""
+    """Work to do after a record is safely saved (create the PayPal product, draft or send an
+    invoice, submit dispute evidence), retried until done. Mint jobs point at an audit; Feature 4
+    jobs point at their invoice or dispute through ref_id."""
 
     __tablename__ = "outbox_jobs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    audit_id: Mapped[str] = mapped_column(ForeignKey("audits.id"))
+    audit_id: Mapped[str | None] = mapped_column(ForeignKey("audits.id"))
+    ref_id: Mapped[str | None] = mapped_column(String(36), index=True)
     kind: Mapped[str] = mapped_column(String(30))
     status: Mapped[JobStatus] = enum_column(JobStatus, default=JobStatus.PENDING)
     attempts: Mapped[int] = mapped_column(default=0)
@@ -274,3 +277,160 @@ class TrustEvent(Base):
     points: Mapped[int]
     audit_id: Mapped[str | None] = mapped_column(ForeignKey("audits.id"))
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+# --- Feature 4: closing, ledger, invoices, webhooks, disputes ---
+
+
+class ClosingStatus(StrEnum):
+    OPEN = "OPEN"
+    INVOICED = "INVOICED"
+    PAID = "PAID"
+    CANCELLED = "CANCELLED"
+    DISPUTED = "DISPUTED"
+
+
+class LedgerDirection(StrEnum):
+    IN = "in"  # money received from the tenant
+    OUT = "out"  # money returned to the tenant
+    INFO = "info"  # an event with an amount that moves no money (a hold, a draft, a reminder)
+
+
+class LedgerSource(StrEnum):
+    FEATURE3 = "feature3"
+    WEBHOOK = "webhook"
+    API = "api"
+    MANUAL = "manual"
+
+
+class InvoiceStatus(StrEnum):
+    PENDING = "PENDING"  # saved here, not yet created in PayPal
+    DRAFT = "DRAFT"
+    SENT = "SENT"
+    PAID = "PAID"
+    CANCELLED = "CANCELLED"
+    REFUNDED = "REFUNDED"
+
+
+class DisputeStatus(StrEnum):
+    OPEN = "OPEN"
+    APPROVED = "APPROVED"  # a manager approved the response; the outbox submits it
+    SUBMITTED = "SUBMITTED"
+    RESOLVED = "RESOLVED"
+
+
+class Closing(Base):
+    """One locked flat: ties the tenant's money to the verified listing version it was agreed on."""
+
+    __tablename__ = "closings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    listing_id: Mapped[str] = mapped_column(ForeignKey("listings.id"), index=True)
+    version_id: Mapped[str] = mapped_column(ForeignKey("listing_versions.id"))
+    audit_id: Mapped[str] = mapped_column(ForeignKey("audits.id"))
+    broker_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    tenant_name: Mapped[str] = mapped_column(String(150))
+    tenant_email: Mapped[str] = mapped_column(String(255))
+    # The Feature 3 capture whose token is deducted; unique so one token pays one closing.
+    capture_ref: Mapped[str] = mapped_column(String(100), unique=True)
+    status: Mapped[ClosingStatus] = enum_column(ClosingStatus, default=ClosingStatus.OPEN)
+    created_by: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class LedgerEntry(Base):
+    """Append-only: no code path updates or deletes a row (enforced below); corrections are new
+    entries. Balances are always summed from these rows, never stored."""
+
+    __tablename__ = "ledger_entries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    listing_id: Mapped[str] = mapped_column(ForeignKey("listings.id"), index=True)
+    closing_id: Mapped[str | None] = mapped_column(ForeignKey("closings.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(30))
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    direction: Mapped[LedgerDirection] = enum_column(LedgerDirection)
+    paypal_ref: Mapped[str | None] = mapped_column(String(100), index=True)
+    # The same event recorded twice (a retried job, a replayed webhook) hits this and is a no-op.
+    idempotency_key: Mapped[str] = mapped_column(String(150), unique=True)
+    occurred_at: Mapped[datetime] = mapped_column(default=utcnow)
+    source: Mapped[LedgerSource] = enum_column(LedgerSource)
+    note: Mapped[str | None] = mapped_column(Text)
+    raw_json: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class Invoice(Base):
+    """The invoice we ask PayPal to send. Its body is HMAC-signed like an audit."""
+
+    __tablename__ = "invoices"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    closing_id: Mapped[str] = mapped_column(ForeignKey("closings.id"), unique=True)
+    paypal_invoice_id: Mapped[str | None] = mapped_column(String(100), unique=True)
+    number: Mapped[str] = mapped_column(String(50), unique=True)
+    items_json: Mapped[str] = mapped_column(Text)
+    deposit: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    brokerage: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    token_deduction: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    total: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    status: Mapped[InvoiceStatus] = enum_column(InvoiceStatus, default=InvoiceStatus.PENDING)
+    due_date: Mapped[datetime]
+    payer_view_url: Mapped[str | None] = mapped_column(Text)
+    override_note: Mapped[str | None] = mapped_column(Text)
+    sent_at: Mapped[datetime | None]
+    paid_at: Mapped[datetime | None]
+    reminders_sent: Mapped[int] = mapped_column(default=0)
+    signature: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class WebhookEvent(Base):
+    """Every webhook we received, verified or not, so a replay is recognised and nothing is lost."""
+
+    __tablename__ = "webhook_events"
+
+    paypal_event_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    event_type: Mapped[str] = mapped_column(String(80))
+    verified: Mapped[bool] = mapped_column(default=False)
+    raw_json: Mapped[str] = mapped_column(Text)
+    received_at: Mapped[datetime] = mapped_column(default=utcnow)
+    processed_at: Mapped[datetime | None]
+    error: Mapped[str | None] = mapped_column(Text)
+
+
+class Dispute(Base):
+    """A PayPal dispute and our response. Nothing is sent to PayPal without approved_by."""
+
+    __tablename__ = "disputes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    paypal_dispute_id: Mapped[str] = mapped_column(String(100), unique=True)
+    closing_id: Mapped[str | None] = mapped_column(ForeignKey("closings.id"), index=True)
+    reason: Mapped[str] = mapped_column(String(80))
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    status: Mapped[DisputeStatus] = enum_column(DisputeStatus, default=DisputeStatus.OPEN)
+    evidence_pack_json: Mapped[str | None] = mapped_column(Text)
+    draft_response: Mapped[str | None] = mapped_column(Text)
+    draft_source: Mapped[str | None] = mapped_column(String(80))
+    final_response: Mapped[str | None] = mapped_column(Text)
+    approved_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    submitted_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class LedgerIsAppendOnly(Exception):
+    pass
+
+
+@event.listens_for(LedgerEntry, "before_update")
+def _no_ledger_updates(_mapper, _connection, target):
+    raise LedgerIsAppendOnly(f"ledger entry {target.id} cannot be changed; record a correcting entry")
+
+
+@event.listens_for(LedgerEntry, "before_delete")
+def _no_ledger_deletes(_mapper, _connection, target):
+    raise LedgerIsAppendOnly(f"ledger entry {target.id} cannot be deleted; record a correcting entry")
