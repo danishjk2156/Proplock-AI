@@ -14,8 +14,13 @@ from app.db.base import get_session
 from app.db.models import Closing, Invoice, InvoiceStatus, LedgerSource, Listing, Role, User
 from app.domain.invoice_rules import InvoiceRefused
 from app.domain.ledger import EntryKind, LedgerEvent
+from app.agents import ledger_copilot as ledger_copilot_agent
+from app.agents.ledger_copilot import QueryLLM, get_query_llm
+from app.services.rate_limit import RateLimiter
 from app.schemas.closing import (
     CloseIn,
+    CopilotIn,
+    CopilotOut,
     ClosingDetail,
     LedgerOut,
     ManagerCloseIn,
@@ -30,6 +35,7 @@ from app.services.ledger_service import LedgerConflict, UnknownListing
 router = APIRouter(tags=["closing & ledger"])
 broker_only = require_role(Role.BROKER)
 manager_only = require_role(Role.MANAGER)
+copilot_limit = RateLimiter(limit=20, per_seconds=60)  # each question is an LLM call
 
 
 def _close(session: Session, actor: User, listing: Listing, body: CloseIn, invoicing: Invoicing, *, is_manager: bool):
@@ -95,6 +101,20 @@ def _invoice(session: Session, closing: Closing) -> Invoice:
     if invoice is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "This closing has no invoice")
     return invoice
+
+
+@router.post("/ledger/copilot", response_model=CopilotOut)
+def ledger_copilot(
+    body: CopilotIn,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+    llm: QueryLLM = Depends(get_query_llm),
+):
+    """Ask the ledger a question in plain English. Read-only: the model only writes a query
+    object, which our code checks and runs over the rows this user can already see."""
+    if not copilot_limit.allow(user.id):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many questions; try again in a minute")
+    return CopilotOut(**ledger_copilot_agent.ask(body.question, ledger_views.ledger(session, user), llm))
 
 
 @router.get("/closings/{closing_id}", response_model=ClosingDetail)

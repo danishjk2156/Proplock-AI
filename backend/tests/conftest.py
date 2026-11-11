@@ -59,6 +59,22 @@ def fake_invoicing() -> FakeInvoicing:
 
 
 @pytest.fixture
+def fake_query_llm():
+    """The ledger copilot's model: no reply set, so a question is "couldn't search" unless a test sets one."""
+    from app.agents.ledger_copilot import FakeQueryLLM
+
+    return FakeQueryLLM()
+
+
+@pytest.fixture
+def fake_dispute_writer():
+    """The dispute drafter: no text set, so drafts fall back to the template unless a test sets one."""
+    from app.agents.dispute_copilot import FakeDisputeWriter
+
+    return FakeDisputeWriter()
+
+
+@pytest.fixture
 def webhook_verifier():
     """Trusts no webhook unless a test swaps in a verifier that does."""
     holder = {"verifier": RejectAllVerifier()}
@@ -66,7 +82,7 @@ def webhook_verifier():
 
 
 @pytest.fixture
-def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, fake_invoicing, webhook_verifier, tmp_path) -> TestClient:
+def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, fake_invoicing, webhook_verifier, fake_query_llm, fake_dispute_writer, tmp_path) -> TestClient:
     """The real app, but with this test's database and upload folder, and no Groq, Google or PayPal calls."""
     app = create_app()
     app.dependency_overrides[get_session] = lambda: db_session
@@ -76,6 +92,11 @@ def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, fake_invoi
     app.dependency_overrides[get_paypal] = lambda: fake_paypal
     app.dependency_overrides[get_invoicing] = lambda: fake_invoicing
     app.dependency_overrides[get_webhook_verifier] = lambda: webhook_verifier["verifier"]
+    from app.agents.dispute_copilot import get_dispute_writer
+    from app.agents.ledger_copilot import get_query_llm
+
+    app.dependency_overrides[get_query_llm] = lambda: fake_query_llm
+    app.dependency_overrides[get_dispute_writer] = lambda: fake_dispute_writer
     app.dependency_overrides[get_upload_dir] = lambda: tmp_path / "uploads"
     return TestClient(app)
 

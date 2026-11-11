@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import audits, broker, closings, manager, me, public
+from app.api import audits, broker, closings, disputes, manager, me, public, webhooks
 from app.config import get_settings
 
 
@@ -27,6 +27,8 @@ def create_app() -> FastAPI:
     app.include_router(audits.router)
     app.include_router(public.router)
     app.include_router(closings.router)
+    app.include_router(disputes.router)
+    app.include_router(webhooks.router)
     return app
 
 
