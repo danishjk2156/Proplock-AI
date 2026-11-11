@@ -3,12 +3,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import audits, broker, manager, me, public
+from app.api import audits, broker, closings, manager, me, public
 from app.config import get_settings
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="PropLock AI - Feature 1: Listing Audit", version="0.1.0")
+    app = FastAPI(title="PropLock AI - Listing Audit (Feature 1) and Invoice Ledger (Feature 4)", version="0.2.0")
     origins = [o.strip() for o in get_settings().cors_origins.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
@@ -26,6 +26,7 @@ def create_app() -> FastAPI:
     app.include_router(broker.router)
     app.include_router(audits.router)
     app.include_router(public.router)
+    app.include_router(closings.router)
     return app
 
 

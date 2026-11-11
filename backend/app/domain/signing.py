@@ -34,3 +34,12 @@ def is_valid(audit_id: str, report_json: str, signature: str | None, secret: str
         return False
     # compare_digest takes the same time however many characters match, so it leaks nothing.
     return hmac.compare_digest(sign(audit_id, report_json, secret), signature)
+
+
+def sign_data(data: Any, secret: str) -> str:
+    """HMAC of any JSON-able value (Feature 4 signs invoice bodies this way)."""
+    return hmac.new(secret.encode("utf-8"), canonical_json(data), hashlib.sha256).hexdigest()
+
+
+def data_is_valid(data: Any, signature: str | None, secret: str) -> bool:
+    return bool(signature) and hmac.compare_digest(sign_data(data, secret), signature)

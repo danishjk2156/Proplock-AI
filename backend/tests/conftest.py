@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.adapters.llm import FakeLLM, FakeVision, get_llm, get_vision
 from app.adapters.maps import FakeMaps, get_maps
 from app.adapters.paypal import FakePayPal, get_paypal
+from app.adapters.paypal_invoicing import FakeInvoicing, RejectAllVerifier, get_invoicing, get_webhook_verifier
 from app.auth import generate_key, hash_key
 from app.config import get_upload_dir
 from app.db import models  # noqa: F401  (registers tables)
@@ -52,7 +53,20 @@ def fake_paypal() -> FakePayPal:
 
 
 @pytest.fixture
-def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, tmp_path) -> TestClient:
+def fake_invoicing() -> FakeInvoicing:
+    """In-memory PayPal Invoicing/Disputes that accepts every call unless a test sets fail_times."""
+    return FakeInvoicing()
+
+
+@pytest.fixture
+def webhook_verifier():
+    """Trusts no webhook unless a test swaps in a verifier that does."""
+    holder = {"verifier": RejectAllVerifier()}
+    return holder
+
+
+@pytest.fixture
+def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, fake_invoicing, webhook_verifier, tmp_path) -> TestClient:
     """The real app, but with this test's database and upload folder, and no Groq, Google or PayPal calls."""
     app = create_app()
     app.dependency_overrides[get_session] = lambda: db_session
@@ -60,6 +74,8 @@ def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, tmp_path) 
     app.dependency_overrides[get_maps] = lambda: fake_maps
     app.dependency_overrides[get_vision] = lambda: fake_vision
     app.dependency_overrides[get_paypal] = lambda: fake_paypal
+    app.dependency_overrides[get_invoicing] = lambda: fake_invoicing
+    app.dependency_overrides[get_webhook_verifier] = lambda: webhook_verifier["verifier"]
     app.dependency_overrides[get_upload_dir] = lambda: tmp_path / "uploads"
     return TestClient(app)
 

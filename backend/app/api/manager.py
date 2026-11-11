@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.adapters import images
 from app.adapters.paypal import PayPal, get_paypal
+from app.adapters.paypal_invoicing import Invoicing, get_invoicing
 from app.auth import require_role
 from app.config import get_upload_dir
 from app.db.base import get_session
@@ -147,9 +148,11 @@ def run_outbox(
     _: User = Depends(manager_only),
     session: Session = Depends(get_session),
     paypal: PayPal = Depends(get_paypal),
+    invoicing: Invoicing = Depends(get_invoicing),
 ) -> dict[str, int]:
-    """Retry every due PayPal job now (the background worker does the same every 30 s)."""
-    return {"minted": outbox.run_due(session, paypal)}
+    """Retry every due PayPal job now: products, invoices, reminders, dispute evidence
+    (the background worker does the same every 30 s). "minted" counts every job that succeeded."""
+    return {"minted": outbox.run_due(session, paypal, invoicing=invoicing)}
 
 
 @router.get("/reviews", response_model=list[ReviewItem])

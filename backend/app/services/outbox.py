@@ -1,15 +1,21 @@
-"""The outbox: work to do after the audit is safely saved, retried until it succeeds (fixes M5, M7).
+"""The outbox: work to do after a record is safely saved, retried until it succeeds (fixes M5, M7).
 
 The dual-write problem: saving the audit and creating the PayPal product are two systems, and a
 crash between them leaves one without the other. So the audit and a "mint" job are saved in the
 same commit, and PayPal is called afterwards. If the call fails, the job is retried later with
 the same product id, so a retry can never create a second product.
 
+Feature 4 uses the same pattern for invoices and dispute evidence (app/services/invoice_jobs.py):
+each job has a fixed PayPal-Request-Id, so running it twice never sends two invoices.
+
 Run the worker (it also expires stale listings):  .venv/Scripts/python -m app.services.outbox
 """
 
 import logging
 import time
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
@@ -28,6 +34,13 @@ LEASE = timedelta(minutes=5)  # how long a worker may hold a job before another 
 def enqueue_mint(session: Session, audit: Audit) -> OutboxJob:
     """Add (not commit) the job, so it is saved in the caller's transaction with the audit."""
     job = OutboxJob(audit_id=audit.id, kind=MINT)
+    session.add(job)
+    return job
+
+
+def enqueue(session: Session, kind: str, ref_id: str, run_at: datetime | None = None) -> OutboxJob:
+    """Add (not commit) a Feature 4 job for an invoice or dispute, in the caller's transaction."""
+    job = OutboxJob(ref_id=ref_id, kind=kind, next_run_at=run_at or datetime.now(UTC))
     session.add(job)
     return job
 
@@ -59,35 +72,65 @@ def _claim(session: Session, job_id: str, now: datetime) -> bool:
     return result.rowcount == 1
 
 
-def run_job(session: Session, job_id: str, paypal: PayPal, now: datetime | None = None) -> JobStatus | None:
-    """Try one job. Returns its new status, or None if it wasn't due or another worker has it."""
-    now = now or datetime.now(UTC)
-    if not _claim(session, job_id, now):
-        return None
-    job = session.get(OutboxJob, job_id)
-    session.refresh(job)
+def _mint(session: Session, job: OutboxJob, adapters: "Adapters", now: datetime) -> None:
     audit = session.get(Audit, job.audit_id)
     version = session.get(ListingVersion, audit.version_id)
-    job.attempts += 1
-    try:
-        product_id = paypal.create_product(product_for(audit, version))
-    except PayPalError as e:
-        job.last_error = str(e)
-        if job.attempts >= MAX_ATTEMPTS:
-            job.status = JobStatus.FAILED  # the listing stays VERIFIED but not LIVE; a person must look
-        else:
-            job.next_run_at = now + backoff(job.attempts)
-        logger.error("Outbox job %s attempt %d failed: %s", job.id, job.attempts, e)
-        session.commit()
-        return job.status
-
+    product_id = adapters.paypal.create_product(product_for(audit, version))
     audit.paypal_product_id = product_id
     audit.status = AuditStatus.VERIFIED
     listing = session.get(Listing, version.listing_id)
     listing.status = ListingStatus.LIVE
     listing.last_confirmed_at = now
-    job.status = JobStatus.DONE
-    job.last_error = None
+
+
+@dataclass
+class Adapters:
+    """The outside services jobs may call. A job whose service is missing here is left queued."""
+
+    paypal: PayPal | None = None
+    invoicing: Any = None  # app.adapters.paypal_invoicing.Invoicing
+
+
+def _handlers() -> dict[str, tuple[str, Callable]]:
+    """kind -> (adapter it needs, handler). Feature 4 handlers live in invoice_jobs."""
+    from app.services import invoice_jobs
+
+    return {MINT: ("paypal", _mint), **invoice_jobs.HANDLERS}
+
+
+def run_job(
+    session: Session, job_id: str, paypal: PayPal | None, now: datetime | None = None, invoicing=None
+) -> JobStatus | None:
+    """Try one job. Returns its new status, or None if it wasn't due, another worker has it,
+    or the service it needs wasn't passed in."""
+    now = now or datetime.now(UTC)
+    adapters = Adapters(paypal=paypal, invoicing=invoicing)
+    kind = session.scalar(select(OutboxJob.kind).where(OutboxJob.id == job_id))
+    needs, handler = _handlers()[kind]
+    if getattr(adapters, needs) is None or not _claim(session, job_id, now):
+        return None
+    job = session.get(OutboxJob, job_id)
+    session.refresh(job)
+    job.attempts += 1
+    try:
+        handler(session, job, adapters, now)
+    except PayPalError as e:
+        session.rollback()  # drop any half-made changes; then record the failure on a clean job
+        job = session.get(OutboxJob, job_id)
+        session.refresh(job)
+        job.attempts += 1
+        job.last_error = str(e)
+        if job.attempts >= MAX_ATTEMPTS:
+            job.status = JobStatus.FAILED  # e.g. the listing stays VERIFIED but not LIVE; a person must look
+        else:
+            job.next_run_at = now + backoff(job.attempts)
+        logger.error("Outbox job %s (%s) attempt %d failed: %s", job.id, job.kind, job.attempts, e)
+        session.commit()
+        return job.status
+
+    if job.status is JobStatus.PENDING:  # a handler may have refused the job (FAILED) itself
+        job.status = JobStatus.DONE
+        job.last_error = None
     session.commit()
     return job.status
 
@@ -104,7 +147,29 @@ def try_now(session: Session, audit_id: str, paypal: PayPal) -> None:
         logger.exception("Immediate mint failed for audit %s; the outbox worker will retry", audit_id)
 
 
-def run_due(session: Session, paypal: PayPal, now: datetime | None = None, limit: int = 20) -> int:
+def try_ref_now(session: Session, ref_id: str, invoicing, now: datetime | None = None, rounds: int = 3) -> None:
+    """Run the due jobs for one invoice/dispute now, following a short chain (create -> send).
+    Failures leave them queued for the worker."""
+    now = now or datetime.now(UTC)
+    for _ in range(rounds):
+        due = session.scalars(
+            select(OutboxJob.id).where(
+                OutboxJob.ref_id == ref_id, OutboxJob.status == JobStatus.PENDING, OutboxJob.next_run_at <= now
+            )
+        ).all()
+        if not due:
+            return
+        for job_id in due:
+            try:
+                if run_job(session, job_id, None, now, invoicing=invoicing) is not JobStatus.DONE:
+                    return
+            except Exception:
+                session.rollback()
+                logger.exception("Immediate job %s failed; the outbox worker will retry", job_id)
+                return
+
+
+def run_due(session: Session, paypal: PayPal | None, now: datetime | None = None, limit: int = 20, invoicing=None) -> int:
     """Run every job that is due. Returns how many succeeded."""
     now = now or datetime.now(UTC)
     due = session.scalars(
@@ -113,23 +178,24 @@ def run_due(session: Session, paypal: PayPal, now: datetime | None = None, limit
         .order_by(OutboxJob.next_run_at)
         .limit(limit)
     ).all()
-    return sum(run_job(session, job_id, paypal, now) is JobStatus.DONE for job_id in due)
+    return sum(run_job(session, job_id, paypal, now, invoicing=invoicing) is JobStatus.DONE for job_id in due)
 
 
 def main(poll_seconds: int = 30) -> None:
     from app.adapters.paypal import get_paypal
+    from app.adapters.paypal_invoicing import get_invoicing
     from app.db.base import SessionLocal
     from app.services.listing_service import expire_stale
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    paypal = get_paypal()
-    logger.info("Outbox worker started with %s; polling every %ss", paypal.name, poll_seconds)
+    paypal, invoicing = get_paypal(), get_invoicing()
+    logger.info("Outbox worker started with %s + %s; polling every %ss", paypal.name, invoicing.name, poll_seconds)
     while True:
         with SessionLocal() as session:
-            done = run_due(session, paypal)
+            done = run_due(session, paypal, invoicing=invoicing)
             expired = expire_stale(session)  # LIVE listings not confirmed for 7 days
         if done or expired:
-            logger.info("Minted %d product(s), expired %d stale listing(s)", done, expired)
+            logger.info("Ran %d job(s), expired %d stale listing(s)", done, expired)
         time.sleep(poll_seconds)
 
 
