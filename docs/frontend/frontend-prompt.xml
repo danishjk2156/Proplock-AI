@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Implementation prompt: Pinterest-inspired redesign of the PropLock AI web app (all roles, Features 1 and 4).
+
+  HOW TO USE (for the frontend developer):
+    1. Collect 8-15 Pinterest pins whose look you like (layout, colour, type, cards, motion).
+    2. Paste them into <inspiration> below: attach the images to the chat, and/or paste their URLs,
+       and write two or three sentences about what you like in each group.
+    3. Give this whole file to your coding agent from the repository root, on a new branch
+       (e.g. feature/frontend-redesign).
+  Human-readable plan: plans/pending/frontend-redesign.md. Wireframes: docs/frontend/wireframe.html.
+-->
+<task id="proplock-frontend-redesign" branch="feature/frontend-redesign">
+
+  <role>
+    You are a senior product designer and React + TypeScript engineer. You turn a designer's visual inspiration
+    into a coherent design system and then rebuild an existing app's screens on it. You keep every behaviour that
+    works today, write accessible markup, and never fake data or features.
+  </role>
+
+  <goal>
+    Redesign the whole PropLock web app (tenant, broker and agency manager) with a Pinterest-inspired experience:
+    image-first masonry "pins", a close-up page, status "boards", one big rounded search bar, a "+ Create" button
+    and a mobile bottom tab bar. Apply the VISUAL STYLE from the inspiration below to the STRUCTURE in
+    docs/frontend/wireframe.html.
+  </goal>
+
+  <!-- ===================== PASTE THE INSPIRATION HERE ===================== -->
+  <inspiration source="pinterest">
+    <instructions_for_the_designer>
+      Replace the example blocks below. One pin element per image or URL. Attach images to the chat if you can;
+      the agent must look at them. Say what to take from each (colour? cards? type? spacing? photos?).
+    </instructions_for_the_designer>
+    <pin id="1" url="PASTE_URL_OR_ATTACH_IMAGE">
+      <take>e.g. warm off-white background, soft 24px rounded image cards, no borders</take>
+    </pin>
+    <pin id="2" url="PASTE_URL_OR_ATTACH_IMAGE">
+      <take>e.g. bold geometric sans headings, small grey captions under images</take>
+    </pin>
+    <pin id="3" url="PASTE_URL_OR_ATTACH_IMAGE">
+      <take>e.g. a deep green accent used sparingly on buttons and badges</take>
+    </pin>
+    <!-- add more <pin> blocks -->
+    <overall_mood>PASTE: three to five words, e.g. "calm, trustworthy, editorial, warm"</overall_mood>
+    <avoid>PASTE: anything you don't want, e.g. "neon, heavy shadows, glassmorphism"</avoid>
+  </inspiration>
+  <!-- ====================================================================== -->
+
+  <how_to_use_the_inputs>
+    <rule>The inspiration decides the LOOK: palette, typography, radius, shadows, image treatment, density, hover and motion, icon mood.</rule>
+    <rule>The wireframe decides the STRUCTURE: which screens exist, their regions, content, states, interactions and the API each one uses. Do not drop or invent screens, fields or actions.</rule>
+    <rule>If the inspiration and the wireframe conflict, structure follows the wireframe and style follows the inspiration. If a style can't meet accessibility (contrast, tap size), adjust the style and note why.</rule>
+    <rule>If the inspiration element still holds the placeholder examples, stop and ask the user for the real inspiration. Never invent a style and call it "from the inspiration".</rule>
+    <rule>Take PATTERNS from Pinterest only. Never use Pinterest's logo, name, brand red (#E60023), icons, illustrations or copy. PropLock has its own name and a mark you design.</rule>
+  </how_to_use_the_inputs>
+
+  <context>
+    <repository>
+      <frontend path="frontend/">Vite 5 + React 18 + TypeScript (strict) + React Router 6, plain CSS. AG Grid Community 33.3.2 (MIT) for the money ledger.</frontend>
+      <backend path="backend/">FastAPI. Treat it as fixed: use the existing endpoints exactly. Only S02 needs a new endpoint (see plan section 6); build S02 behind a VITE_EXPLORE flag.</backend>
+      <read_first>
+        <file>docs/frontend/wireframe.html</file>
+        <file>plans/pending/frontend-redesign.md</file>
+        <file>README.md</file>
+        <file>frontend/src/App.tsx</file>
+        <file>frontend/src/api.ts</file>
+        <file>frontend/src/types.ts</file>
+        <file>frontend/src/format.ts</file>
+        <file>frontend/src/components.tsx</file>
+        <file>frontend/src/styles.css</file>
+        <file>frontend/src/pages/ (every screen)</file>
+      </read_first>
+    </repository>
+
+    <product>
+      PropLock checks a broker's rental ad against facts the broker can't change (owner's terms, rush-hour commute,
+      state deposit rules, photos taken at the flat), signs the result, and publishes the verified listing (Feature 1).
+      When a tenant locks a flat, it sends a PayPal invoice for the verified deposit and brokerage minus the visit
+      token already paid, records every money event in an append-only ledger, answers plain-English questions about
+      the ledger (read-only AI), and drafts cited dispute responses that a manager approves (Feature 4).
+      Users: tenants (no sign-in, arrive by shared link), brokers (phone-first), agency managers (desktop-first).
+    </product>
+
+    <demo_setup>
+      Backend: from backend/, `.venv/Scripts/python -m app.db.seed` prints API keys; run uvicorn with DEMO_MODE=true.
+      Frontend: from frontend/, `npm run dev` (Vite proxies /api to :8000). Sign in with a key from demo_keys.json.
+      Never overwrite someone's real database or demo_keys.json; use a scratch DATABASE_URL for experiments.
+    </demo_setup>
+  </context>
+
+  <screens source="docs/frontend/wireframe.html">
+    <screen id="S00" name="App shell" route="all">TopNav (logo, pill tabs, central rounded SearchBar, + Create, bell, avatar); TabBar under 760 px (Listings, Ledger, +New, Alerts, Me for brokers). The SearchBar searches flats for tenants and is the ledger copilot (POST /ledger/copilot) for brokers and managers.</screen>
+    <screen id="S01" name="Sign in" route="/">API key → GET /me → broker /b, manager /m. Decorative photo collage on desktop.</screen>
+    <screen id="S02" name="Explore verified flats" route="/explore" flag="VITE_EXPLORE">Masonry of LIVE listings as pins; filter chips; load more. Needs GET /public/listings; hidden until it exists.</screen>
+    <screen id="S03" name="Listing close-up" route="/l/:listingId">GET /public/listings/{id}. Owner photos carousel; title, rent, furnishing, address; commute rows CHECKED vs NOT CHECKED; move-in total; broker card with trust; share; Book a visit; link to verify.</screen>
+    <screen id="S04" name="Is this genuine?" route="/v/:auditId">GET /public/audits/{id}/verify. Two unmistakable states plus mismatches in plain words.</screen>
+    <screen id="S05" name="Book a visit" route="sheet">Feature 3 is not built: a designed "coming soon" sheet explaining the ₹500 refundable hold.</screen>
+    <screen id="S06" name="Broker home and boards" route="/b">Greeting, trust ring, KPI tiles; status boards (Live, Needs a fix, In review, Drafts, Rented) with 2x2 collage covers; "Needs you now" masonry; dashed "Start a listing" pins from GET /broker/mandates.</screen>
+    <screen id="S07" name="Check-in photo" route="/b/listings/:id/checkin">Live GPS distance (must be within 100 m), camera capture, extra photos (1-20, 8 MB, jpeg/png/webp), remove.</screen>
+    <screen id="S08" name="Write the ad + pre-check" route="/b/listings/:id/ad">Preview pin + form; pre-check results by check with "Apply" on suggestions; extracted claims as chips; submit → S09 or S10. Rate limit 429 message.</screen>
+    <screen id="S09" name="Audit result" route="/b/audits/:auditId">Pass ring, status (NEEDS FIX, IN REVIEW, SENT BACK with note), failed and can't-check first.</screen>
+    <screen id="S10" name="Live listing" route="/b/listings/:id">Share link + WhatsApp; 7-day availability ring; "Lock for a tenant" (opens S17) when /ledger/closable has an unused hold; mark rented (confirm).</screen>
+    <screen id="S11" name="Broker money ledger" route="/b/ledger">Cards on phones, grid on desktop; own closings only; opens S16.</screen>
+    <screen id="S12" name="Flats and mandates" route="/m">KPI tiles; flats as pins; detail panel with owner photos, mandates (revoke), give mandate (modal).</screen>
+    <screen id="S13" name="Register a flat" route="modal">Fields of POST /manager/properties; "Use my location" for the GPS pin.</screen>
+    <screen id="S14" name="Review queue" route="/m/reviews">Queue + detail; open questions; full report; required note; approve or send back.</screen>
+    <screen id="S15" name="Money ledger cockpit" route="/m/ledger">Copilot in the nav SearchBar with example chips and a read-only answer card that filters the grid; KPIs; AG Grid closings and money events (no row grouping: Community); DEMO banner from /ledger/config.</screen>
+    <screen id="S16" name="Closing and invoice drawer" route="drawer">Invoice breakdown with the token as a deduction and its capture id; signature status; pay link (hidden for FAKE- invoices); QR; Check PayPal now; ledger timeline; manager-only cancel and demo dispute.</screen>
+    <screen id="S17" name="Close a flat" route="modal">Closable listing, unused hold (demo: simulate $15), tenant name and email, manager-only override with a required note, display-only total preview.</screen>
+    <screen id="S18" name="Disputes" route="/m/disputes">Evidence pack as a masonry of cards with source-id chips; editable draft with highlighted, clickable citations; unknown citations block approval; approve with confirm.</screen>
+    <screen id="S19" name="States" route="all">Skeleton pins, empty states with one next action, errors showing the API's detail text; 401 → sign in, 429 → try again in a minute.</screen>
+  </screens>
+
+  <design_system>
+    <step>Phase 0 first: from the inspiration, write docs/frontend/design-tokens.md (palette with hex values and contrast ratios, type scale, spacing, radius, shadow, motion durations) and frontend/src/styles/tokens.css. Show it to the user before building screens.</step>
+    <tokens>--bg --surface --surface-2 --ink --muted --line --line-strong --accent --accent-hover --accent-ink --accent-soft --warn --warn-soft --radius-pin --radius --radius-sm --shadow --display --body, plus a type and spacing scale.</tokens>
+    <theme>Light and dark. Dark values under @media (prefers-color-scheme: dark) guarded by :root:not([data-theme="light"]) AND under :root[data-theme="dark"]; a theme toggle in the avatar menu (kept in localStorage inside try/catch).</theme>
+    <status_language>Keep today's meaning and shapes: LIVE/VERIFIED/PAID/RESOLVED filled accent with a tick; PASS soft accent; FAIL ink with a cross; NEEDS FIX outlined; CAN'T CHECK and SENT/UNPAID dashed warning; DISPUTED ink with a warning icon; grey for draft/cancelled. Colour is never the only signal.</status_language>
+    <accent>One "verified" accent, used only for trust, PASS, LIVE, PAID and the primary action. Amber only for money outstanding and needs-a-person.</accent>
+    <grid>Theme AG Grid with themeQuartz.withParams using var(--token) values so the grid follows light/dark, as frontend/src/pages/ledger/LedgerGrid.tsx does today.</grid>
+  </design_system>
+
+  <components>
+    <component name="Masonry">CSS columns (no JS library). DOM order is reading order. 2 columns on phones, 3-5 on desktop.</component>
+    <component name="Pin">Image (its real proportions, width/height set, loading="lazy", alt text) + overlay slots (badge, chip) + caption. The whole pin is one link or button with a clear accessible name.</component>
+    <component name="Board">Title, count and a 2x2 collage cover.</component>
+    <component name="CloseUp">Image/detail split on desktop; full-bleed image with a sliding sheet on phones.</component>
+    <component name="TopNav, TabBar, SearchBar, CreateMenu">As S00. SearchBar has two modes: search and copilot (marked with an AI symbol and "read-only").</component>
+    <component name="Dialog">One primitive for Drawer, Sheet and Modal: focus trap, Esc, restores focus, aria-modal, scroll lock.</component>
+    <component name="StatusPill, Skeleton, MoneyRow, KpiTile, Ring">Replace the current Pill/Ring with token-based versions; same status map.</component>
+  </components>
+
+  <phases>
+    <phase n="0" name="Inspiration to tokens">design-tokens.md + tokens.css; contrast table; ask the user to approve.</phase>
+    <phase n="1" name="Shell and primitives">S00, layouts (PublicLayout, BrokerLayout, ManagerLayout), Dialog, Masonry, Pin, StatusPill, Skeleton.</phase>
+    <phase n="2" name="Tenant">S03, S04, S05; S02 behind VITE_EXPLORE.</phase>
+    <phase n="3" name="Broker">S06, S07, S08, S09, S10, S11.</phase>
+    <phase n="4" name="Manager">S12, S13, S14, S15, S16, S17, S18.</phase>
+    <phase n="5" name="Polish">S19 everywhere; reduced motion; focus rings; tap targets; per-route document titles.</phase>
+    <phase n="6" name="Screenshots">Replace docs/screenshots and add Feature 4 shots; update README.</phase>
+  </phases>
+
+  <constraints>
+    <must>Work on branch feature/frontend-redesign. One commit per phase or screen group, conventional messages.</must>
+    <must>Use the existing API exactly (api.ts, types.ts). Show the backend's own error text. Money stays strings, formatted with format.ts (₹ Indian grouping, $ US grouping).</must>
+    <must>Keep every current behaviour: role redirects (RequireRole), pre-check rate-limit message, photo limits, confirmations before mark-rented, cancel invoice, approve dispute; DEMO and FAKE- labels; "couldn't be checked" states.</must>
+    <must>Accessible: WCAG 2.1 AA contrast in both themes, keyboard reachable, visible focus, labels on every input, alt text, 44 px tap targets, prefers-reduced-motion.</must>
+    <must>Responsive: no horizontal page scroll from 360 px to 1440 px; brokers phone-first, managers desktop-first.</must>
+    <must>npm run build (strict TypeScript) passes after every phase; no console errors.</must>
+    <never>Never add a runtime dependency without asking; masonry is CSS.</never>
+    <never>Never invent data, photos, counts, reviews or features (no "Save" heart, no fake feed). Placeholders must look like placeholders.</never>
+    <never>Never make the ledger copilot look able to change anything; it is read-only.</never>
+    <never>Never use Pinterest's logo, name, brand colour, icons or assets.</never>
+    <never>Never change backend code unless the user asks (the S02 endpoint is the backend team's).</never>
+    <never>Never push, open a PR or merge unless the user asks.</never>
+  </constraints>
+
+  <acceptance>
+    <check>A design-tokens document exists, derived visibly from the pasted inspiration, with a passing contrast table for light and dark.</check>
+    <check>Every screen S00-S19 exists and matches the wireframe's regions, content and states.</check>
+    <check>Feature 1 story by hand: dishonest ad → NEEDS FIX with suggestions → apply → LIVE → shared /l/:id works signed out on a 375 px phone → /v/:id shows "Genuine".</check>
+    <check>Feature 4 story by hand (DEMO_MODE): simulate a $15 token → close the flat → drawer shows $70,000 + $35,000 − $15 = $104,985 → ask "Which deposits are unpaid after 3 days?" → simulate dispute → draft with valid citations → approve.</check>
+    <check>Keyboard-only pass of both stories; dialogs trap and restore focus; Esc closes them.</check>
+    <check>Light and dark at 375 px and 1280 px: no horizontal scroll, no unreadable text, AG Grid follows the theme.</check>
+    <check>npm run build passes.</check>
+  </acceptance>
+
+  <workflow>
+    <step>Read read_first and open the wireframe. Check that the inspiration element holds real pins; if not, ask for them and stop.</step>
+    <step>Summarise the inspiration in five bullets (what you will take) and propose tokens. Wait for approval.</step>
+    <step>Build phase by phase. After each, run npm run build, check light and dark at 375 px and 1280 px in a browser, and report with screenshots.</step>
+    <step>If a wireframe element can't work with the real API, follow the API, say so, and note it in plans/pending/frontend-redesign.md.</step>
+    <step>Finish with a short report: done and verified, not done, how to run, open questions.</step>
+  </workflow>
+</task>

@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PropLock Wireframes</title>
+<style>
+/* Low-fidelity on purpose: grey boxes, one accent for "verified", no brand colours.
+   Visual style comes from the Pinterest inspiration the designer pastes into the prompt. */
+:root {
+  --bg: #f3f3f1; --paper: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #d6d6d0;
+  --fill: #e7e7e2; --fill-2: #d9d9d3; --accent: #2f6f55; --accent-soft: #dcebe3; --warn: #9a6400;
+  --note: #fff6c9; --note-ink: #5b4b00; --r: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141413; --paper: #1d1d1b; --ink: #ecece8; --muted: #a2a29b; --line: #34342f;
+    --fill: #2a2a27; --fill-2: #353531; --accent: #7fd3ad; --accent-soft: #20382d; --warn: #f0b45a;
+    --note: #3a3410; --note-ink: #f3e7a6;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141413; --paper: #1d1d1b; --ink: #ecece8; --muted: #a2a29b; --line: #34342f;
+  --fill: #2a2a27; --fill-2: #353531; --accent: #7fd3ad; --accent-soft: #20382d; --warn: #f0b45a;
+  --note: #3a3410; --note-ink: #f3e7a6;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--accent); }
+h1, h2, h3, h4 { margin: 0; line-height: 1.2; }
+p { margin: 0; }
+
+/* page chrome */
+.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.top strong { font-size: 15px; }
+.top nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.top nav a { text-decoration: none; color: var(--ink); background: var(--paper); border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+.top nav a:hover { border-color: var(--ink); }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 24px 16px 80px; display: flex; flex-direction: column; gap: 40px; }
+.intro { display: grid; gap: 16px; }
+.intro h1 { font-size: 28px; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.toc a { display: block; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; text-decoration: none; color: var(--ink); }
+.toc a b { color: var(--muted); font-weight: 600; margin-right: 6px; }
+.group-title { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-top: 2px solid var(--ink); padding-top: 10px; }
+
+/* a screen section */
+.screen { display: grid; gap: 14px; scroll-margin-top: 70px; }
+.screen-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; }
+.screen-head h2 { font-size: 20px; }
+.tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--fill); color: var(--muted); }
+.tag.new { background: var(--accent-soft); color: var(--accent); }
+.tag.route { font-family: ui-monospace, Consolas, monospace; font-weight: 500; }
+.meta { color: var(--muted); font-size: 13px; max-width: 900px; }
+.row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+.notes { flex: 1 1 260px; margin: 0; padding: 14px 14px 14px 34px; background: var(--note); color: var(--note-ink); border-radius: 12px; font-size: 13px; display: grid; gap: 6px; }
+.notes li::marker { font-weight: 800; }
+
+/* device frames */
+.frame { background: var(--paper); border: 2px solid var(--ink); border-radius: 14px; overflow: hidden; position: relative; }
+.frame.desk { flex: 999 1 640px; min-width: 0; }
+.frame.phone { flex: 0 1 300px; width: 300px; max-width: 100%; border-radius: 28px; }
+.frame .bar { display: flex; gap: 5px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.frame .bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--fill-2); }
+.frame .notch { height: 18px; display: flex; justify-content: center; align-items: center; }
+.frame .notch::after { content: ""; width: 70px; height: 6px; border-radius: 6px; background: var(--fill-2); }
+.body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.phone .body { padding: 12px; }
+
+/* wireframe primitives */
+.box { border: 1.5px solid var(--line); border-radius: var(--r); padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--paper); }
+.box.fill { background: var(--fill); border-color: transparent; }
+.box.dash { border-style: dashed; background: transparent; }
+.box.accent { background: var(--accent-soft); border-color: transparent; }
+.img { background: var(--fill-2); border-radius: var(--r); min-height: 80px; position: relative; overflow: hidden; }
+.img::before, .img::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid color-mix(in srgb, var(--muted) 40%, transparent); }
+.img::before { transform: rotate(18deg); } .img::after { transform: rotate(-18deg); }
+.ln { height: 9px; border-radius: 9px; background: var(--fill-2); }
+.ln.w30 { width: 30%; } .ln.w40 { width: 40%; } .ln.w50 { width: 50%; } .ln.w60 { width: 60%; } .ln.w70 { width: 70%; } .ln.w80 { width: 80%; }
+.ln.big { height: 16px; } .ln.dark { background: var(--muted); }
+.t { font-size: 13px; } .tm { font-size: 12px; color: var(--muted); } .tb { font-weight: 700; } .h { font-size: 18px; font-weight: 800; }
+.btn { border: 1.5px solid var(--ink); border-radius: 999px; padding: 7px 14px; font-size: 12px; font-weight: 700; text-align: center; background: var(--paper); white-space: nowrap; }
+.btn.pri { background: var(--ink); color: var(--paper); }
+.btn.ghost { border-color: transparent; text-decoration: underline; }
+.btn.round { width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+.input { border: 1.5px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 12px; color: var(--muted); background: var(--paper); }
+.input.sq { border-radius: 12px; }
+.input.area { border-radius: 12px; min-height: 64px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; letter-spacing: .03em; white-space: nowrap; }
+.pill.ok { background: var(--accent); color: var(--paper); }
+.pill.soft { background: var(--accent-soft); color: var(--accent); }
+.pill.fail { background: var(--ink); color: var(--paper); }
+.pill.out { border: 1.5px solid var(--ink); }
+.pill.dash { border: 1.5px dashed var(--warn); color: var(--warn); }
+.pill.grey { background: var(--fill); color: var(--muted); }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 11px; background: var(--paper); white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.flex { display: flex; gap: 8px; align-items: center; }
+.between { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.wrapx { flex-wrap: wrap; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; }
+.side { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; }
+.side.q { grid-template-columns: 220px minmax(0, 1fr); }
+.n { display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #e2b500; color: #1d1d1b; font: 800 10px system-ui; align-items: center; justify-content: center; flex: none; font-style: normal; }
+.kpi { border-radius: 14px; background: var(--fill); padding: 8px 10px; display: grid; gap: 2px; }
+.kpi b { font-size: 15px; } .kpi span { font-size: 10px; color: var(--muted); }
+
+/* Pinterest-style masonry: CSS columns, cards of varying heights */
+.masonry { columns: 4 150px; column-gap: 10px; }
+.phone .masonry { columns: 2; column-gap: 8px; }
+.pin { break-inside: avoid; margin: 0 0 10px; display: flex; flex-direction: column; gap: 5px; }
+.pin .img { position: relative; }
+.pin .over { position: absolute; z-index: 1; display: flex; gap: 4px; }
+.pin .over.tl { top: 8px; left: 8px; } .pin .over.br { bottom: 8px; right: 8px; } .pin .over.tr { top: 8px; right: 8px; }
+.h1x { min-height: 110px; } .h2x { min-height: 150px; } .h3x { min-height: 190px; } .h4x { min-height: 230px; }
+
+/* chrome inside frames */
+.appnav { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.appnav .logo { width: 28px; height: 28px; border-radius: 50%; background: var(--ink); flex: none; }
+.appnav .search { flex: 1; }
+.tabbar { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--line); padding: 8px 4px 12px; text-align: center; font-size: 10px; color: var(--muted); }
+.tabbar div { display: grid; justify-items: center; gap: 3px; }
+.tabbar div::before { content: ""; width: 18px; height: 18px; border-radius: 6px; background: var(--fill-2); }
+.tabbar .on { color: var(--ink); font-weight: 700; }
+.tabbar .on::before { background: var(--ink); }
+.tabbar .plus::before { border-radius: 50%; width: 26px; height: 26px; background: var(--ink); }
+.table { border: 1.5px solid var(--line); border-radius: 14px; overflow: hidden; font-size: 11px; }
+.table .tr { display: grid; grid-template-columns: 1.1fr 1.5fr .9fr .9fr .9fr .9fr; gap: 6px; padding: 7px 10px; border-top: 1px solid var(--line); align-items: center; }
+.table .tr:first-child { border-top: 0; background: var(--fill); font-weight: 700; color: var(--muted); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 46%; background: var(--paper); border-left: 2px solid var(--ink); padding: 14px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.25); }
+.modal { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, 86%); background: var(--paper); border: 2px solid var(--ink); border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.timeline { display: grid; gap: 6px; }
+.timeline div { border-left: 3px solid var(--line); padding-left: 8px; display: grid; gap: 2px; }
+.timeline .in { border-left-color: var(--accent); }
+.sheet { border-radius: 20px 20px 0 0; margin-top: -24px; position: relative; background: var(--paper); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.cam { background: #111; border-radius: 18px; min-height: 210px; display: flex; align-items: flex-end; justify-content: center; padding: 12px; }
+.cam .shutter { width: 52px; height: 52px; border-radius: 50%; border: 4px solid #fff; }
+.ring { width: 46px; height: 46px; border-radius: 50%; border: 6px solid var(--fill-2); border-top-color: var(--accent); border-right-color: var(--accent); flex: none; }
+.hl { outline: 2px dashed #e2b500; outline-offset: 3px; }
+
+@media (max-width: 720px) {
+  .split, .side, .side.q { grid-template-columns: minmax(0, 1fr); }
+  .masonry { columns: 2; }
+  .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .drawer { width: 100%; }
+  .table .tr { grid-template-columns: 1fr 1fr 1fr; }
+  .table .tr > :nth-child(n+4) { display: none; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <strong>PropLock · wireframes v1</strong>
+  <nav aria-label="Jump to">
+    <a href="#s00">Shell</a><a href="#tenant">Tenant</a><a href="#broker">Broker</a><a href="#manager">Manager</a><a href="#states">States</a>
+  </nav>
+  <button class="btn" style="margin-left:auto;cursor:pointer" onclick="const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'">Toggle theme</button>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1>PropLock: screen-by-screen wireframes</h1>
+    <p class="meta">This sets <b>structure, content and behaviour</b> for every screen of the app: tenant, broker and agency manager across Features 1 and 4. It is grey on purpose. The <b>visual style</b> (colour, type, imagery, radius, motion) comes from the Pinterest inspiration the designer supplies.
+    The Pinterest patterns used here are a masonry feed of image-first "pins", a close-up page, boards, a big rounded search bar, a "+ Create" button and a mobile bottom tab bar. Each screen lists its route, its data source (the existing API) and numbered notes. The full detail is in <code>plans/pending/frontend-redesign.md</code>.</p>
+    <div class="legend">
+      <span><i class="n">1</i> note on the right</span>
+      <span><span class="tag new">NEW</span> not in today's app</span>
+      <span><span class="pill ok">VERIFIED</span> the one accent: trust/verified</span>
+      <span><span class="pill dash">CAN'T CHECK</span> needs a person</span>
+      <span><span class="pill fail">FAIL</span> problem</span>
+    </div>
+    <div class="toc">
+      <a href="#s00"><b>S00</b>App shell &amp; navigation</a>
+      <a href="#s01"><b>S01</b>Sign in</a>
+      <a href="#s02"><b>S02</b>Tenant: explore verified flats</a>
+      <a href="#s03"><b>S03</b>Tenant: listing close-up</a>
+      <a href="#s04"><b>S04</b>Tenant: is this genuine?</a>
+      <a href="#s05"><b>S05</b>Tenant: book a visit (F3 stub)</a>
+      <a href="#s06"><b>S06</b>Broker: home &amp; boards</a>
+      <a href="#s07"><b>S07</b>Broker: check-in photo</a>
+      <a href="#s08"><b>S08</b>Broker: write the ad + pre-check</a>
+      <a href="#s09"><b>S09</b>Broker: audit result</a>
+      <a href="#s10"><b>S10</b>Broker: live listing</a>
+      <a href="#s11"><b>S11</b>Broker: money ledger</a>
+      <a href="#s12"><b>S12</b>Manager: flats &amp; mandates</a>
+      <a href="#s13"><b>S13</b>Manager: register a flat</a>
+      <a href="#s14"><b>S14</b>Manager: review queue</a>
+      <a href="#s15"><b>S15</b>Manager: money ledger cockpit</a>
+      <a href="#s16"><b>S16</b>Closing &amp; invoice drawer</a>
+      <a href="#s17"><b>S17</b>Close a flat (lock for tenant)</a>
+      <a href="#s18"><b>S18</b>Manager: disputes</a>
+      <a href="#states"><b>S19</b>Empty, loading, error states</a>
+    </div>
+  </section>
+
+  <!-- ================= S00 SHELL ================= -->
+  <section class="screen" id="s00">
+    <div class="screen-head"><h2>S00 · App shell &amp; navigation</h2><span class="tag">all roles</span></div>
+    <p class="meta">Pinterest's chrome: a logo, pill tabs, one large rounded search field in the middle, then actions and an avatar. On phones: a bottom tab bar with a raised "+" in the centre. What the search field does depends on the role.</p>
+    <div class="row">
+      <div class="frame desk">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="appnav">
+          <span class="logo"></span>
+          <span class="btn pri">Listings</span><span class="btn ghost">Ledger</span><span class="btn ghost">Reviews <span class="pill ok">2</span></span>
+          <span class="input search"><i class="n">1</i> Search flats, or ask the ledger: "unpaid after 3 days?"</span>
+          <span class="btn round">+</span><i class="n">2</i>
+          <span class="btn round">🔔</span><span class="btn round" style="background:var(--fill-2)"></span><i class="n">3</i>
+        </div>
+        <div class="body"><div class="masonry">
+          <div class="pin"><div class="img h2x"></div></div><div class="pin"><div class="img h4x"></div></div>
+          <div class="pin"><div class="img h1x"></div></div><div class="pin"><div class="img h3x"></div></div>
+          <div class="pin"><div class="img h3x"></div></div><div class="pin"><div class="img h1x"></div></div>
+        </div></div>
+      </div>
+      <div class="frame phone">
+        <div class="notch"></div>
+        <div class="body"><span class="input">Search or ask…</span>
+          <div class="masonry"><div class="pin"><div class="img h3x"></div></div><div class="pin"><div class="img h2x"></div></div><div class="pin"><div class="img h1x"></div></div><div class="pin"><div class="img h2x"></div></div></div>
+        </div>
+        <div class="tabbar"><div class="on">Home</div><div>Ledger</div><div class="plus">New</div><div>Alerts</div><div>Me</div></div>
+        <i class="n" style="position:absolute;bottom:52px;left:140px">4</i>
+      </div>
+      <ol class="notes">
+        <li><b>One search field, three jobs.</b> Tenant: search verified flats. Broker and manager: the ledger copilot (<code>POST /ledger/copilot</code>) when the text is a question, otherwise a filter over their own listings. The reply opens in a sheet under the field and always says it is read-only.</li>
+        <li><b>"+" = Create.</b> Broker: new listing (pick a flat from <code>GET /broker/mandates</code>). Manager: menu with Register a flat, Give a mandate, Close a flat.</li>
+        <li>Avatar menu: name, role, trust score (broker), theme, sign out. Bell: review-queue count for managers; "needs a fix" and "confirm availability" for brokers.</li>
+        <li>Phone tab bar for brokers (phone-first): Listings · Ledger · <b>+ New</b> · Alerts · Me. The manager is desktop-first: top nav on desktop, the same tab bar under 760 px.</li>
+        <li>Tenants see the shell without the ledger, "+" or bell. They never sign in.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ================= S01 SIGN IN ================= -->
+  <section class="screen" id="s01">
+    <div class="screen-head"><h2>S01 · Sign in</h2><span class="tag route">/</span><span class="tag">broker, manager</span></div>
+    <div class="row">
+      <div class="frame desk">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="body"><div class="split">
+          <div class="masonry" style="columns:3"><div class="pin"><div class="img h3x"></div></div><div class="pin"><div class="img h1x"></div></div><div class="pin"><div class="img h2x"></div></div><div class="pin"><div class="img h2x"></div></div><div class="pin"><div class="img h3x"></div></div><div class="pin"><div class="img h1x"></div></div></div>
+          <div class="box" style="justify-content:center;gap:12px">
+            <span class="logo" style="width:40px;height:40px;border-radius:50%;background:var(--ink)"></span>
+            <span class="h">Welcome to PropLock</span><span class="tm">Verified rentals. Honest money.</span>
+            <span class="t tb">Your API key</span><span class="input">pl_broker_…</span><i class="n">1</i>
+            <span class="btn pri">Sign in</span>
+            <span class="tm">Tenants don't sign in: brokers share a listing link. <i class="n">2</i></span>
+          </div>
+        </div></div>
+      </div>
+      <ol class="notes">
+        <li>Calls <code>GET /me</code> with <code>X-API-Key</code>. A broker key goes to S06 and a manager key to S15 (or S12). An error shows the backend's message.</li>
+        <li>The left side is a decorative collage of flat photos (Pinterest's sign-in collage). Hide it on phones.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ================= TENANT ================= -->
+  <h3 class="group-title" id="tenant">Tenant (public, no sign-in)</h3>
+
+  <section class="screen" id="s02">
+    <div class="screen-head"><h2>S02 · Explore verified flats</h2><span class="tag route">/explore</span><span class="tag new">NEW · needs API</span></div>
+    <p class="meta">The most Pinterest-like screen: a masonry feed of LIVE listings only, each one a "pin". It needs a new <code>GET /public/listings</code> (LIVE only, paginated). Until that exists, build it behind a flag; tenants still arrive through shared links (S03).</p>
+    <div class="row">
+      <div class="frame desk">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="appnav"><span class="logo"></span><span class="input search">Search Indiranagar, 2BHK, under ₹40k…</span></div>
+        <div class="body">
+          <div class="chips"><span class="chip" style="background:var(--ink);color:var(--paper)">All</span><span class="chip">Bengaluru</span><span class="chip">Chennai</span><span class="chip">Walk to metro</span><span class="chip">Unfurnished</span><span class="chip">Under ₹35k</span><i class="n">1</i></div>
+          <div class="masonry">
+            <div class="pin"><div class="img h3x"><span class="over tl"><span class="pill ok">✓ VERIFIED</span></span><span class="over br"><span class="chip">11 min walk · metro</span></span></div><span class="t tb">2BHK in Indiranagar</span><span class="tm">₹35,000 · Unfurnished</span><i class="n">2</i></div>
+            <div class="pin"><div class="img h1x"><span class="over tl"><span class="pill ok">✓ VERIFIED</span></span></div><span class="t tb">1BHK, Thoraipakkam</span><span class="tm">₹18,000</span></div>
+            <div class="pin"><div class="img h4x"><span class="over tl"><span class="pill ok">✓ VERIFIED</span></span></div><span class="t tb">3BHK near tech park</span><span class="tm">₹52,000 · Semi</span></div>
+            <div class="pin"><div class="img h2x"><span class="over tl"><span class="pill ok">✓ VERIFIED</span></span></div><span class="t tb">Studio, HSR</span><span class="tm">₹16,500</span></div>
+            <div class="pin"><div class="img h2x"></div><span class="t tb">2BHK, Adyar</span><span class="tm">₹28,000</span></div>
+            <div class="pin"><div class="img h3x"></div><span class="t tb">2BHK, Whitefield</span><span class="tm">₹31,000</span></div>
+            <div class="pin"><div class="img h1x"></div><span class="t tb">1RK, Koramangala</span><span class="tm">₹12,000</span></div>
+            <div class="pin"><div class="img h2x"></div><span class="t tb">2BHK, Velachery</span><span class="tm">₹24,000</span></div>
+          </div>
+          <div class="tm" style="text-align:center">Loading more… <i class="n">3</i></div>
+        </div>
+      </div>
+      <ol class="notes">
+        <li>Filter chips scroll sideways on phones. Filters run on the client until the API takes query parameters.</li>
+        <li><b>Pin:</b> the owner's photo (or a placeholder), the "Verified" badge, the main commute claim that passed, title, rent and furnishing. Pins differ in height because photos keep their own proportions; never crop to a fixed height. Hover (desktop): a "View" button and the move-in total.</li>
+        <li>Infinite scroll with a visible "Load more" button as a fallback (keyboard and screen-reader friendly).</li>
+        <li>No "Save" heart unless a shortlist API exists. Don't fake features.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s03">
+    <div class="screen-head"><h2>S03 · Listing close-up</h2><span class="tag route">/l/:listingId</span><span class="tag">GET /public/listings/{id}</span></div>
+    <p class="meta">This is Pinterest's close-up page: a big image on the left and details on the right on desktop; on phones a full-bleed image with a sheet sliding up over it, then "More verified flats" as a masonry feed below.</p>
+    <div class="row">
+      <div class="frame desk">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="body">
+          <div class="box" style="padding:0;overflow:hidden"><div class="split" style="gap:0">
+            <div class="img h4x" style="border-radius:0;min-height:320px"><span class="over tl" style="position:absolute;top:10px;left:10px"><span class="pill ok">✓ VERIFIED BY PROPLOCK</span></span><span style="position:absolute;bottom:10px;right:10px" class="chip">1 / 4 · Next</span><i class="n" style="position:absolute;top:10px;right:10px">1</i></div>
+            <div class="body">
+              <div class="between"><span class="btn round">⤴</span><span class="btn pri">Book a visit · ₹500 hold</span></div><i class="n">2</i>
+              <span class="h">2BHK in Indiranagar</span>
+              <span class="h">₹35,000 <span class="tm">/ month</span></span>
+              <div class="chips"><span class="chip">Unfurnished</span><span class="chip">12th Main, Indiranagar</span></div>
+              <span class="t tb">Commute (checked at rush hour) <i class="n">3</i></span>
+              <div class="between t"><span>🚶 11 min to Indiranagar Metro</span><span class="pill soft">CHECKED</span></div>
+              <div class="between t"><span>🚗 25 min to Bagmane Tech Park</span><span class="pill grey">NOT CHECKED</span></div>
+              <div class="box fill"><span class="t tb">What you pay to move in <i class="n">4</i></span>
+                <div class="between t"><span>Rent</span><span>₹35,000</span></div><div class="between t"><span>Deposit</span><span>₹70,000</span></div><div class="between t"><span>Brokerage</span><span>₹35,000</span></div><div class="between t tb"><span>Total</span><span>₹1,40,000</span></div></div>
+              <div class="flex"><span class="ring"></span><div><span class="t tb">Rajesh · XYZ Properties</span><br><span class="tm">Trust 102 · listing confirmed 2 days ago</span></div></div>
+              <a class="t">Is this genuine? Check the signature →</a> <i class="n">5</i>
+            </div>
+          </div></div>
+          <span class="t tb">More verified flats <i class="n">6</i></span>
+          <div class="masonry"><div class="pin"><div class="img h2x"></div></div><div class="pin"><div class="img h1x"></div></div><div class="pin"><div class="img h3x"></div></div><div class="pin"><div class="img h1x"></div></div></div>
+        </div>
+      </div>
+      <div class="frame phone">
+        <div class="notch"></div>
+        <div class="img h4x" style="border-radius:0;min-height:240px"></div>
+        <div class="sheet"><span class="pill ok" style="align-self:flex-start">✓ VERIFIED</span><span class="h">2BHK in Indiranagar</span><span class="h">₹35,000 <span class="tm">/ mo</span></span><div class="ln w80"></div><div class="ln w60"></div><div class="box fill"><div class="ln w50"></div><div class="ln w70"></div></div></div>
+        <div class="body" style="border-top:1px solid var(--line)"><span class="btn pri">Book a visit · ₹500 hold</span></div>
+      </div>
+      <ol class="notes">
+        <li>The owner's photos only (never the broker's), in a carousel: swipe on phones, arrows plus a counter on desktop. Every image has alt text such as "Living room, photo 1 of 4".</li>
+        <li>"Book a visit" is the primary action, pinned to the bottom on phones. It leads to S05 (Feature 3, not built). Share uses the Web Share API, with copy-link as a fallback.</li>
+        <li>A commute row that passed shows CHECKED; any other shows NOT CHECKED. Never show a minute figure the checks didn't confirm as if it were confirmed.</li>
+        <li>The move-in total is the honest headline number (<code>move_in_total</code>). Rupee figures use Indian digit grouping.</li>
+        <li>Links to S04 (<code>verify_url</code>).</li>
+        <li>"More verified flats" only when S02's API exists; otherwise hide it.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s04">
+    <div class="screen-head"><h2>S04 · Is this genuine?</h2><span class="tag route">/v/:auditId</span><span class="tag">GET /public/audits/{id}/verify</span></div>
+    <div class="row">
+      <div class="frame phone"><div class="notch"></div><div class="body">
+        <div class="box accent" style="align-items:center;text-align:center;padding:20px"><span class="ring" style="width:64px;height:64px;border-color:var(--accent)"></span><span class="h">Genuine, unchanged</span><span class="tm">Signed 11 Nov 2026 · PayPal product PL-…</span></div>
+        <div class="box"><div class="between t"><span>Signature</span><span class="pill ok">VALID</span></div><div class="between t"><span>Matches today's data</span><span class="pill ok">YES</span></div></div>
+        <span class="btn">Check again</span><i class="n">1</i>
+      </div></div>
+      <div class="frame phone"><div class="notch"></div><div class="body">
+        <div class="box" style="border:2px solid var(--ink);align-items:center;text-align:center;padding:20px"><span class="h">⚠ Changed after it was checked</span><span class="tm">Don't pay anything. Ask the broker or the agency why the ad changed.</span></div>
+        <div class="box"><span class="t tb">What changed</span><span class="tm">ad rent: signed 35000, now 30000</span></div><i class="n">2</i>
+      </div></div>
+      <ol class="notes">
+        <li>Two big states, readable at a glance: green with a tick, or dark with a warning. Colour is never the only signal; the words say it.</li>
+        <li>List <code>mismatches</code> in plain words. An unknown id shows "No audit with this id exists".</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s05">
+    <div class="screen-head"><h2>S05 · Book a visit</h2><span class="tag new">Feature 3 · not built</span></div>
+    <div class="row">
+      <div class="frame phone"><div class="notch"></div><div class="body">
+        <span class="h">Book a visit</span><span class="tm">2BHK in Indiranagar · Rajesh</span>
+        <div class="grid3"><span class="chip">Sat 10:00</span><span class="chip">Sat 12:00</span><span class="chip">Sun 11:00</span></div>
+        <div class="box fill"><span class="t tb">₹500 refundable hold</span><span class="tm">Held by PayPal, not charged. Deducted from your move-in invoice if you take the flat.</span></div>
+        <span class="btn pri">Hold ₹500 with PayPal</span><i class="n">1</i>
+      </div></div>
+      <ol class="notes">
+        <li>Design it, but ship it as a "Coming soon" sheet until Feature 3's API exists. The promise "deducted from your move-in invoice" is what Feature 4 already does (S16).</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ================= BROKER ================= -->
+  <h3 class="group-title" id="broker">Broker (phone-first)</h3>
+
+  <section class="screen" id="s06">
+    <div class="screen-head"><h2>S06 · Home &amp; boards</h2><span class="tag route">/b</span><span class="tag">GET /broker/listings · /broker/mandates · /me</span></div>
+    <p class="meta">Pinterest boards become status boards. The broker's listings are grouped by what to do next, and flats they may list appear as "Start a listing" pins.</p>
+    <div class="row">
+      <div class="frame phone"><div class="notch"></div><div class="body">
+        <div class="flex"><span class="ring"></span><div style="flex:1"><span class="tm">Good evening</span><br><span class="h">Rajesh</span></div><span class="btn round">🔔</span></div><i class="n">1</i>
+        <div class="grid3"><div class="kpi"><b>1</b><span>Live</span></div><div class="kpi"><b>1</b><span>Need a fix</span></div><div class="kpi"><b>0</b><span>In review</span></div></div>
+        <span class="t tb">Your boards <i class="n">2</i></span>
+        <div class="grid2">
+          <div class="box" style="padding:6px"><div class="grid2" style="gap:3px"><div class="img" style="min-height:44px;border-radius:8px"></div><div class="img" style="min-height:44px;border-radius:8px"></div></div><span class="t tb">Live · 1</span></div>
+          <div class="box" style="padding:6px"><div class="grid2" style="gap:3px"><div class="img" style="min-height:44px;border-radius:8px"></div><div class="img" style="min-height:44px;border-radius:8px"></div></div><span class="t tb">Needs a fix · 1</span></div>
+          <div class="box" style="padding:6px"><div class="img" style="min-height:44px;border-radius:8px"></div><span class="t tb">Drafts · 0</span></div>
+          <div class="box" style="padding:6px"><div class="img" style="min-height:44px;border-radius:8px"></div><span class="t tb">Rented · 0</span></div>
+        </div>
+        <span class="t tb">Needs you now <i class="n">3</i></span>
+        <div class="masonry">
+          <div class="pin"><div class="img h2x"><span class="over tl"><span class="pill out">NEEDS FIX</span></span></div><span class="t tb">2BHK Indiranagar</span><span class="tm">3 things to fix</span></div>
+          <div class="pin"><div class="img h1x"><span class="over tl"><span class="pill ok">LIVE</span></span><span class="over br"><span class="chip">2 days left</span></span></div><span class="t tb">1BHK Thoraipakkam</span><span class="tm">Confirm availability</span></div>
+          <div class="pin"><div class="box dash h1x" style="align-items:center;justify-content:center"><span class="btn round">+</span><span class="tm">Start a listing</span></div><span class="t tb">PROP-CHN-002</span><span class="tm">Mandate until 30 Nov</span><i class="n">4</i></div>
+        </div>
+      </div><div class="tabbar"><div class="on">Listings</div><div>Ledger</div><div class="plus">New</div><div>Alerts</div><div>Me</div></div></div>
+      <ol class="notes">
+        <li>Greeting, trust-score ring (out of 120), bell. KPI tiles filter the feed when tapped.</li>
+        <li><b>Boards</b> = statuses: Live (LIVE/VERIFIED), Needs a fix (NEEDS_FIX), In review, Drafts, Rented/Expired. Each board's cover is a 2×2 collage of its listings' photos. Tapping one opens a masonry page for that board.</li>
+        <li>"Needs you now" puts urgent pins first: NEEDS_FIX, then LIVE with ≤ 2 days left, then drafts. A pin's hint text is today's <code>listingHint()</code>.</li>
+        <li>A flat with an active mandate and no open listing appears as a dashed "Start a listing" pin. Tapping it is <code>POST /broker/listings</code>, then S07.</li>
+        <li>Each pin's route depends on its status: DRAFT → S07/S08, NEEDS_FIX/IN_REVIEW → S09, LIVE/EXPIRED/RENTED → S10.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s07">
+    <div class="screen-head"><h2>S07 · Check-in photo at the flat</h2><span class="tag route">/b/listings/:id/checkin</span><span class="tag">POST …/photos (kind=CHECKIN, lat/lng)</span></div>
+    <div class="row">
+      <div class="frame phone"><div class="notch"></div><div class="body">
+        <div class="between"><span class="btn round">‹</span><span class="t tb">Step 1 of 2 · Check in</span><span></span></div>
+        <div class="box accent"><span class="t tb">📍 You're 8 m from the flat</span><span class="tm">Must be within 100 m. GPS ±12 m</span></div><i class="n">1</i>
+        <div class="cam"><span class="shutter"></span></div><i class="n">2</i>
+        <span class="t tb">Your photos</span>
+        <div class="grid4"><div class="img" style="min-height:54px;border-radius:12px"></div><div class="img" style="min-height:54px;border-radius:12px"></div><div class="box dash" style="min-height:54px;align-items:center;justify-content:center">+</div></div><i class="n">3</i>
+        <span class="btn pri">Next: write the ad</span>
+      </div></div>
+      <ol class="notes">
+        <li>Live distance from the browser's location to the flat's pin (<code>metresBetween</code>). It turns into a warning above 100 m, and permission states are explained ("Allow location to check in").</li>
+        <li>Camera capture (<code>&lt;input type=file accept=image/* capture=environment&gt;</code>). The first photo is the CHECKIN photo, sent with its lat/lng.</li>
+        <li>Extra photos (EXTRA): up to 20, 8 MB each, JPEG/PNG/WEBP; each can be removed (<code>DELETE …/photos/{id}</code>). Rejections show the backend's reason.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s08">
+    <div class="screen-head"><h2>S08 · Write the ad + pre-check</h2><span class="tag route">/b/listings/:id/ad</span><span class="tag">POST /broker/precheck · POST …/submit</span></div>
+    <p class="meta">Like Pinterest's "create pin" screen: the preview on the left, the form on the right (stacked on phones). The pre-check acts as a live coach.</p>
+    <div class="row">
+      <div class="frame desk"><div class="bar"><i></i><i></i><i></i></div><div class="body"><div class="split">
+        <div class="stack" style="display:grid;gap:10px">
+          <div class="pin"><div class="img h3x"></div><span class="t tb">2BHK, 11 min walk to Indiranagar Metro</span><span class="tm">₹35,000 · Unfurnished</span></div><i class="n">1</i>
+          <div class="box"><div class="between"><span class="t tb">Pre-check</span><span class="pill out">WOULD NEED A FIX</span></div><i class="n">2</i>
+            <div class="between t"><span>Owner's terms</span><span class="pill fail">✗ FAIL</span></div><span class="tm">Deposit 1,40,000 · allowed up to 70,000</span><span class="t" style="color:var(--accent)">→ Set the deposit to ₹70,000</span>
+            <div class="between t"><span>Commute</span><span class="pill fail">✗ FAIL</span></div><span class="t" style="color:var(--accent)">→ "11 min walk to Indiranagar Metro"</span>
+            <div class="between t"><span>Deposit rules</span><span class="pill soft">✓ PASS</span></div>
+          </div>
+        </div>
+        <div style="display:grid;gap:8px">
+          <span class="t tb">Title</span><span class="input sq">2BHK, 11 min walk to Indiranagar Metro</span>
+          <span class="t tb">Description</span><span class="input area">Unfurnished 2BHK on 12th Main…</span>
+          <div class="grid2"><div><span class="t tb">Rent (₹)</span><span class="input sq">35000</span><span class="tm">Owner allows 32,000–35,000</span></div><div><span class="t tb">Deposit (₹)</span><span class="input sq">70000</span><span class="tm">Up to 70,000</span></div></div>
+          <div class="grid2"><div><span class="t tb">Brokerage (₹)</span><span class="input sq">35000</span></div><div><span class="t tb">Furnishing</span><span class="input sq">Unfurnished ▾</span></div></div>
+          <span class="t tb">Commute claims <i class="n">3</i></span><div class="flex"><span class="input sq" style="flex:1">Indiranagar Metro</span><span class="input sq">11</span><span class="input sq">walk ▾</span><span class="btn">Add</span></div>
+          <div class="chips"><span class="chip">Found in your text: 11 min walk · Indiranagar Metro</span></div>
+          <div class="flex"><span class="btn">Run pre-check</span><span class="btn pri">Submit for audit</span></div><i class="n">4</i>
+        </div>
+      </div></div></div>
+      <ol class="notes">
+        <li>The preview pin updates as the broker types: this is how the tenant feed will show it.</li>
+        <li>Pre-check results, grouped by check (D owner's terms, B commute, C deposit rules; photos are checked on submit). Each suggestion ("→ …") has an "Apply" link that fills the field. The limit is 10 pre-checks a minute; a 429 shows "try again in a minute".</li>
+        <li>Claims found in the text appear as chips, so the broker sees what the AI read.</li>
+        <li>Submit goes to S09 when the result is NEEDS_FIX or IN_REVIEW, or to S10 when it is LIVE/VERIFIED. A busy state covers about 10 s while the AI checks run.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s09">
+    <div class="screen-head"><h2>S09 · Audit result</h2><span class="tag route">/b/audits/:auditId</span><span class="tag">GET /audits/{id}</span></div>
+    <div class="row">
+      <div class="frame phone"><div class="notch"></div><div class="body">
+        <div class="flex"><span class="ring"></span><div><span class="h">2 of 5 checks passed</span><br><span class="pill out">NEEDS FIX</span></div></div><i class="n">1</i>
+        <div class="box"><div class="between"><span class="t tb">D · Owner's terms</span><span class="pill fail">✗ FAIL</span></div><span class="tm">Deposit: 1,40,000 · allowed 70,000</span><span class="t" style="color:var(--accent)">→ Set deposit to ₹70,000</span></div>
+        <div class="box"><div class="between"><span class="t tb">B · Commute</span><span class="pill dash">CAN'T CHECK</span></div><span class="tm">Driving time needs rush-hour traffic: a manager decides</span></div>
+        <div class="box"><div class="between"><span class="t tb">A · Photos</span><span class="pill soft">✓ PASS</span></div></div><i class="n">2</i>
+        <span class="btn pri">Fix the ad</span><span class="tm">Signed audit · id 6023…</span>
+      </div></div>
+      <ol class="notes">
+        <li>The ring shows the pass ratio; the status pill is NEEDS FIX, IN REVIEW (with "the agency is checking N things by hand") or SENT BACK, which shows the manager's note.</li>
+        <li>Failed and can't-check items come first, then passes collapsed. Reuse today's <code>CheckReport</code> logic (evidence rows, advisories).</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s10">
+    <div class="screen-head"><h2>S10 · Live listing</h2><span class="tag route">/b/listings/:id</span><span class="tag">confirm-availability · mark-rented · close</span></div>
+    <div class="row">
+      <div class="frame phone"><div class="notch"></div>
+        <div class="img h3x" style="border-radius:0"><span class="over tl" style="position:absolute;top:10px;left:10px"><span class="pill ok">✓ LIVE</span></span></div>
+        <div class="sheet"><span class="h">2BHK in Indiranagar</span><span class="tm">Version 2 · signed · <a>See the audit</a></span>
+          <div class="box"><span class="t tb">Share with tenants</span><span class="input">proplock.app/l/2946…</span><div class="grid2"><span class="btn">Copy</span><span class="btn pri">WhatsApp</span></div></div><i class="n">1</i>
+          <div class="box"><div class="flex"><span class="ring"></span><div><span class="t tb">Still available?</span><br><span class="tm">5 days left</span></div></div><span class="btn pri">Yes, still available</span></div><i class="n">2</i>
+          <div class="box accent"><span class="t tb">Tenant locked the flat?</span><span class="tm">Send the move-in invoice: deposit + brokerage − visit token</span><span class="btn pri">Lock for a tenant</span></div><i class="n">3</i>
+        </div>
+        <div class="body" style="border-top:1px solid var(--line)"><span class="btn">Mark as rented</span></div>
+      </div>
+      <ol class="notes">
+        <li>Share: the public link (S03), copy and WhatsApp. "Open the tenant's view".</li>
+        <li>A 7-day ring. Confirming calls <code>confirm-availability</code>; an EXPIRED listing shows "confirm to bring it back". Missing it costs 3 trust points, which the screen says.</li>
+        <li><b>Feature 4 entry point:</b> opens S17 with this listing preselected. It appears only when the listing has an unused captured hold (<code>GET /ledger/closable</code>).</li>
+        <li>"Mark as rented" asks for confirmation first. RENTED shows "It no longer shows to tenants".</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s11">
+    <div class="screen-head"><h2>S11 · Broker money ledger</h2><span class="tag route">/b/ledger</span><span class="tag">GET /ledger (own closings)</span></div>
+    <div class="row">
+      <div class="frame phone"><div class="notch"></div><div class="body">
+        <span class="h">My money</span>
+        <div class="grid2"><div class="kpi"><b>$15.00</b><span>Received</span></div><div class="kpi" style="background:color-mix(in srgb,var(--warn) 18%,transparent)"><b>$104,985</b><span>Outstanding</span></div></div><i class="n">1</i>
+        <span class="input">Ask: "which deposits are unpaid?"</span>
+        <div class="chips"><span class="chip" style="background:var(--ink);color:var(--paper)">Closings</span><span class="chip">All money events</span></div>
+        <div class="box"><div class="between"><span class="t tb">Asha Rao</span><span class="pill dash">SENT · UNPAID</span></div><span class="tm">2BHK Indiranagar · PL-E19DDEC6</span><div class="between t"><span>Outstanding</span><span class="tb">$104,985.00</span></div></div><i class="n">2</i>
+        <div class="box"><div class="between"><span class="t tb">Vikram S</span><span class="pill ok">✓ PAID</span></div><span class="tm">1BHK Thoraipakkam</span></div>
+      </div><div class="tabbar"><div>Listings</div><div class="on">Ledger</div><div class="plus">New</div><div>Alerts</div><div>Me</div></div></div>
+      <ol class="notes">
+        <li>The same cockpit as S15, but on a phone it shows cards, never a grid. Show "Sandbox invoices are in USD; figures are the ₹ amounts verified in the listing" once, small.</li>
+        <li>Tapping a card opens S16 as a full-screen sheet. Brokers can't cancel invoices or simulate disputes.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ================= MANAGER ================= -->
+  <h3 class="group-title" id="manager">Agency manager (desktop-first)</h3>
+
+  <section class="screen" id="s12">
+    <div class="screen-head"><h2>S12 · Flats &amp; mandates</h2><span class="tag route">/m</span><span class="tag">/manager/properties · /mandates · /brokers</span></div>
+    <div class="row">
+      <div class="frame desk"><div class="bar"><i></i><i></i><i></i></div>
+        <div class="appnav"><span class="logo"></span><span class="btn pri">Flats</span><span class="btn ghost">Reviews</span><span class="btn ghost">Ledger</span><span class="btn ghost">Disputes</span><span class="input search">Search flats or ask the ledger…</span><span class="btn round">+</span></div>
+        <div class="body">
+          <div class="grid4"><div class="kpi"><b>2</b><span>Flats</span></div><div class="kpi"><b>2</b><span>Active mandates</span></div><div class="kpi"><b>2</b><span>Brokers</span></div><div class="kpi"><b>101</b><span>Avg trust</span></div></div><i class="n">1</i>
+          <div class="split">
+            <div class="masonry" style="columns:2">
+              <div class="pin hl"><div class="img h3x"><span class="over tr"><span class="chip">2 mandates</span></span></div><span class="t tb">PROP-BLR-001 · Indiranagar</span><span class="tm">Unfurnished · owner R. Kumar</span></div>
+              <div class="pin"><div class="img h2x"></div><span class="t tb">PROP-CHN-002 · Thoraipakkam</span><span class="tm">Semi · owner S. Iyer</span></div>
+              <div class="pin"><div class="box dash h1x" style="align-items:center;justify-content:center"><span class="btn round">+</span><span class="tm">Register a flat</span></div></div>
+            </div><i class="n">2</i>
+            <div class="box"><span class="h">PROP-BLR-001</span><span class="tm">12th Main, Indiranagar · 12.97, 77.64</span>
+              <span class="t tb">Owner photos</span><div class="grid4"><div class="img" style="min-height:50px;border-radius:10px"></div><div class="img" style="min-height:50px;border-radius:10px"></div><div class="box dash" style="min-height:50px;align-items:center;justify-content:center">+</div></div><i class="n">3</i>
+              <span class="t tb">Mandates</span>
+              <div class="between t"><span>Rajesh · ₹32–35k · dep ≤ 70k · until 30 Nov</span><span class="btn">Revoke</span></div>
+              <div class="between t"><span>QuickCash · ₹32–35k · until 15 Dec</span><span class="btn">Revoke</span></div>
+              <span class="btn pri">Give a broker a mandate</span><i class="n">4</i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ol class="notes">
+        <li>KPI tiles. The top nav replaces today's side menu, with the Pinterest-style search in the middle.</li>
+        <li>Flats as pins with their first owner photo; the selected pin is outlined. A dashed pin = register a flat (S13).</li>
+        <li>Owner photos (<code>POST /manager/properties/{id}/photos</code>, with room type). The note says: "Shown to tenants instead of the broker's photos".</li>
+        <li>The mandate form opens as a modal: broker, min/max rent, max deposit, max brokerage (months), valid until. Revoking asks for confirmation.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s13">
+    <div class="screen-head"><h2>S13 · Register a flat</h2><span class="tag">modal from "+" · POST /manager/properties</span></div>
+    <div class="row">
+      <div class="frame desk" style="min-height:360px"><div class="bar"><i></i><i></i><i></i></div><div class="body"><div class="masonry"><div class="pin"><div class="img h3x"></div></div><div class="pin"><div class="img h2x"></div></div><div class="pin"><div class="img h4x"></div></div><div class="pin"><div class="img h1x"></div></div></div></div>
+        <div class="scrim"></div>
+        <div class="modal"><div class="between"><span class="h">Register a flat</span><span class="btn round">✕</span></div>
+          <div class="grid2"><span class="input sq">PROP-BLR-003</span><span class="input sq">Owner name</span></div>
+          <span class="input sq">Address</span><div class="grid3"><span class="input sq">City</span><span class="input sq">State</span><span class="input sq">PIN</span></div>
+          <div class="flex"><span class="input sq" style="flex:1">12.97 , 77.64</span><span class="btn">📍 Use my location</span></div><i class="n">1</i>
+          <span class="input sq">Furnishing ▾</span><span class="btn pri">Register flat</span></div>
+      </div>
+      <ol class="notes">
+        <li>"Take the GPS pin at the flat: every commute and photo check measures from it." Show a small map preview once the pin is set (optional, no key needed with OpenStreetMap tiles).</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s14">
+    <div class="screen-head"><h2>S14 · Review queue</h2><span class="tag route">/m/reviews</span><span class="tag">GET /manager/reviews · POST /manager/reviews/{id}</span></div>
+    <div class="row">
+      <div class="frame desk"><div class="bar"><i></i><i></i><i></i></div><div class="body"><div class="side q">
+        <div style="display:grid;gap:8px;align-content:start"><div class="box hl"><span class="t tb">PROP-BLR-001 · v1</span><span class="tm">Rajesh · since 11 Nov</span><span class="t">1 open question</span></div><div class="box"><span class="t tb">PROP-CHN-002 · v3</span><span class="tm">QuickCash</span></div></div><i class="n">1</i>
+        <div class="box"><div class="between"><span class="h">2BHK in Indiranagar</span><span class="pill dash">IN REVIEW</span></div>
+          <span class="t tb">Couldn't be checked <i class="n">2</i></span><div class="box dash t">commute: Bagmane Tech Park (driving): rush-hour traffic can't be checked</div>
+          <span class="t tb">The full report</span><div class="ln w80"></div><div class="ln w60"></div><div class="ln w70"></div>
+          <span class="t tb">Your note (required)</span><span class="input area">Called the owner: 22 min at 9 am.</span>
+          <div class="flex"><span class="btn pri">Approve and publish</span><span class="btn">Send back to broker</span></div><i class="n">3</i>
+        </div></div></div></div>
+      <ol class="notes">
+        <li>A queue list on the left, detail on the right (stacked on phones). The count also shows on the nav badge.</li>
+        <li>Only what the checks couldn't decide, in plain words (<code>open_questions</code>).</li>
+        <li>The note is required (≥ 3 characters). Approve leads to publishing (PayPal product) and LIVE; send back gives NEEDS_FIX with the note.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s15">
+    <div class="screen-head"><h2>S15 · Money ledger cockpit</h2><span class="tag route">/m/ledger</span><span class="tag">GET /ledger · /ledger/config · POST /ledger/copilot</span></div>
+    <p class="meta">This is the only data-dense screen, and it stays a real table (AG Grid Community, which the sponsor track asks for). The Pinterest feel comes from the chrome, rounded tiles and the copilot in the big search field, not from turning money into pins.</p>
+    <div class="row">
+      <div class="frame desk"><div class="bar"><i></i><i></i><i></i></div>
+        <div class="appnav"><span class="logo"></span><span class="btn ghost">Flats</span><span class="btn ghost">Reviews</span><span class="btn pri">Ledger</span><span class="btn ghost">Disputes</span><span class="input search hl">✦ Which deposits are unpaid after 3 days?</span><span class="btn round">+</span></div><i class="n">1</i>
+        <div class="body">
+          <div class="box accent"><span class="t tb">1 closing matches.</span><span class="tm">Asha Rao · PL-E19DDEC6 · SENT · outstanding $104,985 [closing:c50d…]</span><span class="tm">Search written by groq:gpt-oss-120b · rows counted by PropLock · read-only</span><div class="flex"><span class="btn">Show all rows</span></div></div><i class="n">2</i>
+          <div class="grid4"><div class="kpi"><b>3</b><span>Closings</span></div><div class="kpi"><b>$105,015</b><span>Received</span></div><div class="kpi"><b>$104,985</b><span>Outstanding · 1 unpaid</span></div><div class="kpi"><b>1</b><span>Disputed</span></div></div><i class="n">3</i>
+          <div class="between wrapx"><div class="chips"><span class="chip" style="background:var(--ink);color:var(--paper)">Closings</span><span class="chip">All money events</span></div><span class="input" style="min-width:220px">Filter: tenant, invoice, PayPal id…</span></div>
+          <div class="table">
+            <div class="tr"><span>Tenant</span><span>Flat</span><span>Closing</span><span>Invoice</span><span>Received</span><span>Outstanding</span></div>
+            <div class="tr"><span>Asha Rao</span><span>2BHK Indiranagar</span><span><span class="pill dash">INVOICED</span></span><span><span class="pill dash">SENT</span></span><span>$15.00</span><span class="tb">$104,985.00</span></div>
+            <div class="tr"><span>Vikram S</span><span>1BHK Thoraipakkam</span><span><span class="pill ok">PAID</span></span><span><span class="pill ok">PAID</span></span><span>$54,000.00</span><span>$0.00</span></div>
+            <div class="tr"><span>Meera</span><span>Studio HSR</span><span><span class="pill fail">DISPUTED</span></span><span><span class="pill ok">PAID</span></span><span>$51,000.00</span><span>$0.00</span></div>
+          </div><i class="n">4</i>
+          <span class="tm">Sandbox invoices are in USD; figures are the ₹ amounts verified in the listing. <i class="n">5</i></span>
+        </div>
+      </div>
+      <ol class="notes">
+        <li>On this screen the nav search field <b>is</b> the copilot (✦ marks AI). It offers example questions as chips on focus. Write requests ("cancel all invoices") come back as a refusal.</li>
+        <li>The answer card filters the grid to the rows the copilot found, with "Show all rows" to clear it. It always names the model and says it is read-only.</li>
+        <li>KPIs are summed from <code>closings</code>; amber is used only for outstanding money.</li>
+        <li>AG Grid Community, themed from the design tokens (light/dark). Columns: tenant, flat, property, broker, closing status, invoice status, invoice no., deposit + brokerage, token deducted, received, outstanding, reminders, closed at. Second view: all money events. Below 760 px: cards (S11). <b>No row grouping</b> (that's Enterprise).</li>
+        <li>In DEMO_MODE (<code>/ledger/config</code>), show a visible "Demo: visit tokens are simulated, ids start with FAKE-" banner.</li>
+        <li>Clicking a row opens S16.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s16">
+    <div class="screen-head"><h2>S16 · Closing &amp; invoice drawer</h2><span class="tag">GET /closings/{id} · /refresh · /qr · /cancel</span></div>
+    <div class="row">
+      <div class="frame desk" style="min-height:520px"><div class="bar"><i></i><i></i><i></i></div><div class="body"><div class="table"><div class="tr"><span>Tenant</span><span>Flat</span><span></span><span></span><span></span><span></span></div><div class="tr"><span>Asha Rao</span><span>…</span><span></span><span></span><span></span><span></span></div></div></div>
+        <div class="scrim"></div>
+        <div class="drawer">
+          <div class="between"><span class="h">Asha Rao</span><span class="btn round">✕</span></div>
+          <div class="chips"><span class="pill dash">INVOICED</span><span class="pill dash">SENT · UNPAID</span><span class="pill grey">DEMO · FAKE-INV</span></div>
+          <span class="tm">2BHK Indiranagar · broker Rajesh · asha@example.com · <a>signed audit</a></span><i class="n">1</i>
+          <div class="box"><div class="between t"><span class="tb">Invoice PL-E19DDEC6</span><span class="tm">Signature valid</span></div>
+            <div class="between t"><span>Security deposit</span><span>$70,000.00</span></div><div class="between t"><span>Brokerage fee</span><span>$35,000.00</span></div>
+            <div class="between t"><span>Visit token already paid <span class="tm">FAKE-CAP-…</span></span><span>− $15.00</span></div>
+            <div class="between t tb" style="border-top:2px solid var(--ink);padding-top:4px"><span>Invoice total</span><span>$104,985.00</span></div><i class="n">2</i>
+            <div class="flex wrapx"><span class="btn pri">Tenant's pay page</span><span class="btn">QR code</span><span class="btn">↻ Check PayPal now</span></div><i class="n">3</i>
+          </div>
+          <div class="grid3"><div class="kpi"><b>$105,000</b><span>Gross</span></div><div class="kpi"><b>$15</b><span>Received</span></div><div class="kpi"><b>$104,985</b><span>Outstanding</span></div></div>
+          <span class="t tb">Ledger · 4 entries <i class="n">4</i></span>
+          <div class="timeline"><div class="in"><span class="t tb">Hold captured · + $15.00</span><span class="tm">11 Nov 10:39 · feature3</span></div><div><span class="t tb">Invoice prepared</span><span class="tm">deposit + brokerage − token</span></div><div><span class="t tb">Invoice sent</span><span class="tm">to asha@example.com</span></div></div>
+          <div class="flex"><span class="btn">Cancel invoice</span><span class="btn ghost">Simulate dispute (demo)</span></div><i class="n">5</i>
+        </div>
+      </div>
+      <ol class="notes">
+        <li>A right drawer on desktop and a full-screen sheet on phones. Esc closes it and focus is trapped while it is open.</li>
+        <li>The breakdown makes the Feature 4 promise visible: the token appears as a deduction, with its PayPal capture id. A manager override shows as a warning box with its note. An invalid signature shows a prominent warning.</li>
+        <li>The pay link opens PayPal (hidden for demo invoices). The QR is an image with alt text. "Check PayPal now" refreshes the payment status.</li>
+        <li>The ledger timeline: a green edge for money in, amber for money out, grey for info. Each row shows when, the source and the PayPal ref.</li>
+        <li>Manager only: Cancel (asks for confirmation) and, in demo mode, simulate a dispute; "Open dispute" links to S18.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s17">
+    <div class="screen-head"><h2>S17 · Close a flat (lock for a tenant)</h2><span class="tag">modal · GET /ledger/closable · POST …/close</span></div>
+    <div class="row">
+      <div class="frame desk" style="min-height:440px"><div class="bar"><i></i><i></i><i></i></div><div class="body"><div class="masonry"><div class="pin"><div class="img h3x"></div></div><div class="pin"><div class="img h2x"></div></div><div class="pin"><div class="img h1x"></div></div></div></div>
+        <div class="scrim"></div>
+        <div class="modal"><div class="between"><span class="h">Send the move-in invoice</span><span class="btn round">✕</span></div>
+          <span class="t tb">Listing</span><span class="input sq">2BHK in Indiranagar · PROP-BLR-001 · Rajesh ▾</span><span class="tm">Verified: deposit $70,000 + brokerage $35,000</span><i class="n">1</i>
+          <span class="t tb">Visit token</span><span class="input sq">FAKE-CAP-2026… · $15.00 · 11 Nov ▾</span><span class="btn ghost">Simulate a $15 token (demo)</span><i class="n">2</i>
+          <div class="grid2"><span class="input sq">Tenant name</span><span class="input sq">Tenant email</span></div>
+          <span class="t">☐ Invoice different amounts (manager, needs a note)</span><i class="n">3</i>
+          <div class="box fill"><div class="between t tb"><span>Invoice total</span><span>$104,985.00</span></div><span class="tm">= deposit + brokerage − visit token</span></div><i class="n">4</i>
+          <span class="btn pri">Create and send the PayPal invoice</span></div>
+      </div>
+      <ol class="notes">
+        <li>Lists only LIVE, verified listings. Brokers see their own, managers see all of them (with the broker's name).</li>
+        <li>Unused captured holds for that listing. If there are none, say so ("Feature 3 records them when a visit happens"). The demo button is for managers in DEMO_MODE only.</li>
+        <li>Override: deposit and brokerage fields plus a required "why" note. Brokers never see this option.</li>
+        <li>A live total preview computed on the client, for display only; the backend computes the real one. The submit button stays disabled until name, email and token are set. Afterwards the modal closes and S16 opens for the new closing.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="screen" id="s18">
+    <div class="screen-head"><h2>S18 · Disputes</h2><span class="tag route">/m/disputes</span><span class="tag">GET /manager/disputes · /draft · /approve</span></div>
+    <div class="row">
+      <div class="frame desk"><div class="bar"><i></i><i></i><i></i></div><div class="body"><div class="side q">
+        <div style="display:grid;gap:8px;align-content:start"><div class="box hl"><div class="between"><span class="t tb">FAKE-PP-D-…</span><span class="pill grey">OPEN</span></div><span class="t">Not as described</span><span class="tm">$104,985 · 11 Nov</span></div></div>
+        <div style="display:grid;gap:10px">
+          <div class="between"><span class="h">Not as described · $104,985</span><span class="pill grey">OPEN</span></div>
+          <span class="t tb">Evidence pack · 10 records <i class="n">1</i></span>
+          <div class="masonry" style="columns:3 140px">
+            <div class="pin box"><span class="chip">audit:6023…</span><span class="t">Signed listing audit, signature valid; deposit 70,000…</span></div>
+            <div class="pin box"><div class="img h1x"></div><span class="chip">photo:5329…</span><span class="t">Check-in photo at the flat, GPS…</span></div>
+            <div class="pin box"><span class="chip">invoice:e19d…</span><span class="t">Invoice PL-E19DDEC6 · total 104,985 · sent</span></div>
+            <div class="pin box"><span class="chip">ledger:d219…</span><span class="t">Hold captured $15</span></div>
+            <div class="pin box dash"><span class="t">Not available: Feature 3 visit check-in</span></div>
+          </div>
+          <span class="t tb">Response to PayPal <i class="n">2</i></span><span class="input area" style="min-height:110px">We acknowledge the dispute… [dispute:FAKE-PP-D-…]. The listing was audited… [audit:6023…]</span>
+          <span class="tm">1,675 / 2,000 · 11 citations · 0 unknown · Draft by groq:gpt-oss-120b</span>
+          <div class="flex"><span class="btn">Redraft from the evidence</span><span class="btn pri">Approve and submit to PayPal</span></div><i class="n">3</i>
+        </div></div></div></div>
+      <ol class="notes">
+        <li>The evidence pack as a masonry board of evidence cards. Each card shows its <code>source_id</code> chip and summary; photo items show the photo. Missing evidence appears as dashed cards.</li>
+        <li>The draft is editable while OPEN. Citations like <code>[audit:…]</code> are highlighted, and clicking one scrolls to its card. A citation that isn't in the pack turns red and blocks approval.</li>
+        <li>Approval asks for confirmation; the exact text is sent. Afterwards the screen is read-only with "Submitted to PayPal on …".</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ================= STATES ================= -->
+  <section class="screen" id="states">
+    <div class="screen-head"><h2>S19 · Empty, loading, error states</h2><span class="tag">every screen</span></div>
+    <div class="row">
+      <div class="frame phone"><div class="notch"></div><div class="body"><span class="t tb">Loading</span><div class="masonry"><div class="pin"><div class="img h2x" style="opacity:.6"></div><div class="ln w60"></div></div><div class="pin"><div class="img h3x" style="opacity:.6"></div><div class="ln w40"></div></div><div class="pin"><div class="img h1x" style="opacity:.6"></div></div></div></div></div>
+      <div class="frame phone"><div class="notch"></div><div class="body"><span class="t tb">Empty</span><div class="box dash" style="align-items:center;text-align:center;padding:24px"><span class="btn round">+</span><span class="t tb">No listings yet</span><span class="tm">Start one from a flat you have a mandate for.</span><span class="btn pri">Start a listing</span></div></div></div>
+      <div class="frame phone"><div class="notch"></div><div class="body"><span class="t tb">Error</span><div class="box" style="border:2px solid var(--ink)"><span class="t tb">You have no active mandate for PROP-CHN-002</span><span class="tm">The backend's own message, never "Something went wrong".</span><span class="btn">Try again</span></div></div></div>
+      <ol class="notes">
+        <li>Skeleton pins with the same masonry rhythm while loading. Respect <code>prefers-reduced-motion</code> (no shimmer).</li>
+        <li>Every empty state names one next action.</li>
+        <li>Errors show the API's <code>detail</code> text (<code>api.ts</code> already extracts it). 401 goes to S01; 404 shows "not found" in context; 429 shows "try again in a minute".</li>
+      </ol>
+    </div>
+  </section>
+</main>
+</body>
+</html>
