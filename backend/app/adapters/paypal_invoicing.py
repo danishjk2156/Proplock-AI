@@ -160,6 +160,14 @@ class PayPalInvoicing(PayPalCatalog):
             json=invoice_body(req),
             headers={"PayPal-Request-Id": request_id, "Prefer": "return=representation"},
         )
+        if resp.status_code == 422 and "DUPLICATE_INVOICE_NUMBER" in resp.text:
+            # Seen in the sandbox: a retry with the same PayPal-Request-Id is NOT replayed; PayPal
+            # refuses the number instead. Our number is fixed per invoice, so the invoice with that
+            # number is the one an earlier attempt created: find it and treat that as success.
+            existing = self.find_by_number(req.number)
+            if existing:
+                logger.info("PayPal invoice %s already existed as %s; treating as created", req.number, existing.paypal_invoice_id)
+                return existing
         if resp.status_code not in (200, 201):
             raise self._fail("create_invoice", resp)
         body = resp.json()
@@ -167,6 +175,15 @@ class PayPalInvoicing(PayPalCatalog):
         if not invoice_id:
             raise PayPalError("create_invoice returned no invoice id", resp.status_code)
         return CreatedInvoice(paypal_invoice_id=invoice_id, status=body.get("status", "DRAFT"))
+
+    def find_by_number(self, number: str) -> CreatedInvoice | None:
+        resp = self._call("POST", "/v2/invoicing/search-invoices", json={"invoice_number": number})
+        if resp.status_code != 200:
+            raise self._fail("search_invoices", resp)
+        for item in resp.json().get("items", []):
+            if (item.get("detail") or {}).get("invoice_number") == number:
+                return CreatedInvoice(paypal_invoice_id=item["id"], status=item.get("status", "DRAFT"))
+        return None
 
     def send(self, invoice_id: str, request_id: str) -> str | None:
         resp = self._call(

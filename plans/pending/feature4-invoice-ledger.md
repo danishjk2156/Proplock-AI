@@ -4,7 +4,7 @@ Source of truth: `docs/PropLock_Solution_Overview.pdf` §3.1 and the PropLock AI
 Branch: `feature/4-invoice-ledger` (from `main` at `36b37ab`).
 Implementation prompt for a coding agent: [`feature4-prompt.xml`](feature4-prompt.xml).
 
-Status: **BUILT 2026-11-11.** Proposed decisions D1-D10 taken as written. All phases done on Fake/Demo PayPal; the real Invoicing spike is blocked (403, see Progress).
+Status: **BUILT 2026-11-11.** Proposed decisions D1-D10 taken as written. All phases done; the real Invoicing spike passes against the sandbox (webhooks and dispute evidence not yet exercised for real).
 
 > **Deadline:** hackathon submissions close **12 November 2026**. The full plan below is several days of work. §7 "Hackathon cut" lists the smallest slice that demos the idea in about a day; everything else is roadmap.
 
@@ -220,7 +220,7 @@ That demos: simulated capture → invoice with the token deducted → ledger in 
 
 | Phase | Status |
 |---|---|
-| 0 Spike + contract | **done, real spike blocked**: sandbox keys work for Catalog, but Invoicing returns 403 NOT_AUTHORIZED (enable *Invoicing* on the sandbox app). LedgerEvent contract + DEMO_MODE simulate-capture |
+| 0 Spike + contract | **done**: real sandbox spike passes (create, retry, read back total 1035.00 with discount -15.00, send, QR, cancel); LedgerEvent contract + DEMO_MODE simulate-capture |
 | 1 Ledger | **done**: 5 tables + migration; append-only enforced by ORM listeners; idempotent record(); derived balances |
 | 2 Closing → invoice | **done**: invoice from the signed audit minus the token, manager override with note, signed invoice, outbox create → send with fixed request ids |
 | 3 Webhooks | **done**: verified via PayPal (demo HMAC in DEMO_MODE), raw events stored, deduped by event id and ledger key |
@@ -230,7 +230,9 @@ That demos: simulated capture → invoice with the token deducted → ledger in 
 | 7 Dispute defense | **done**: evidence pack with source ids, citation-checked draft (template fallback), approval before submit |
 | 8 Demo + docs | **done**: `scripts/demo_feature4.py` (online + `--offline`), README section, BUILD_LOG |
 
-### Deviations from the plan (follow the real API when the spike runs)
+### Deviations from the plan
+
+- **Invoice retries:** the real API does not replay a repeated `PayPal-Request-Id` for invoices; it returns `422 DUPLICATE_INVOICE_NUMBER`. `create_draft` then finds the invoice by its fixed number (`search-invoices`) and treats it as created.
 
 - **Row grouping** is AG Grid Enterprise-only, so the cockpit shows closings and money events as two views plus a detail drawer.
 - **Token label:** Invoicing v2's invoice discount has no label field, so the capture id is written in the invoice note.

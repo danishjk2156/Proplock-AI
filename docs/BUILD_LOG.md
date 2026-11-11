@@ -816,3 +816,23 @@ At `due − 1`, `due + 1` and `due + 3` days (`INVOICE_REMINDER_OFFSETS`), at mo
 - `pytest`: all green (the 280 existing tests plus the new Feature 4 ones); `npm run build` passes.
 - Checked in the browser against a scratch DEMO_MODE database (light and dark, desktop and 375 px): close-a-flat → invoice drawer ($70,000 + $35,000 − $15 = $104,985), QR, a copilot question answered by real Groq, simulated dispute → Groq draft with 11 valid citations → approved → submitted. No console errors.
 - **Not verified:** any real Invoicing or Disputes call (blocked by the 403 above), a real webhook delivery (needs a public URL and `PAYPAL_WEBHOOK_ID`).
+
+### Real sandbox spike, after Invoicing was enabled (2026-11-11)
+
+`python -m scripts.spike_invoicing`: **exit 0**, every step against the real PayPal sandbox:
+| Step | Result |
+|---|---|
+| create draft (700 + 350, discount 15) | `INV2-EF3A-KZEE-PCAB-GW5V`, DRAFT |
+| create again, same request id | same invoice (after the fix below) |
+| read back | `amount.value` **1035.00**; `breakdown.item_total` 1050.00; `discount.invoice_discount.amount.value` **"-15.00"** (we send 15.00, PayPal stores it negated) |
+| send | SENT; the reply carries the payer link `https://www.sandbox.paypal.com/invoice/p/#INV2-…` |
+| QR code | 848-character base64 PNG in the plain response body |
+| cancel | CANCELLED |
+
+A full-size draft (70,000 + 35,000 − 15) was also accepted with total **104985.00** and then deleted, so the demo's real figures fit the sandbox.
+
+**The real API differed from the plan in one way, now fixed:** for invoices, a retry with the same `PayPal-Request-Id` is **not** replayed. PayPal answers `422 DUPLICATE_INVOICE_NUMBER` (debug id `f329105392757`). Because our invoice number is fixed per invoice, `create_draft` now treats that error as "an earlier attempt already created it": it looks the invoice up with `POST /v2/invoicing/search-invoices {invoice_number}` and returns that id. With no match, it is still an error. Two new mock-server tests cover both cases (362 tests in total). This is exactly why the number is ours rather than `generate-next-invoice-number`: a fresh number on each retry would have created a second invoice.
+
+One stray sandbox draft from the first attempt (`INV2-3WQJ-CBQH-WBLE-YJD8`, never sent) is left in the sandbox account.
+
+Still not verified for real: webhook delivery (needs a public URL and `PAYPAL_WEBHOOK_ID`) and Disputes `provide-evidence` (needs a real disputed sandbox payment).

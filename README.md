@@ -220,6 +220,6 @@ npm run build
 - **Sign-in is an API key:** the web app keeps it in the browser's local storage. Fine for a demo, but a real login would use a session cookie.
 - **The frontend has no automated tests yet:** it was checked by hand in a browser (see the build log).
 - **Features 2–3 are not built.** The tenant page shows "Book a visit" as coming next; Feature 4 uses a simulated visit token in `DEMO_MODE`.
-- **Feature 4 has not reached the real PayPal Invoicing API:** the sandbox app returns 403 NOT_AUTHORIZED for Invoicing until the *Invoicing* feature is switched on for it in the PayPal developer dashboard. The adapter is tested against a mock server, and the demo uses `FAKE-INV-` invoices. Webhooks need a public URL and `PAYPAL_WEBHOOK_ID`; until then, "Check PayPal now" reads the invoice status directly.
+- **Feature 4 against real PayPal:** Invoicing is verified in the sandbox (`scripts/spike_invoicing` passes). Webhooks need a public URL and `PAYPAL_WEBHOOK_ID`; until then, "Check PayPal now" reads the invoice status directly. Dispute evidence submission is tested only against a mock server. `scripts/demo_feature4` always uses `FAKE-INV-` invoices.
 - **Invoices are in USD** in the sandbox (PayPal has no domestic INR between Indian accounts), using the ₹ figures verified in the listing.
 - **AG Grid Community has no row grouping**, so closings and their money events are two views plus a detail drawer.

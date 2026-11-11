@@ -87,6 +87,33 @@ def test_create_reads_the_id_from_a_link_only_reply():
     assert api.create_draft(REQ, "r").paypal_invoice_id == "INV2-BBBB"
 
 
+def test_a_retry_refused_as_duplicate_number_finds_the_first_invoice():
+    # Real sandbox behaviour (2026-11-11): the same PayPal-Request-Id is not replayed for invoices;
+    # PayPal answers 422 DUPLICATE_INVOICE_NUMBER. Our number is fixed, so the match is ours.
+    api, requests = _api({
+        ("POST", "/v1/oauth2/token"): TOKEN,
+        ("POST", "/v2/invoicing/invoices"): httpx.Response(
+            422, json={"name": "UNPROCESSABLE_ENTITY", "details": [{"issue": "DUPLICATE_INVOICE_NUMBER"}]}),
+        ("POST", "/v2/invoicing/search-invoices"): httpx.Response(200, json={"items": [
+            {"id": "INV2-OTHER", "status": "SENT", "detail": {"invoice_number": "PL-OTHER"}},
+            {"id": "INV2-MINE", "status": "DRAFT", "detail": {"invoice_number": "PL-ABC12345"}}]}),
+    })
+
+    assert api.create_draft(REQ, "create-inv-1").paypal_invoice_id == "INV2-MINE"
+    assert json.loads(requests[2].content) == {"invoice_number": "PL-ABC12345"}
+
+
+def test_a_duplicate_number_with_no_match_is_still_an_error():
+    api, _ = _api({
+        ("POST", "/v1/oauth2/token"): TOKEN,
+        ("POST", "/v2/invoicing/invoices"): httpx.Response(
+            422, json={"name": "UNPROCESSABLE_ENTITY", "details": [{"issue": "DUPLICATE_INVOICE_NUMBER"}]}),
+        ("POST", "/v2/invoicing/search-invoices"): httpx.Response(200, json={"items": []}),
+    })
+    with pytest.raises(PayPalError, match="DUPLICATE_INVOICE_NUMBER"):
+        api.create_draft(REQ, "r")
+
+
 def test_errors_carry_status_issue_and_debug_id():
     api, _ = _api({
         ("POST", "/v1/oauth2/token"): TOKEN,
