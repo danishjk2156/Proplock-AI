@@ -121,7 +121,7 @@ Each step ends with `npm run build` passing and a browser check (light and dark,
 
 | Phase | Status |
 |---|---|
-| 0 Tokens | not started |
+| 0 Tokens | proposed 2026-11-12: `docs/frontend/design-tokens.md`, `frontend/src/styles/tokens.css` (awaiting approval) |
 | 1 Shell | not started |
 | 2 Tenant | not started |
 | 3 Broker | not started |

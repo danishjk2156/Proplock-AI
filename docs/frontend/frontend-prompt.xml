@@ -27,22 +27,27 @@
 
   <!-- ===================== PASTE THE INSPIRATION HERE ===================== -->
   <inspiration source="pinterest">
-    <instructions_for_the_designer>
-      Replace the example blocks below. One pin element per image or URL. Attach images to the chat if you can;
-      the agent must look at them. Say what to take from each (colour? cards? type? spacing? photos?).
-    </instructions_for_the_designer>
-    <pin id="1" url="PASTE_URL_OR_ATTACH_IMAGE">
-      <take>e.g. warm off-white background, soft 24px rounded image cards, no borders</take>
+    <source>A single-page real-estate design ("AURA Estates", architectural realty) generated from Pinterest
+      real-estate pins and shared by the designer on 2026-11-12. Tailwind palette: obsidian #09090B/#18181B/#27272A,
+      ash #FAFAFA/#F4F4F5/#E4E4E7/#A1A1AA/#71717A, blaze orange #F97316/#EA580C/#C2410C. Fonts: Plus Jakarta Sans
+      (display, 600-800) and Inter (body). Take patterns only, not its name, copy, photos or numbers.</source>
+    <pin id="1" url="aura-estates: sticky top nav + segmented Buy/Rent tabs">
+      <take>white sticky bar with blur and a hairline bottom border; a segmented control with a black selected pill on a grey track; the logo as a black rounded square with a mark, and an orange dot in the wordmark</take>
     </pin>
-    <pin id="2" url="PASTE_URL_OR_ATTACH_IMAGE">
-      <take>e.g. bold geometric sans headings, small grey captions under images</take>
+    <pin id="2" url="aura-estates: matte-black hero with search console">
+      <take>a matte-black band, a big tight Jakarta 800 headline with one word in orange, an uppercase eyebrow with an orange dot, and a dark search console inside it with uppercase field labels</take>
     </pin>
-    <pin id="3" url="PASTE_URL_OR_ATTACH_IMAGE">
-      <take>e.g. a deep green accent used sparingly on buttons and badges</take>
+    <pin id="3" url="aura-estates: property card">
+      <take>white cards rounded 16px with a 1px zinc border and almost no shadow; on hover the border goes black, a large soft shadow appears and the photo zooms 1.05 over 500ms; a bottom gradient on the photo, a matte-black price tag at bottom left, uppercase badges at top left</take>
     </pin>
-    <!-- add more <pin> blocks -->
-    <overall_mood>PASTE: three to five words, e.g. "calm, trustworthy, editorial, warm"</overall_mood>
-    <avoid>PASTE: anything you don't want, e.g. "neon, heavy shadows, glassmorphism"</avoid>
+    <pin id="4" url="aura-estates: filter chips, sort, view switch">
+      <take>chips rounded 12px, black when selected and outlined zinc otherwise; tabular figures for every price and count; small 11px uppercase labels with wide tracking</take>
+    </pin>
+    <pin id="5" url="aura-estates: detail modal and empty state">
+      <take>a large rounded modal with an image/detail split; an empty state with an icon tile, a short heading and one black button</take>
+    </pin>
+    <overall_mood>architectural, matte, precise, confident, calm</overall_mood>
+    <avoid>orange as a status colour (verified stays green, chosen by the user 2026-11-12); white text on #F97316 (2.8:1 contrast); the wishlist heart (no API); fake stats like "1,420+ verified listings"; glassmorphism beyond the sticky-nav blur</avoid>
   </inspiration>
   <!-- ====================================================================== -->
 

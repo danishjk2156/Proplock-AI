@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PropLock tokens</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../frontend/src/styles/tokens.css" />
+<style>
+  /* Phase 0 preview only: shows the tokens on a few sample components. Not app code. */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: var(--fs-base)/1.5 var(--body); -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; letter-spacing: var(--tracking-tight); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: var(--sp-6) var(--sp-4) var(--sp-14); display: grid; gap: var(--sp-8); }
+  .eyebrow { font-size: var(--fs-eyebrow); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); color: var(--muted); }
+  .nav { position: sticky; top: 0; background: color-mix(in srgb, var(--surface) 95%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+  .nav .in { max-width: 1100px; margin: 0 auto; padding: var(--sp-3) var(--sp-4); display: flex; gap: var(--sp-3); align-items: center; }
+  .logo { display: flex; gap: 10px; align-items: center; font-family: var(--display); font-weight: 800; font-size: var(--fs-md); }
+  .logo i { width: 36px; height: 36px; border-radius: var(--radius); background: var(--inverse); color: var(--inverse-ink); display: grid; place-items: center; font-style: normal; }
+  .logo b { color: var(--brand); }
+  .search { flex: 1; min-width: 0; height: var(--tap); border-radius: var(--radius-pill); background: var(--surface-2); border: 1px solid var(--line); display: flex; align-items: center; padding: 0 var(--sp-4); gap: var(--sp-2); color: var(--muted); font-size: var(--fs-sm); }
+  .search .ai { margin-left: auto; font-size: var(--fs-eyebrow); font-weight: 600; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); padding: 2px 6px; }
+  .btn { min-height: var(--tap); padding: 0 var(--sp-4); border-radius: var(--radius); border: 1px solid transparent; font: 600 var(--fs-sm) var(--body); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background var(--dur-fast) var(--ease); }
+  .btn.primary { background: var(--action); color: var(--action-ink); }
+  .btn.primary:hover { background: var(--action-hover); }
+  .btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+  .btn.dark { background: var(--inverse); color: var(--inverse-ink); }
+  .btn:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+  .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px; gap: 2px; }
+  .seg span { padding: 6px 14px; border-radius: var(--radius-sm); font-size: var(--fs-sm); font-weight: 500; color: var(--ink-2); }
+  .seg span.on { background: var(--inverse); color: var(--inverse-ink); font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: var(--radius-sm); font-size: var(--fs-eyebrow); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: 1.5px solid transparent; }
+  .p-live { background: var(--accent); color: var(--accent-ink); }
+  .p-pass { background: var(--accent-soft); color: var(--accent-text); }
+  .p-fail { background: var(--ink); color: var(--bg); }
+  .p-fix { border-color: var(--ink); color: var(--ink); }
+  .p-cant { border: 1.5px dashed var(--warn); background: var(--warn-soft); color: var(--warn-text); }
+  .p-grey { background: var(--surface-2); color: var(--muted); }
+  .masonry { columns: 2 180px; column-gap: var(--sp-4); }
+  .pin { break-inside: avoid; margin-bottom: var(--sp-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-pin); overflow: hidden; box-shadow: var(--shadow-xs); transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+  .pin:hover { border-color: var(--ink); box-shadow: var(--shadow-lg); }
+  .ph { position: relative; background: repeating-linear-gradient(135deg, var(--placeholder) 0 12px, var(--surface-2) 12px 24px); display: grid; place-items: center; color: var(--muted); font-size: var(--fs-xs); }
+  .ph::after { content: ""; position: absolute; inset: 0; background: var(--photo-fade); }
+  .ph .tl { position: absolute; top: 12px; left: 12px; z-index: 1; display: flex; gap: 6px; }
+  .ph .price { position: absolute; left: 12px; bottom: 12px; z-index: 1; background: rgba(9,9,11,0.9); color: #fafafa; border-radius: var(--radius); padding: 4px 10px; font: 800 var(--fs-md) var(--display); font-variant-numeric: tabular-nums; }
+  .ph .tag { background: rgba(255,255,255,0.95); color: #09090b; }
+  .cap { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+  .cap h3 { font-size: var(--fs-md); }
+  .cap p { font-size: var(--fs-xs); color: var(--muted); margin: 2px 0 0; }
+  .hero { background: #09090b; color: #fafafa; border: 1px solid var(--line); border-radius: var(--radius-pin); padding: var(--sp-8) var(--sp-6); }
+  .hero h1 { font-size: clamp(28px, 5vw, var(--fs-hero)); font-weight: 800; line-height: 1.1; }
+  .hero h1 em { font-style: normal; color: var(--brand); }
+  .hero p { color: #a1a1aa; margin: var(--sp-3) 0 0; max-width: 520px; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--sp-2); }
+  .sw { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: var(--fs-xs); background: var(--surface); }
+  .sw div { height: 44px; }
+  .sw span { display: block; padding: 6px 8px; font-family: var(--mono); color: var(--muted); }
+  .theme { display: flex; gap: var(--sp-2); }
+</style>
+</head>
+<body>
+<header class="nav"><div class="in">
+  <span class="logo"><i aria-hidden="true">⌂</i><span>PropLock<b>.</b></span></span>
+  <div class="search" role="search">🔍 Ask the ledger… <span class="ai">✦ AI · read-only</span></div>
+  <button class="btn primary">+ Create</button>
+</div></header>
+<main class="wrap">
+  <div class="row" style="justify-content: space-between">
+    <div><div class="eyebrow">Phase 0 · proposal</div><h1 style="font-size: var(--fs-2xl)">Design tokens</h1></div>
+    <div class="theme"><button class="btn ghost" onclick="document.documentElement.dataset.theme='light'">Light</button><button class="btn ghost" onclick="document.documentElement.dataset.theme='dark'">Dark</button></div>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow" style="color:#a1a1aa">Verified rentals · India</div>
+    <h1>Every claim in this ad was <em>checked</em>.</h1>
+    <p>Matte-black hero band from the inspiration. Bright orange is only decoration, here in the headline accent.</p>
+  </section>
+
+  <section class="row">
+    <button class="btn primary">Submit for audit</button>
+    <button class="btn ghost">Save draft</button>
+    <button class="btn dark">Share link</button>
+    <span class="seg"><span class="on">All</span><span>Live</span><span>Needs a fix</span><span>Drafts</span></span>
+  </section>
+
+  <section class="row">
+    <span class="pill p-live">✓ Live</span><span class="pill p-pass">✓ Pass</span><span class="pill p-fail">✕ Fail</span>
+    <span class="pill p-fix">Needs fix</span><span class="pill p-cant">? Can't check</span><span class="pill p-cant">Unpaid</span>
+    <span class="pill p-fail">⚠ Disputed</span><span class="pill p-grey">Draft</span>
+  </section>
+
+  <section class="masonry" aria-label="Sample pins">
+    <article class="pin"><div class="ph" style="aspect-ratio: 4/5">Owner photo<div class="tl"><span class="pill p-live">✓ Verified</span><span class="pill tag">2 BHK</span></div><span class="price">₹45,000</span></div><div class="cap"><h3>Sample flat title</h3><p>Placeholder · not real data</p></div></article>
+    <article class="pin"><div class="ph" style="aspect-ratio: 16/10">Owner photo<div class="tl"><span class="pill p-cant">Can't check</span></div><span class="price">₹28,500</span></div><div class="cap"><h3>Another sample</h3><p>Placeholder · not real data</p></div></article>
+    <article class="pin"><div class="ph" style="aspect-ratio: 1/1">Owner photo<div class="tl"><span class="pill p-fix">Needs fix</span></div><span class="price">₹62,000</span></div><div class="cap"><h3>Third sample</h3><p>Placeholder · not real data</p></div></article>
+    <article class="pin"><div class="ph" style="aspect-ratio: 3/4">Owner photo<div class="tl"><span class="pill p-grey">Draft</span></div><span class="price">₹19,000</span></div><div class="cap"><h3>Fourth sample</h3><p>Placeholder · not real data</p></div></article>
+  </section>
+
+  <section>
+    <div class="eyebrow" style="margin-bottom: 8px">Palette (follows the theme)</div>
+    <div class="swatches">
+      <div class="sw"><div style="background:var(--bg)"></div><span>--bg</span></div>
+      <div class="sw"><div style="background:var(--surface-2)"></div><span>--surface-2</span></div>
+      <div class="sw"><div style="background:var(--ink)"></div><span>--ink</span></div>
+      <div class="sw"><div style="background:var(--muted)"></div><span>--muted</span></div>
+      <div class="sw"><div style="background:var(--brand)"></div><span>--brand</span></div>
+      <div class="sw"><div style="background:var(--action)"></div><span>--action</span></div>
+      <div class="sw"><div style="background:var(--accent)"></div><span>--accent</span></div>
+      <div class="sw"><div style="background:var(--warn)"></div><span>--warn</span></div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

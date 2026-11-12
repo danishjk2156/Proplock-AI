@@ -836,3 +836,11 @@ A full-size draft (70,000 + 35,000 − 15) was also accepted with total **104985
 One stray sandbox draft from the first attempt (`INV2-3WQJ-CBQH-WBLE-YJD8`, never sent) is left in the sandbox account.
 
 Still not verified for real: webhook delivery (needs a public URL and `PAYPAL_WEBHOOK_ID`) and Disputes `provide-evidence` (needs a real disputed sandbox payment).
+
+## Frontend redesign · Phase 0: inspiration → tokens (2026-11-12)
+
+- Inspiration: the "AURA Estates" real-estate design (matte black + zinc + one orange; Plus Jakarta Sans over Inter; 16 px cards with hairline borders; dark price tags over photos). Recorded in `<inspiration>` in `docs/frontend/frontend-prompt.xml`.
+- Output: `docs/frontend/design-tokens.md` (roles, palette, contrast table, type, shape, motion), `frontend/src/styles/tokens.css` (light, dark by OS setting, dark by `data-theme`, reduced motion) and `docs/frontend/token-preview.html`.
+- Changes from the inspiration: the button orange is `#C2410C`, because white on `#F97316` is only 2.80:1. Verified states stay **green**, and orange is used for actions only (the user chose this). Muted grey is darkened to `#65656D`, because `#71717A` on `#F4F4F5` is 4.40:1.
+- Verified: all 18 text/background pairs pass AA in both themes (lowest 4.92:1). The preview has no horizontal scroll at 375 px or 1280 px, in light or dark.
+- `tokens.css` is not imported by the app yet. Phase 1 wires it in and replaces `styles.css`.
