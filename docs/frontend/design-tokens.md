@@ -1,129 +1,115 @@
-# PropLock design tokens (Phase 0)
+# PropLock design tokens: "midnight and gold"
 
-Status: **in use since 2026-11-12.** `src/main.tsx` imports `tokens.css` before `styles.css`, which no longer defines its own palette.
-Code: [`frontend/src/styles/tokens.css`](../../frontend/src/styles/tokens.css). Preview: [`token-preview.html`](token-preview.html).
+Status: **in use since 2026-11-13.** It replaces the first "architectural" (black, zinc and orange) token set.
+Code: [`frontend/src/styles/tokens.css`](../../frontend/src/styles/tokens.css). It is imported by `src/main.tsx` before `src/styles.css`. Every screen uses the tokens, including the AG Grid ledger.
 
 ## 1. Where the look comes from
 
-Inspiration: a single-page real-estate design ("AURA Estates, architectural realty") that the designer collected and generated from Pinterest real-estate pins. It is recorded in the `<inspiration>` element of [`frontend-prompt.xml`](frontend-prompt.xml). We take its **patterns**. We do not take its name, copy, photos or fake numbers.
+The inspiration is a dark fintech landing page that the designer shared on 2026-11-13. We take its **patterns** only. We don't take its name, copy, photos, logo or numbers, and nothing from its subject matter (binary-options trading).
 
 What we take:
 
-1. **Palette:** a matte black (`#09090B`) and zinc-grey ground (`#FAFAFA`, `#F4F4F5`, `#E4E4E7`) with **one orange** for the call to action. Orange appears sparingly: buttons, a dot in the logo, small markers.
-2. **Type:** Plus Jakarta Sans at 700–800 with tight tracking for headings and prices. Inter for body text. Tiny uppercase "eyebrow" labels (11 px, 0.14em tracking). Tabular figures for money.
-3. **Cards:** white, rounded 16 px, with a 1 px hairline border and almost no shadow. Hover darkens the border, lifts the card with a large soft shadow and zooms the photo slightly (scale 1.05, 500 ms).
-4. **Over the photo:** a dark gradient at the bottom, a matte-black price tag at bottom left, and small uppercase badges at top left (dark, or white on the photo).
-5. **Chrome:** a sticky white top bar with a blur. A segmented control (black "selected" pill on a grey track) for tabs and filters. Chips are rounded 12 px, black when selected and outlined otherwise. There is a dark "hero" band with a search console inside it.
+1. **Ground:** a deep navy-charcoal page (`#0E131C`) with slightly lighter panels. The hero band has a soft gold glow, and on the sign-in page a faint gold grid.
+2. **Gold:** one warm gold (`#E3B962`) for actions, line icons, prices and the small dot under feature titles.
+3. **Titles:** a small lowercase line ("how every deal stays honest") above a wide-tracked UPPERCASE title in Montserrat.
+4. **Buttons:** uppercase and tracked. The default is a thin gold outline; the main call to action is solid gold with dark text.
+5. **Panels:** important cards are framed by a thin gold hairline with a soft gold glow. Tables have gold uppercase headers and zebra rows.
+6. **Icons:** gold line icons in thin gold rings, four in a row, each with a short description.
 
 What we change, and why:
 
 | Inspiration | PropLock | Why |
 |---|---|---|
-| Orange `#F97316` on buttons with white text | Buttons use `#C2410C`. The bright orange is decorative only. | White on `#F97316` is 2.80:1, which fails WCAG AA. White on `#C2410C` is 5.18:1. |
-| Orange for every highlight, including "verified" | **Green** for verified states (LIVE, PASS, PAID, RESOLVED, trust); orange for actions only | Verification is what the product is about, and orange reads as a warning. It would also collide with amber "money outstanding". The user chose this on 2026-11-12. |
-| "Saved" heart, wishlist | Not used | We don't invent features without an API (plan §8). |
-| Muted grey `#71717A` | `#65656D` | `#71717A` on `#F4F4F5` is 4.40:1, which fails. `#65656D` is 5.26:1. |
-| Input borders `#E4E4E7` | `#8A8A93` (`--line-strong`) | Form controls need 3:1 against their background. |
-| Light only | Light and dark (matte black ground) | Plan §4. |
+| Gold on every highlight | Gold is for **actions only**; verified states stay **green** | Verification is what the product is about (chosen by the user on 2026-11-12) |
+| Amber/gold for warnings | **Coral** (`#F2937A`) for "money outstanding / a person must look" | Amber would read as gold, the action colour |
+| Dark only | Dark by default, plus an ivory light theme behind the toggle | Daylight readability on phones; the choice is kept per browser |
+| Marketing filler ("trusted brokers", fake trades table) | Four true descriptions of Features 1–4, no figures | We never invent data |
 
 ## 2. Roles
 
 | Role | Tokens | Used for |
 |---|---|---|
-| Ground | `--bg --surface --surface-2 --placeholder` | Page, cards, tracks and tiles, image placeholders |
-| Inverse | `--inverse --inverse-ink --inverse-muted` | Matte-black hero band, selected chips and segmented items, tooltips |
+| Ground | `--bg --surface --surface-2 --placeholder` | Page, panels, tracks and inputs, image placeholders |
+| Hero | `--hero-ground --hero-ink --hero-muted --hero-gold` | Sign-in hero, manager sidebar, broker greeting, photo placeholders. Dark in **both** themes. |
+| Inverse | `--inverse --inverse-ink` | Selected segmented tab, the tenant's own chat bubbles, the avatar |
 | Text | `--ink --ink-2 --muted` | Headings and body, secondary text, captions |
-| Lines | `--line --line-strong` | Hairlines and dividers, input borders |
-| Brand | `--brand` | Logo dot and small markers. **Never text and never a fill behind text.** |
-| Action | `--action --action-hover --action-ink --action-soft --action-text` | Primary button, links, focus ring, active tab, the "+ Create" button |
-| Verified | `--accent --accent-hover --accent-ink --accent-soft --accent-text` | LIVE / VERIFIED / PAID / RESOLVED (filled, tick), PASS (soft), trust ring |
-| Warn | `--warn --warn-soft --warn-text` | CAN'T CHECK, SENT/UNPAID (dashed), needs a person, the DEMO banner |
+| Lines | `--line --line-strong --line-gold` | Hairlines, input borders, the gold frames |
+| Brand | `--brand` | Line icons, prices, the logo, dots. Large or bold text only. |
+| Action | `--action --action-hover --action-ink --action-soft --action-text` | Primary and outline buttons, links, focus rings, the selected slot and nav item |
+| Verified | `--accent --accent-ink --accent-soft --accent-text` | LIVE / VERIFIED / PAID / RESOLVED / booked, PASS, money in, trust ring |
+| Warn | `--warn --warn-soft --warn-text` | CAN'T CHECK, SENT/UNPAID, a held slot, money out |
 
-Status shapes stay as they are today (plan F8), so colour is never the only signal:
+Status shapes stay as they were, so colour is never the only signal:
 
 | Status | Shape |
 |---|---|
-| LIVE, VERIFIED, PAID, RESOLVED | filled `--accent` + ✓ |
-| PASS | `--accent-soft` fill, `--accent-text` + ✓ |
-| FAIL | filled `--ink` + ✕ |
-| NEEDS FIX | outlined `--ink` |
-| CAN'T CHECK, SENT, UNPAID | dashed `--warn` border, `--warn-soft` fill |
-| DISPUTED | filled `--ink` + ⚠ |
-| DRAFT, CANCELLED, IN REVIEW | `--surface-2` grey |
+| LIVE, VERIFIED, PAID, RESOLVED, BOOKED | filled green + ✓ |
+| PASS, hold released | soft green with a green hairline |
+| FAIL, DISPUTED, fee captured | filled `--ink` |
+| NEEDS FIX, broker no-show | outlined `--ink` |
+| CAN'T CHECK, SENT/UNPAID, HELD, SETTLING | dashed coral border on a soft coral fill |
+| DRAFT, CANCELLED, IN REVIEW, expired | `--surface-2` grey |
 
 ## 3. Palette
 
-| Token | Light | Dark |
+| Token | Dark (default) | Light (`data-theme="light"`) |
 |---|---|---|
-| `--bg` | `#FAFAFA` | `#09090B` |
-| `--surface` | `#FFFFFF` | `#18181B` |
-| `--surface-2` | `#F4F4F5` | `#27272A` |
-| `--ink` | `#09090B` | `#FAFAFA` |
-| `--ink-2` | `#3F3F46` | `#D4D4D8` |
-| `--muted` | `#65656D` | `#A1A1AA` |
-| `--line` | `#E4E4E7` | `#27272A` |
-| `--line-strong` | `#8A8A93` | `#71717A` |
-| `--inverse` / `--inverse-ink` | `#09090B` / `#FAFAFA` | `#FAFAFA` / `#09090B` |
-| `--brand` | `#F97316` | `#F97316` |
-| `--action` / `--action-ink` | `#C2410C` / `#FFFFFF` | `#FB923C` / `#09090B` |
-| `--action-soft` / `--action-text` | `#FFEDD5` / `#9A3412` | `#431407` / `#FED7AA` |
-| `--accent` / `--accent-ink` | `#15803D` / `#FFFFFF` | `#4ADE80` / `#052E16` |
-| `--accent-soft` / `--accent-text` | `#DCFCE7` / `#166534` | `#14532D` / `#BBF7D0` |
-| `--warn` | `#A16207` | `#FACC15` |
-| `--warn-soft` / `--warn-text` | `#FEF9C3` / `#854D0E` | `#422006` / `#FDE68A` |
+| `--bg` | `#0E131C` | `#F7F4EC` |
+| `--surface` | `#151C28` | `#FFFFFF` |
+| `--surface-2` | `#1C2534` | `#EFEADD` |
+| `--ink` / `--ink-2` / `--muted` | `#EFE9DC` / `#CBC5B7` / `#9AA3B2` | `#141A24` / `#3A4150` / `#5D6472` |
+| `--line` / `--line-strong` | `#263043` / `#6C7689` | `#E2DCCB` / `#8B8473` |
+| `--action` / `--action-ink` | `#E3B962` / `#10151F` | `#8A6416` / `#FFFFFF` |
+| `--action-soft` / `--action-text` | `#2B2617` / `#F1D28F` | `#F6ECD2` / `#6A4C0E` |
+| `--accent` / `--accent-ink` | `#5BD198` / `#062619` | `#1E7A4C` / `#FFFFFF` |
+| `--accent-soft` / `--accent-text` | `#12342A` / `#A3EBC6` | `#DCF2E5` / `#175F3B` |
+| `--warn` / `--warn-soft` / `--warn-text` | `#F2937A` / `#3A1F1B` / `#F9C2B3` | `#B3442A` / `#FBE6DF` / `#8F3420` |
+| `--hero-ink` / `--hero-muted` / `--hero-gold` | `#EFE9DC` / `#B4BCCB` / `#E3B962` | same (the hero band stays dark) |
 
-### Contrast (WCAG 2.1; text needs 4.5:1, UI borders 3:1)
+### Contrast (WCAG 2.1; text needs 4.5:1, control borders 3:1), measured
 
-| Foreground | Background | Need | Light | Dark |
+| Foreground | Background | Need | Dark | Light |
 |---|---|---|---|---|
-| `--ink` | `--bg` | 4.5:1 | 19.06 ✓ | 19.06 ✓ |
-| `--ink` | `--surface` | 4.5:1 | 19.90 ✓ | 16.97 ✓ |
-| `--ink-2` | `--surface` | 4.5:1 | 10.44 ✓ | 11.99 ✓ |
-| `--muted` | `--bg` | 4.5:1 | 5.53 ✓ | 7.76 ✓ |
-| `--muted` | `--surface` | 4.5:1 | 5.78 ✓ | 6.91 ✓ |
-| `--muted` | `--surface-2` | 4.5:1 | 5.26 ✓ | 5.81 ✓ |
-| `--line-strong` | `--surface` | 3.0:1 | 3.42 ✓ | 3.67 ✓ |
-| `--action-ink` | `--action` | 4.5:1 | 5.18 ✓ | 8.79 ✓ |
-| `--action` | `--surface` | 4.5:1 | 5.18 ✓ | 7.83 ✓ |
-| `--action` | `--bg` | 4.5:1 | 4.96 ✓ | 8.79 ✓ |
-| `--action-text` | `--action-soft` | 4.5:1 | 6.38 ✓ | 11.56 ✓ |
-| `--accent-ink` | `--accent` | 4.5:1 | 5.02 ✓ | 8.55 ✓ |
-| `--accent` | `--surface` | 4.5:1 | 5.02 ✓ | 10.17 ✓ |
-| `--accent-text` | `--accent-soft` | 4.5:1 | 6.49 ✓ | 7.52 ✓ |
-| `--warn` | `--surface` | 4.5:1 | 4.92 ✓ | 11.57 ✓ |
-| `--warn-text` | `--warn-soft` | 4.5:1 | 6.38 ✓ | 11.70 ✓ |
-| `--inverse-ink` | `--inverse` | 4.5:1 | 19.06 ✓ | 19.06 ✓ |
-| `--inverse-muted` | `--inverse` | 4.5:1 | 7.76 ✓ | 7.41 ✓ |
-
-Text over photos (price tags, badges) always sits on a solid `rgba(9,9,11,0.9)` tag or a white tag, never directly on the image.
+| `--ink` | `--bg` | 4.5 | 15.38 ✓ | 15.88 ✓ |
+| `--ink` | `--surface` | 4.5 | 14.13 ✓ | 17.46 ✓ |
+| `--ink-2` | `--surface` | 4.5 | 9.94 ✓ | 10.23 ✓ |
+| `--muted` | `--bg` | 4.5 | 7.32 ✓ | 5.41 ✓ |
+| `--muted` | `--surface` | 4.5 | 6.72 ✓ | 5.95 ✓ |
+| `--muted` | `--surface-2` | 4.5 | 6.05 ✓ | 4.95 ✓ |
+| `--line-strong` | `--surface` | 3.0 | 3.74 ✓ | 3.72 ✓ |
+| `--action-ink` | `--action` | 4.5 | 9.91 ✓ | 5.36 ✓ |
+| `--action` | `--surface` | 4.5 | 9.26 ✓ | 5.36 ✓ |
+| `--action` | `--bg` | 4.5 | 10.09 ✓ | 4.88 ✓ |
+| `--action-text` | `--action-soft` | 4.5 | 10.31 ✓ | 6.73 ✓ |
+| `--accent-ink` | `--accent` | 4.5 | 8.48 ✓ | 5.33 ✓ |
+| `--accent` | `--surface` | 4.5 | 8.97 ✓ | 5.33 ✓ |
+| `--accent-text` | `--accent-soft` | 4.5 | 9.84 ✓ | 6.53 ✓ |
+| `--warn` | `--surface` | 4.5 | 7.51 ✓ | 5.56 ✓ |
+| `--warn-text` | `--warn-soft` | 4.5 | 9.63 ✓ | 6.52 ✓ |
+| `--inverse-ink` | `--inverse` | 4.5 | 9.91 ✓ | 13.58 ✓ |
+| `--hero-ink` / `--hero-muted` / gold | hero ground | 4.5 | 14.42 / 9.13 / 9.45 ✓ | same |
 
 ## 4. Type
 
-| Step | Size / line height | Font, weight | Use |
-|---|---|---|---|
-| Hero | 44 / 1.1 (32 on phones) | Jakarta 800, -0.02em | Sign-in and explore hero |
-| 2xl | 32 / 1.15 | Jakarta 800 | Page title (desktop), big money figures |
-| xl | 24 / 1.2 | Jakarta 800 | Page title (phone), KPI values |
-| lg | 20 / 1.25 | Jakarta 700 | Section titles, price on the close-up |
-| md | 17 / 1.3 | Jakarta 700 | Pin titles, dialog titles |
-| base | 15 / 1.5 | Inter 400/500 | Body |
-| sm | 13 / 1.45 | Inter 500 | Secondary text, table cells |
-| xs | 12 / 1.4 | Inter 500 | Captions, helper text |
-| eyebrow | 11 / 1.3 | Inter 600, uppercase, 0.14em | Labels above fields, badge text, KPI labels |
-
-Money uses `font-variant-numeric: tabular-nums`. Fonts load from Google Fonts, which `index.html` already does.
+| Use | Font | Notes |
+|---|---|---|
+| Hero and section titles | Montserrat 700, UPPERCASE, tracking 0.04–0.08em | One word may be gold (`<em>` in `.hero-title`) |
+| Page and card titles | Montserrat 700, sentence case | Long listing titles stay readable |
+| Eyebrow (`.eyebrow`) | Inter 12–13 px, lowercase, muted | Sits above an uppercase title |
+| Labels, buttons, pills, table headers, KPI labels | Inter 600–700, 10.5–12.5 px, UPPERCASE, tracking 0.08–0.14em | |
+| Body | Inter 15 px / 1.55 | |
+| Money | Montserrat, tabular figures, gold for prices and totals | |
 
 ## 5. Shape, depth and motion
 
-- Radius: `--radius-pin` 16 px (pins, cards, dialogs), `--radius` 12 px (buttons, inputs, chips, tags), `--radius-sm` 8 px (badges, segmented items), `--radius-pill` for the search bar and avatars.
-- Borders do the work and shadows stay quiet: `--shadow-xs` at rest, `--shadow-lg` on hover and on dialogs.
-- Spacing is a 4 px grid (`--sp-1` … `--sp-14`). Tap targets are at least `--tap` (44 px).
-- Motion: `--dur-fast` 150 ms (colour, press scale 0.99), `--dur` 300 ms (card lift, sheet), `--dur-slow` 500 ms (photo zoom). Easing is `--ease`. All durations are 0 under `prefers-reduced-motion`.
+- Radius: `--radius-pin` 14 px (cards, dialogs), `--radius` 10 px, `--radius-sm` 6 px (buttons, inputs, pills, chips: crisper, like the inspiration).
+- Depth comes from hairlines and the gold glow (`--glow`) on framed panels, hovered cards, the primary button and the selected slot. Shadows are deep but quiet.
+- Motion: 150 ms for colour and press, 300 ms for card lift, 500 ms for photo zoom on hover. All of it is 0 ms under `prefers-reduced-motion`.
 
-## 6. Dark theme
+## 6. Theme switch
 
-The dark theme uses a matte-black ground (`#09090B`) with zinc surfaces and the same roles. Action, verified and warn colours move to their lighter tints so they pass contrast on black. The OS setting applies it unless the user picks a theme. The avatar-menu toggle sets `data-theme` on `<html>`.
+`ThemeToggle` (in `components.tsx`) sits on the sign-in page, in the manager sidebar and in the broker header. It sets `data-theme="light"` on `<html>` and saves the choice in `localStorage` (`proplock.theme`). A small script in `index.html` applies the saved choice before the first paint. Storage access is wrapped in try/catch, so a blocked storage means the theme simply lasts for one page.
 
 ## 7. AG Grid
 
-`LedgerGrid.tsx` keeps `themeQuartz.withParams` with `var(--surface)`, `var(--ink)`, `var(--surface-2)`, `var(--line)` and `var(--accent-soft)`. Phase 1 changes `accentColor` to `var(--action)` and `wrapperBorderRadius` to 16, so the grid follows both themes.
+`LedgerGrid.tsx` keeps `themeQuartz.withParams`, with `var(--surface)`, `var(--ink)`, `var(--surface-2)` and `var(--line)` for the grid, `var(--action-text)` for the headers, `var(--action)` as the accent, and `var(--action-soft)` for the selected row. `browserColorScheme: "inherit"` makes its scrollbars follow the theme.

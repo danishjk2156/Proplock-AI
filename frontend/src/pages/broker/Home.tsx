@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, apiUrl } from "../../api";
 import { useAuth } from "../../auth";
-import { ErrorBox, Icon, Loading, Pill, Ring, useLoad } from "../../components";
+import { ErrorBox, Icon, Loading, Pill, Ring, ThemeToggle, useLoad } from "../../components";
 import { daysUntil, plain, rupees, shortDate } from "../../format";
 import type { BrokerListing, BrokerMandate, ListingOutLite } from "./shared";
 
@@ -73,9 +73,12 @@ export default function BrokerHome() {
           <h1>{me?.name}</h1>
         </div>
         <Ring value={me?.trust_score ?? 0} max={120} size={52} label={`Trust score ${me?.trust_score}`} />
-        <Link className="icon-btn" aria-label="My visits" title="My visits" to="/b/visits"><Icon name="calendar" size={20} /></Link>
-        <Link className="icon-btn" aria-label="Money ledger" title="Money ledger" to="/b/ledger"><Icon name="ledger" size={20} /></Link>
-        <button className="icon-btn" aria-label="Sign out" onClick={signOut}><Icon name="out" size={20} /></button>
+        <nav className="hello-actions" aria-label="Broker menu">
+          <Link className="btn small" to="/b/visits"><Icon name="calendar" size={16} />Visits</Link>
+          <Link className="btn small" to="/b/ledger"><Icon name="ledger" size={16} />Ledger</Link>
+          <ThemeToggle />
+          <button className="icon-btn" aria-label="Sign out" title="Sign out" onClick={signOut}><Icon name="out" size={18} /></button>
+        </nav>
       </header>
 
       <main className="content">

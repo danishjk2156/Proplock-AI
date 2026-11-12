@@ -121,8 +121,8 @@ Each step ends with `npm run build` passing and a browser check (light and dark,
 
 | Phase | Status |
 |---|---|
-| 0 Tokens | done 2026-11-12: `docs/frontend/design-tokens.md`, `frontend/src/styles/tokens.css`, merged into `main` |
-| 1 Shell | started 2026-11-12: tokens wired into the whole app (all screens incl. Features 2-3, AG Grid); shell components (TopNav, TabBar, dialogs, Masonry, Pin) not started |
+| 0 Tokens | done 2026-11-12; replaced 2026-11-13 by the "midnight and gold" tokens (new inspiration), see `docs/frontend/design-tokens.md` |
+| 1 Shell | in progress: tokens on every screen, theme toggle, sign-in landing (2026-11-13); TopNav, TabBar, dialog primitive, Masonry and Pin not started |
 | 2 Tenant | not started |
 | 3 Broker | not started |
 | 4 Manager | not started |

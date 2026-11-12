@@ -1,65 +1,77 @@
-/* PropLock design tokens: "architectural" look.
-   Source: the AURA Estates real-estate inspiration (docs/frontend/design-tokens.md):
-   matte black + zinc greys, one orange for actions, Plus Jakarta Sans display over Inter,
-   12-16 px radii with hairline borders, uppercase eyebrow labels, dark price tags over photos.
-   PropLock's own rule on top: green means verified (LIVE / PASS / PAID / trust), amber means
-   money outstanding or needs a person. Every text pair here is >= 4.5:1 in both themes. */
+/* PropLock design tokens: "midnight and gold".
+   Inspiration (2026-11-13): a dark fintech landing page — deep navy-charcoal ground, warm gold for
+   actions and line icons, small lowercase eyebrows over wide-tracked uppercase titles, gold-outline
+   secondary buttons, solid gold calls to action, cards framed by a thin gold hairline, zebra tables.
+   We take the patterns only, never its brand, copy, photos or numbers.
+   PropLock's rules on top: gold is for actions only; green means verified (LIVE / PASS / PAID /
+   booked / trust); coral means money outstanding or a person must look (amber would read as gold).
+   Dark is the default; the toggle sets data-theme="light" on <html> for the ivory theme.
+   Every text pair is >= 4.5:1 and every control border >= 3:1 (docs/frontend/design-tokens.md). */
 
 :root {
   /* surfaces */
-  --bg: #fafafa;
-  --surface: #ffffff;
-  --surface-2: #f4f4f5;
-  --placeholder: #e4e4e7;
-  --inverse: #09090b;          /* matte-black hero, price tags, selected chips */
-  --inverse-ink: #fafafa;
-  --inverse-muted: #a1a1aa;
+  --bg: #0e131c;
+  --surface: #151c28;
+  --surface-2: #1c2534;
+  --placeholder: #232e40;
+  --inverse: #e3b962;          /* gold: selected chips and tabs, the tenant's own chat bubbles, avatar */
+  --inverse-ink: #10151f;
+  --inverse-muted: #4a3a15;
 
   /* text and lines */
-  --ink: #09090b;
-  --ink-2: #3f3f46;
-  --muted: #65656d;
-  --line: #e4e4e7;
-  --line-strong: #8a8a93;      /* input borders: >= 3:1 against surface */
+  --ink: #efe9dc;              /* warm ivory */
+  --ink-2: #cbc5b7;
+  --muted: #9aa3b2;
+  --line: #263043;
+  --line-strong: #6c7689;      /* input borders: >= 3:1 against surface */
+  --line-gold: rgba(227, 185, 98, 0.32);  /* the inspiration's thin gold frames */
 
-  /* brand orange: decorative only (logo dot, small markers), never text or a button fill */
-  --brand: #f97316;
+  /* brand gold: icons, the logo, eyebrow dots */
+  --brand: #e3b962;
 
   /* actions: primary buttons, links, focus, selected nav */
-  --action: #c2410c;
-  --action-hover: #9a3412;
-  --action-ink: #ffffff;
-  --action-soft: #ffedd5;
-  --action-text: #9a3412;
+  --action: #e3b962;
+  --action-hover: #f0cc80;
+  --action-ink: #10151f;
+  --action-soft: #2b2617;
+  --action-text: #f1d28f;
 
-  /* verified: LIVE, PASS, PAID, RESOLVED, trust */
-  --accent: #15803d;
-  --accent-hover: #166534;
-  --accent-ink: #ffffff;
-  --accent-soft: #dcfce7;
-  --accent-text: #166534;
+  /* verified: LIVE, PASS, PAID, RESOLVED, booked, trust */
+  --accent: #5bd198;
+  --accent-hover: #7fdcae;
+  --accent-ink: #062619;
+  --accent-soft: #12342a;
+  --accent-text: #a3ebc6;
 
   /* needs a person / money outstanding / can't check */
-  --warn: #a16207;
-  --warn-soft: #fef9c3;
-  --warn-text: #854d0e;
+  --warn: #f2937a;
+  --warn-soft: #3a1f1b;
+  --warn-text: #f9c2b3;
 
   /* shape */
-  --radius-pin: 16px;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --radius-pin: 14px;
+  --radius: 10px;
+  --radius-sm: 6px;
   --radius-pill: 999px;
-  --shadow-xs: 0 1px 2px rgba(9, 9, 11, 0.05);
-  --shadow: 0 1px 2px rgba(9, 9, 11, 0.05), 0 8px 24px rgba(9, 9, 11, 0.06);
-  --shadow-lg: 0 20px 25px -5px rgba(9, 9, 11, 0.10), 0 8px 10px -6px rgba(9, 9, 11, 0.10);
-  --scrim: rgba(9, 9, 11, 0.55);
-  --photo-fade: linear-gradient(to top, rgba(9, 9, 11, 0.55), transparent 55%);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+  --glow: 0 0 0 1px rgba(227, 185, 98, 0.45), 0 12px 32px -8px rgba(227, 185, 98, 0.25);
+  --scrim: rgba(5, 8, 13, 0.72);
+  --photo-fade: linear-gradient(to top, rgba(14, 19, 28, 0.92), rgba(14, 19, 28, 0.15) 60%, transparent);
+  --hero-ink: #efe9dc;         /* the hero band is dark in both themes */
+  --hero-muted: #b4bccb;
+  --hero-gold: #e3b962;
+  --hero-ground:
+    radial-gradient(1200px 500px at 70% -10%, rgba(227, 185, 98, 0.16), transparent 60%),
+    radial-gradient(900px 420px at 0% 0%, rgba(80, 110, 170, 0.22), transparent 60%),
+    linear-gradient(180deg, #121a28 0%, #0e131c 100%);
 
   /* type */
-  --display: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+  --display: Montserrat, "Plus Jakarta Sans", system-ui, sans-serif;
   --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: ui-monospace, "SF Mono", Consolas, monospace;
-  --fs-eyebrow: 11px;  /* uppercase, 600, tracking 0.14em */
+  --fs-eyebrow: 12px;  /* lowercase italic-free script line above a title, in muted */
   --fs-xs: 12px;
   --fs-sm: 13px;
   --fs-base: 15px;
@@ -68,8 +80,9 @@
   --fs-xl: 24px;
   --fs-2xl: 32px;
   --fs-hero: 44px;
-  --tracking-tight: -0.02em;
-  --tracking-eyebrow: 0.14em;
+  --tracking-tight: -0.01em;
+  --tracking-caps: 0.08em;     /* uppercase titles */
+  --tracking-eyebrow: 0.14em;  /* tiny uppercase labels and buttons */
 
   /* spacing (4 px grid) */
   --sp-1: 4px;
@@ -87,79 +100,50 @@
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --dur-fast: 150ms;
   --dur: 300ms;
-  --dur-slow: 500ms;   /* photo zoom on hover (scale 1.05) */
+  --dur-slow: 500ms;
 
-  color-scheme: light;
-}
-
-/* Dark: matte black ground, same roles. Applied by the OS setting unless the user chose light,
-   or forced by the theme toggle (data-theme on <html>). */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #09090b;
-    --surface: #18181b;
-    --surface-2: #27272a;
-    --placeholder: #34343a;
-    --inverse: #fafafa;
-    --inverse-ink: #09090b;
-    --inverse-muted: #52525b;
-    --ink: #fafafa;
-    --ink-2: #d4d4d8;
-    --muted: #a1a1aa;
-    --line: #27272a;
-    --line-strong: #71717a;
-    --action: #fb923c;
-    --action-hover: #fdba74;
-    --action-ink: #09090b;
-    --action-soft: #431407;
-    --action-text: #fed7aa;
-    --accent: #4ade80;
-    --accent-hover: #86efac;
-    --accent-ink: #052e16;
-    --accent-soft: #14532d;
-    --accent-text: #bbf7d0;
-    --warn: #facc15;
-    --warn-soft: #422006;
-    --warn-text: #fde68a;
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
-    --scrim: rgba(0, 0, 0, 0.7);
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme="dark"] {
-  --bg: #09090b;
-  --surface: #18181b;
-  --surface-2: #27272a;
-  --placeholder: #34343a;
-  --inverse: #fafafa;
-  --inverse-ink: #09090b;
-  --inverse-muted: #52525b;
-  --ink: #fafafa;
-  --ink-2: #d4d4d8;
-  --muted: #a1a1aa;
-  --line: #27272a;
-  --line-strong: #71717a;
-  --action: #fb923c;
-  --action-hover: #fdba74;
-  --action-ink: #09090b;
-  --action-soft: #431407;
-  --action-text: #fed7aa;
-  --accent: #4ade80;
-  --accent-hover: #86efac;
-  --accent-ink: #052e16;
-  --accent-soft: #14532d;
-  --accent-text: #bbf7d0;
-  --warn: #facc15;
-  --warn-soft: #422006;
-  --warn-text: #fde68a;
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
-  --scrim: rgba(0, 0, 0, 0.7);
   color-scheme: dark;
+}
+
+/* Ivory light theme: same roles, chosen with the theme toggle. */
+:root[data-theme="light"] {
+  --bg: #f7f4ec;
+  --surface: #ffffff;
+  --surface-2: #efeadd;
+  --placeholder: #e4dcc8;
+  --inverse: #141a24;
+  --inverse-ink: #f3e2b3;
+  --inverse-muted: #a8a08c;
+  --ink: #141a24;
+  --ink-2: #3a4150;
+  --muted: #5d6472;
+  --line: #e2dccb;
+  --line-strong: #8b8473;
+  --line-gold: rgba(138, 100, 22, 0.35);
+  --brand: #b78a2f;
+  --action: #8a6416;
+  --action-hover: #6f500f;
+  --action-ink: #ffffff;
+  --action-soft: #f6ecd2;
+  --action-text: #6a4c0e;
+  --accent: #1e7a4c;
+  --accent-hover: #17623d;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcf2e5;
+  --accent-text: #175f3b;
+  --warn: #b3442a;
+  --warn-soft: #fbe6df;
+  --warn-text: #8f3420;
+  --shadow-xs: 0 1px 2px rgba(20, 26, 36, 0.06);
+  --shadow: 0 1px 2px rgba(20, 26, 36, 0.06), 0 10px 28px rgba(20, 26, 36, 0.08);
+  --shadow-lg: 0 24px 48px -12px rgba(20, 26, 36, 0.18);
+  --glow: 0 0 0 1px rgba(138, 100, 22, 0.4), 0 12px 32px -10px rgba(138, 100, 22, 0.25);
+  --scrim: rgba(20, 26, 36, 0.55);
+  --photo-fade: linear-gradient(to top, rgba(20, 26, 36, 0.85), rgba(20, 26, 36, 0.1) 60%, transparent);
+  --hero-ground:
+    radial-gradient(1200px 500px at 70% -10%, rgba(227, 185, 98, 0.28), transparent 60%),
+    linear-gradient(180deg, #141a24 0%, #1d2534 100%);
+  color-scheme: light;
 }
 
 @media (prefers-reduced-motion: reduce) {

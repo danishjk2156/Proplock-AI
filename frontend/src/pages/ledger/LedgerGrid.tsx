@@ -20,7 +20,7 @@ const theme = themeQuartz.withParams({
   backgroundColor: "var(--surface)",
   foregroundColor: "var(--ink)",
   headerBackgroundColor: "var(--surface-2)",
-  headerTextColor: "var(--muted)",
+  headerTextColor: "var(--action-text)",
   borderColor: "var(--line)",
   rowHoverColor: "var(--surface-2)",
   selectedRowBackgroundColor: "var(--action-soft)",
@@ -29,7 +29,8 @@ const theme = themeQuartz.withParams({
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: 13,
   headerFontWeight: 600,
-  wrapperBorderRadius: 16,
+  wrapperBorderRadius: 14,
+  browserColorScheme: "inherit", // scrollbars follow the dark / light theme
   spacing: 7,
 });
 

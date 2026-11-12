@@ -29,6 +29,8 @@ const PATHS: Record<string, ReactNode> = {
   scale: (<><path d="M12 4v16M7 20h10M5 8h14" /><path d="M5 8l-3 6h6zM19 8l-3 6h6z" /></>),
   spark: (<><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6" /></>),
   send: <path d="M4 12 20 4l-5 16-3-7z M12 13l8-9" />,
+  sun: (<><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>),
+  moon: <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />,
   refresh: (<><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8" /><path d="M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16" /><path d="M20 20v-4h-4" /></>),
 };
 
@@ -112,6 +114,28 @@ export function Pill({ status }: { status: ListingStatus | string }) {
 }
 
 // ---------- chrome ----------
+/** Dark (midnight and gold) by default; the choice is kept per browser (wrapped: storage may be blocked). */
+export function ThemeToggle({ className = "" }: { className?: string }) {
+  const [light, setLight] = useState(() => document.documentElement.dataset.theme === "light");
+  function flip() {
+    const next = !light;
+    setLight(next);
+    if (next) document.documentElement.dataset.theme = "light";
+    else delete document.documentElement.dataset.theme;
+    try {
+      window.localStorage.setItem("proplock.theme", next ? "light" : "dark");
+    } catch {
+      // storage unavailable: the theme lasts for this page only
+    }
+  }
+  return (
+    <button type="button" className={`icon-btn theme-toggle ${className}`} onClick={flip}
+      aria-label={light ? "Switch to the dark theme" : "Switch to the light theme"} title={light ? "Dark theme" : "Light theme"}>
+      <Icon name={light ? "moon" : "sun"} size={18} />
+    </button>
+  );
+}
+
 export function AppBar({ title, subtitle, back, right }: {
   title: string; subtitle?: string; back?: string; right?: ReactNode;
 }) {

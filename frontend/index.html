@@ -4,8 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PropLock</title>
+    <meta name="theme-color" content="#0e131c" />
+    <script>
+      // Apply the saved theme before the first paint (no flash). Dark is the default.
+      try { if (localStorage.getItem("proplock.theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

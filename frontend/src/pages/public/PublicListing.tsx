@@ -122,7 +122,7 @@ export default function PublicListing() {
       </main>
 
       <div className="footer-bar" style={{ gridAutoFlow: "row" }}>
-        <Link className="btn dark" to={`/l/${l.listing_id}/visit`}><Icon name="calendar" size={18} />Book a visit</Link>
+        <Link className="btn primary" to={`/l/${l.listing_id}/visit`}><Icon name="calendar" size={18} />Book a visit</Link>
         <span className="tiny muted" style={{ textAlign: "center" }}>Ask about the flat, then pick a time. PayPal holds a small visit fee; you aren’t charged to book.</span>
       </div>
     </div>

@@ -855,3 +855,12 @@ Still not verified for real: webhook delivery (needs a public URL and `PAYPAL_WE
 - Checked in the browser: tenant listing (light, 375 px), visit booking (dark, 375 px, no horizontal scroll), manager ledger (light, desktop); no console errors.
 - Not done yet (rest of Phase 1): the new shell (TopNav, TabBar, search/copilot bar, dialog primitive, Masonry, Pin) and the theme toggle.
 
+
+## Frontend redesign: "midnight and gold" (2026-11-13)
+
+- New inspiration: a dark fintech landing page (navy-charcoal ground, gold actions and line icons, lowercase eyebrows over uppercase titles, gold-outline buttons, gold-framed panels, zebra tables). We took the patterns only, not its brand, copy or subject.
+- `tokens.css` was rewritten: dark is the default, with an ivory light theme behind a toggle (`ThemeToggle`, saved in `localStorage`, applied before the first paint). Gold is for actions only, verified stays green, and "needs a person" moves from amber to coral so it can't be mistaken for gold. All 17 text pairs and the borders were measured in both themes (lowest 4.88:1 for text, 3.72:1 for borders); the table is in `docs/frontend/design-tokens.md`.
+- `styles.css` was rewritten with the same class names, so every screen changed with no page logic touched. Buttons are uppercase gold outline or solid gold; cards have hairlines and gold frames; tables have gold headers and zebra rows; the manager sidebar and broker greeting use the dark hero ground; the PIN digits are gold.
+- The sign-in page is now a landing: a hero band with the sign-in card in a gold frame, and a "four safeguards" row (Features 1-4, described as built, no figures).
+- Fixes found in the browser check: the broker header was crowded at 375 px, so its links moved to their own row; AG Grid's scrollbar strip was white, fixed with `browserColorScheme: "inherit"`; "Book a visit" is now the solid gold call to action.
+- Checked: sign-in (desktop dark, phone light), manager visit calendar and money ledger (dark), broker home, listing and booking (phone, dark); no horizontal scroll at 375 px; no console errors.
