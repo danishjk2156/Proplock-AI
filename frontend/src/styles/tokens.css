@@ -1,0 +1,171 @@
+/* PropLock design tokens: "architectural" look.
+   Source: the AURA Estates real-estate inspiration (docs/frontend/design-tokens.md):
+   matte black + zinc greys, one orange for actions, Plus Jakarta Sans display over Inter,
+   12-16 px radii with hairline borders, uppercase eyebrow labels, dark price tags over photos.
+   PropLock's own rule on top: green means verified (LIVE / PASS / PAID / trust), amber means
+   money outstanding or needs a person. Every text pair here is >= 4.5:1 in both themes. */
+
+:root {
+  /* surfaces */
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --placeholder: #e4e4e7;
+  --inverse: #09090b;          /* matte-black hero, price tags, selected chips */
+  --inverse-ink: #fafafa;
+  --inverse-muted: #a1a1aa;
+
+  /* text and lines */
+  --ink: #09090b;
+  --ink-2: #3f3f46;
+  --muted: #65656d;
+  --line: #e4e4e7;
+  --line-strong: #8a8a93;      /* input borders: >= 3:1 against surface */
+
+  /* brand orange: decorative only (logo dot, small markers), never text or a button fill */
+  --brand: #f97316;
+
+  /* actions: primary buttons, links, focus, selected nav */
+  --action: #c2410c;
+  --action-hover: #9a3412;
+  --action-ink: #ffffff;
+  --action-soft: #ffedd5;
+  --action-text: #9a3412;
+
+  /* verified: LIVE, PASS, PAID, RESOLVED, trust */
+  --accent: #15803d;
+  --accent-hover: #166534;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcfce7;
+  --accent-text: #166534;
+
+  /* needs a person / money outstanding / can't check */
+  --warn: #a16207;
+  --warn-soft: #fef9c3;
+  --warn-text: #854d0e;
+
+  /* shape */
+  --radius-pin: 16px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+  --shadow-xs: 0 1px 2px rgba(9, 9, 11, 0.05);
+  --shadow: 0 1px 2px rgba(9, 9, 11, 0.05), 0 8px 24px rgba(9, 9, 11, 0.06);
+  --shadow-lg: 0 20px 25px -5px rgba(9, 9, 11, 0.10), 0 8px 10px -6px rgba(9, 9, 11, 0.10);
+  --scrim: rgba(9, 9, 11, 0.55);
+  --photo-fade: linear-gradient(to top, rgba(9, 9, 11, 0.55), transparent 55%);
+
+  /* type */
+  --display: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+  --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Consolas, monospace;
+  --fs-eyebrow: 11px;  /* uppercase, 600, tracking 0.14em */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 15px;
+  --fs-md: 17px;
+  --fs-lg: 20px;
+  --fs-xl: 24px;
+  --fs-2xl: 32px;
+  --fs-hero: 44px;
+  --tracking-tight: -0.02em;
+  --tracking-eyebrow: 0.14em;
+
+  /* spacing (4 px grid) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-14: 56px;
+  --tap: 44px;
+
+  /* motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 150ms;
+  --dur: 300ms;
+  --dur-slow: 500ms;   /* photo zoom on hover (scale 1.05) */
+
+  color-scheme: light;
+}
+
+/* Dark: matte black ground, same roles. Applied by the OS setting unless the user chose light,
+   or forced by the theme toggle (data-theme on <html>). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #09090b;
+    --surface: #18181b;
+    --surface-2: #27272a;
+    --placeholder: #34343a;
+    --inverse: #fafafa;
+    --inverse-ink: #09090b;
+    --inverse-muted: #52525b;
+    --ink: #fafafa;
+    --ink-2: #d4d4d8;
+    --muted: #a1a1aa;
+    --line: #27272a;
+    --line-strong: #71717a;
+    --action: #fb923c;
+    --action-hover: #fdba74;
+    --action-ink: #09090b;
+    --action-soft: #431407;
+    --action-text: #fed7aa;
+    --accent: #4ade80;
+    --accent-hover: #86efac;
+    --accent-ink: #052e16;
+    --accent-soft: #14532d;
+    --accent-text: #bbf7d0;
+    --warn: #facc15;
+    --warn-soft: #422006;
+    --warn-text: #fde68a;
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    --scrim: rgba(0, 0, 0, 0.7);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #09090b;
+  --surface: #18181b;
+  --surface-2: #27272a;
+  --placeholder: #34343a;
+  --inverse: #fafafa;
+  --inverse-ink: #09090b;
+  --inverse-muted: #52525b;
+  --ink: #fafafa;
+  --ink-2: #d4d4d8;
+  --muted: #a1a1aa;
+  --line: #27272a;
+  --line-strong: #71717a;
+  --action: #fb923c;
+  --action-hover: #fdba74;
+  --action-ink: #09090b;
+  --action-soft: #431407;
+  --action-text: #fed7aa;
+  --accent: #4ade80;
+  --accent-hover: #86efac;
+  --accent-ink: #052e16;
+  --accent-soft: #14532d;
+  --accent-text: #bbf7d0;
+  --warn: #facc15;
+  --warn-soft: #422006;
+  --warn-text: #fde68a;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  --scrim: rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}
