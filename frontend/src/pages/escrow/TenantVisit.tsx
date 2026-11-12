@@ -105,7 +105,7 @@ export default function TenantVisit({ visit, token, listingId, title, brokerName
         <span className="pill solid"><Icon name="check" size={12} />BOOKED</span>
         <h2>{when(visit.starts_at)}</h2>
         <p className="small">{title} with {brokerName}. {money(visit.fee, visit.currency)} is held by PayPal, not charged.</p>
-        <div className="pin" aria-label={`Your door PIN is ${visit.pin?.split("").join(" ")}`}>
+        <div className="door-pin" aria-label={`Your door PIN is ${visit.pin?.split("").join(" ")}`}>
           {(visit.pin ?? "····").split("").map((d, i) => <span key={i}>{d}</span>)}
         </div>
         <p className="tiny muted">Show this PIN to {brokerName} at the door. Once it’s entered you can never be charged as a no-show.</p>

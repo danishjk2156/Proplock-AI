@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api } from "../../api";
 import { ErrorBox, Icon, Loading, Pill, useLoad } from "../../components";
 import { dateTime, kindLabel, money } from "../../format";
@@ -34,7 +34,13 @@ export default function Cockpit({ isManager }: { isManager: boolean }) {
   const [tab, setTab] = useState<"closings" | "entries">("closings");
   const [quick, setQuick] = useState("");
   const [open, setOpen] = useState<string | null>(null);
-  const [copilot, setCopilot] = useState<CopilotOut | null>(null);
+  const location = useLocation();
+  const handed = location.state as { copilot?: CopilotOut; create?: string } | null;
+  // An answer asked in the nav search arrives with the navigation and filters the grid like a local one.
+  const [copilot, setCopilot] = useState<CopilotOut | null>(handed?.copilot ?? null);
+  useEffect(() => {
+    if (handed?.copilot) setCopilot(handed.copilot);
+  }, [handed]);
 
   const data = ledger.data;
   const titles = useMemo(() => new Map((data?.closings ?? []).map((c) => [c.id, `${c.tenant_name} · ${c.property_id}`])), [data]);
@@ -85,7 +91,7 @@ export default function Cockpit({ isManager }: { isManager: boolean }) {
         <div className="stat"><span className="n">{totals.disputed}</span><span className="l">Disputed</span></div>
       </div>
 
-      <CloseFlat isManager={isManager} demo={config.data?.demo_mode ?? false} onClosed={(c) => { ledger.reload(); setOpen(c.id); }} />
+      <CloseFlat startOpen={handed?.create === "close"} isManager={isManager} demo={config.data?.demo_mode ?? false} onClosed={(c) => { ledger.reload(); setOpen(c.id); }} />
 
       <Copilot onAnswer={setCopilot} answer={copilot} />
 
@@ -199,7 +205,7 @@ function Copilot({ answer, onAnswer }: { answer: CopilotOut | null; onAnswer: (a
 }
 
 /** Lock a flat for a tenant: pick a LIVE listing and a captured visit token, then invoice. */
-function CloseFlat({ isManager, demo, onClosed }: { isManager: boolean; demo: boolean; onClosed: (c: ClosingDetail) => void }) {
+function CloseFlat({ isManager, demo, onClosed, startOpen }: { isManager: boolean; demo: boolean; onClosed: (c: ClosingDetail) => void; startOpen?: boolean }) {
   const closable = useLoad(() => api.get<ClosableListing[]>("/ledger/closable"));
   const [listingId, setListingId] = useState("");
   const [captureRef, setCaptureRef] = useState("");
@@ -211,7 +217,10 @@ function CloseFlat({ isManager, demo, onClosed }: { isManager: boolean; demo: bo
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!startOpen);
+  useEffect(() => {
+    if (startOpen) setExpanded(true);
+  }, [startOpen]);
 
   const listing = closable.data?.find((l) => l.listing_id === listingId) ?? null;
   useEffect(() => {

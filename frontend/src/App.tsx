@@ -18,6 +18,7 @@ import BrokerDoor from "./pages/escrow/BrokerDoor";
 import { BrokerLedger, ManagerLedger } from "./pages/ledger/Pages";
 import Disputes from "./pages/ledger/Disputes";
 import type { Role } from "./types";
+import { BrokerLayout, ManagerLayout, PublicLayout } from "./ui/shell/Shell";
 
 function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
   const { me, loading } = useAuth();
@@ -32,27 +33,33 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Login />} />
 
-      {/* Broker app */}
-      <Route path="/b" element={<RequireRole role="BROKER"><BrokerHome /></RequireRole>} />
-      <Route path="/b/listings/:listingId" element={<RequireRole role="BROKER"><ListingStatusPage /></RequireRole>} />
-      <Route path="/b/listings/:listingId/checkin" element={<RequireRole role="BROKER"><Checkin /></RequireRole>} />
-      <Route path="/b/listings/:listingId/ad" element={<RequireRole role="BROKER"><Draft /></RequireRole>} />
-      <Route path="/b/audits/:auditId" element={<RequireRole role="BROKER"><AuditResult /></RequireRole>} />
-      <Route path="/b/ledger" element={<RequireRole role="BROKER"><BrokerLedger /></RequireRole>} />
-      <Route path="/b/visits" element={<RequireRole role="BROKER"><BrokerVisits /></RequireRole>} />
-      <Route path="/b/visits/:visitId" element={<RequireRole role="BROKER"><BrokerDoor /></RequireRole>} />
+      {/* Broker app: phone-first shell with the tab bar */}
+      <Route path="/b" element={<RequireRole role="BROKER"><BrokerLayout /></RequireRole>}>
+        <Route index element={<BrokerHome />} />
+        <Route path="listings/:listingId" element={<ListingStatusPage />} />
+        <Route path="listings/:listingId/checkin" element={<Checkin />} />
+        <Route path="listings/:listingId/ad" element={<Draft />} />
+        <Route path="audits/:auditId" element={<AuditResult />} />
+        <Route path="ledger" element={<BrokerLedger />} />
+        <Route path="visits" element={<BrokerVisits />} />
+        <Route path="visits/:visitId" element={<BrokerDoor />} />
+      </Route>
 
-      {/* Agency manager */}
-      <Route path="/m" element={<RequireRole role="MANAGER"><ManagerFlats /></RequireRole>} />
-      <Route path="/m/reviews" element={<RequireRole role="MANAGER"><ManagerReviews /></RequireRole>} />
-      <Route path="/m/visits" element={<RequireRole role="MANAGER"><ManagerVisits /></RequireRole>} />
-      <Route path="/m/ledger" element={<RequireRole role="MANAGER"><ManagerLedger /></RequireRole>} />
-      <Route path="/m/disputes" element={<RequireRole role="MANAGER"><Disputes /></RequireRole>} />
+      {/* Agency manager: desktop-first shell, tab bar under 760 px */}
+      <Route path="/m" element={<RequireRole role="MANAGER"><ManagerLayout /></RequireRole>}>
+        <Route index element={<ManagerFlats />} />
+        <Route path="reviews" element={<ManagerReviews />} />
+        <Route path="visits" element={<ManagerVisits />} />
+        <Route path="ledger" element={<ManagerLedger />} />
+        <Route path="disputes" element={<Disputes />} />
+      </Route>
 
       {/* Public: no login */}
-      <Route path="/l/:listingId" element={<PublicListing />} />
-      <Route path="/l/:listingId/visit" element={<BookVisit />} />
-      <Route path="/v/:auditId" element={<Verify />} />
+      <Route element={<PublicLayout />}>
+        <Route path="/l/:listingId" element={<PublicListing />} />
+        <Route path="/l/:listingId/visit" element={<BookVisit />} />
+        <Route path="/v/:auditId" element={<Verify />} />
+      </Route>
 
       <Route path="*" element={<NotFound />} />
     </Routes>

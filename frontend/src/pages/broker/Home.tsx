@@ -4,7 +4,7 @@ import { api, apiUrl } from "../../api";
 import { useAuth } from "../../auth";
 import { ErrorBox, Icon, Loading, Pill, Ring, useLoad } from "../../components";
 import { daysUntil, plain, rupees, shortDate } from "../../format";
-import type { BrokerListing, BrokerMandate, ListingOutLite } from "./shared";
+import { openOrStartListing, type BrokerListing, type BrokerMandate } from "./shared";
 
 function listingHint(l: BrokerListing): string {
   switch (l.status) {
@@ -48,12 +48,9 @@ export default function BrokerHome() {
 
   async function start(m: BrokerMandate) {
     setError(null);
-    const open = listings.data?.find((l) => l.id === m.listing_id && ["DRAFT", "NEEDS_FIX"].includes(l.status));
-    if (open) return navigate(`/b/listings/${open.id}`);
     setBusy(m.mandate_id);
     try {
-      const created = await api.post<ListingOutLite>("/broker/listings", { property_id: m.property_id });
-      navigate(`/b/listings/${created.id}/checkin`);
+      navigate(await openOrStartListing(m, listings.data ?? []));
     } catch (e) {
       setError(e);
     } finally {

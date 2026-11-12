@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useLocation } from "react-router-dom";
 import { api, apiUrl } from "../../api";
 import { ErrorBox, Loading, useLoad } from "../../components";
 import { plain, shortDate } from "../../format";
@@ -17,7 +18,12 @@ export default function ManagerFlats() {
   const brokers = useLoad(() => api.get<Broker[]>("/manager/brokers"));
   const mandates = useLoad(() => api.get<Mandate[]>("/manager/mandates"));
   const [selected, setSelected] = useState<string | null>(null);
-  const [showNew, setShowNew] = useState(false);
+  const handed = useLocation().state as { create?: string } | null;
+  // "+ Create" in the nav: open the register form, or point at the table to pick a flat for a mandate.
+  const [showNew, setShowNew] = useState(handed?.create === "flat");
+  useEffect(() => {
+    if (handed?.create === "flat") setShowNew(true);
+  }, [handed]);
 
   useEffect(() => {
     if (!selected && flats.data?.length) setSelected(flats.data[0].id);
@@ -43,6 +49,10 @@ export default function ManagerFlats() {
         <div className="stat"><span className="n">{brokers.data?.length ?? "–"}</span><span className="l">Brokers</span></div>
         <div className="stat"><span className="n">{brokers.data?.length ? Math.round(brokers.data.reduce((s, b) => s + b.trust_score, 0) / brokers.data.length) : "–"}</span><span className="l">Average broker trust</span></div>
       </section>
+
+      {handed?.create === "mandate" && !selected && (
+        <p className="alert info small" role="status">To give a mandate, choose a flat below with “Manage”.</p>
+      )}
 
       {showNew &&<RegisterFlat onDone={(id) => { setShowNew(false); flats.reload(); setSelected(id); }} />}
 

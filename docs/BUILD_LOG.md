@@ -844,3 +844,30 @@ Still not verified for real: webhook delivery (needs a public URL and `PAYPAL_WE
 - Changes from the inspiration: the button orange is `#C2410C`, because white on `#F97316` is only 2.80:1. Verified states stay **green**, and orange is used for actions only (the user chose this). Muted grey is darkened to `#65656D`, because `#71717A` on `#F4F4F5` is 4.40:1.
 - Verified: all 18 text/background pairs pass AA in both themes (lowest 4.92:1). The preview has no horizontal scroll at 375 px or 1280 px, in light or dark.
 - `tokens.css` is not imported by the app yet. Phase 1 wires it in and replaces `styles.css`.
+
+## Frontend redesign · Phase 1: shell and primitives (2026-11-12)
+
+- **Shell (S00)** `frontend/src/ui/shell/Shell.tsx`:
+  - Top nav: logo, pill tabs, one rounded search field, "+ Create"/"+ New", a bell and an avatar.
+  - Phone tab bar under 760 px: two tabs, a raised "+", Alerts/Reviews and Me.
+  - Route layouts `BrokerLayout`, `ManagerLayout` and `PublicLayout`, wrapped in the same `RequireRole` redirects as before.
+  - Tenants get the logo and a theme switch only. Their search box appears only with `VITE_EXPLORE=true`.
+- **Search = ledger copilot** for brokers and managers (`POST /ledger/copilot`). The answer opens under the field, always says it is read-only, and can open the ledger filtered to the rows it found (handed over in router state).
+- **"+ Create":** a broker picks a mandate (the same reopen-or-create rule as the home screen, now shared as `openOrStartListing`). A manager picks register a flat, give a mandate or close a flat; each opens the existing form on its page.
+- **Bell:** real counts only. Managers see the review queue; brokers see NEEDS_FIX listings and LIVE listings due for confirmation today.
+- **Primitives in `src/ui/`:**
+  - `Dialog`: modal, drawer, sheet and menu. Focus trap, Esc, focus restored to the opener, scroll lock, `aria-modal`.
+  - `Masonry`: CSS columns, 2 on phones and up to 5 236 px columns.
+  - `Pin` and `Board`: real image proportions, `loading="lazy"`, placeholders that look like placeholders.
+  - `SkeletonPins` / `SkeletonLines`.
+  - `StatusPill`: the same status map, moved out of `components.tsx`; `Pill` remains as an alias. `Icon` moved to its own module too.
+- **Theme:** `tokens.css` is loaded first. System, light or dark is picked in the account menu and stored in localStorage (try/catch).
+- `styles.css` now uses the tokens throughout. Orange is for actions, green for verified, and amber dashed for needs-a-person. Every existing screen picks up the new look before its own redesign phase.
+- The Feature 3 door PIN CSS class was renamed `.door-pin`, so `.pin` is free for the masonry card.
+- **Verified** against a scratch DB in DEMO_MODE (seeded keys), with Chromium at 375 px and 1280 px in light and dark:
+  - Every `/b` and `/m` route renders inside its layout, with no horizontal scroll. This fixed one overflow: a visually hidden table header escaping `.table-box`.
+  - No console errors apart from the expected 404 from a made-up `/v/` id.
+  - Keyboard: the create dialog takes focus, traps Tab, closes on Esc and returns focus to the opener, both on desktop and from the phone tab bar.
+  - The theme toggle sets `data-theme` and persists it.
+  - The copilot in the nav shows the backend's own refusal when no Groq key is set.
+  - `npm run build` passes.
