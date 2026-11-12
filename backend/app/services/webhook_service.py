@@ -21,10 +21,12 @@ from app.db.models import (
     Invoice,
     InvoiceStatus,
     LedgerSource,
+    Visit,
+    VisitStatus,
     WebhookEvent,
 )
 from app.domain.ledger import EntryKind
-from app.services import closing_service, dispute_service, ledger_service
+from app.services import closing_service, dispute_service, escrow_service, ledger_service
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +123,74 @@ def on_dispute_changed(session: Session, event: dict) -> str:
     return f"dispute {dispute.paypal_dispute_id} {dispute.status}"
 
 
+# --- Feature 3: visit holds. Webhooks confirm or correct what the outbox did; they never decide. ---
+
+
+def _visit_for(session: Session, auth_id: str | None, capture_id: str | None = None) -> Visit | None:
+    if capture_id:
+        found = session.scalar(select(Visit).where(Visit.capture_ref == capture_id))
+        if found:
+            return found
+    return session.scalar(select(Visit).where(Visit.authorization_ref == auth_id)) if auth_id else None
+
+
+def on_capture_completed(session: Session, event: dict) -> str:
+    resource = event.get("resource", {})
+    capture_id = resource.get("id")
+    auth_id = ((resource.get("supplementary_data") or {}).get("related_ids") or {}).get("authorization_id")
+    visit = _visit_for(session, auth_id, capture_id)
+    if visit is None:
+        return "no matching visit"
+    if visit.status is VisitStatus.SETTLING:
+        visit.status = VisitStatus.CAPTURED
+        visit.capture_ref = capture_id
+        visit.settled_at = _occurred(event)
+    elif visit.status is not VisitStatus.CAPTURED:
+        return f"visit {visit.id} is {visit.status.value}; capture {capture_id} needs a person to look"
+    escrow_service._ledger(session, visit, EntryKind.HOLD_CAPTURED, visit.capture_ref or capture_id, _occurred(event),
+                           source=LedgerSource.WEBHOOK)
+    return f"visit {visit.id} captured"
+
+
+def on_capture_denied(session: Session, event: dict) -> str:
+    resource = event.get("resource", {})
+    auth_id = ((resource.get("supplementary_data") or {}).get("related_ids") or {}).get("authorization_id")
+    visit = _visit_for(session, auth_id, resource.get("id"))
+    if visit is None:
+        return "no matching visit"
+    visit.outcome_reason = f"{visit.outcome_reason or ''} PayPal denied the capture; a manager must look.".strip()
+    return f"visit {visit.id} capture denied"
+
+
+def on_authorization_voided(session: Session, event: dict) -> str:
+    resource = event.get("resource", {})
+    visit = _visit_for(session, resource.get("id"))
+    if visit is None:
+        return "no matching visit"
+    if visit.status is VisitStatus.COMMITTED:  # released outside PropLock (e.g. expired at PayPal)
+        visit.status = VisitStatus.SETTLING
+        visit.outcome = visit.outcome or "NO_PROOF"
+        visit.outcome_reason = "PayPal released the hold before the visit was settled."
+    if visit.status is VisitStatus.SETTLING:
+        visit.status = VisitStatus.VOIDED
+    if not visit.settled_at:
+        visit.settled_at = _occurred(event)
+    escrow_service._ledger(session, visit, EntryKind.HOLD_VOIDED, visit.authorization_ref, _occurred(event),
+                           source=LedgerSource.WEBHOOK, note=visit.outcome_reason)
+    return f"visit {visit.id} voided"
+
+
+def on_order_approved(session: Session, event: dict) -> str:
+    order_id = (event.get("resource") or {}).get("id")
+    visit = session.scalar(select(Visit).where(Visit.paypal_order_id == order_id)) if order_id else None
+    return f"order {order_id} approved; the tenant's page authorises it" if visit else "no matching visit"
+
+
 HANDLERS = {
+    "PAYMENT.CAPTURE.COMPLETED": on_capture_completed,
+    "PAYMENT.CAPTURE.DENIED": on_capture_denied,
+    "PAYMENT.AUTHORIZATION.VOIDED": on_authorization_voided,
+    "CHECKOUT.ORDER.APPROVED": on_order_approved,
     "INVOICING.INVOICE.PAID": on_invoice_paid,
     "INVOICING.INVOICE.CANCELLED": on_invoice_cancelled,
     "INVOICING.INVOICE.REFUNDED": on_invoice_refunded,

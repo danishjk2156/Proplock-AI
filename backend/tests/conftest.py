@@ -75,6 +75,22 @@ def fake_dispute_writer():
 
 
 @pytest.fixture
+def fake_assistant():
+    """Feature 2's booking assistant: a bland reply unless a test sets fake_assistant.result."""
+    from app.agents.visit_agent import FakeBookingAssistant
+
+    return FakeBookingAssistant()
+
+
+@pytest.fixture
+def fake_orders():
+    """Feature 3's PayPal Orders: accepts everything (no buyer approval step) unless a test says so."""
+    from app.adapters.paypal_orders import FakeOrders
+
+    return FakeOrders()
+
+
+@pytest.fixture
 def webhook_verifier():
     """Trusts no webhook unless a test swaps in a verifier that does."""
     holder = {"verifier": RejectAllVerifier()}
@@ -82,7 +98,7 @@ def webhook_verifier():
 
 
 @pytest.fixture
-def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, fake_invoicing, webhook_verifier, fake_query_llm, fake_dispute_writer, tmp_path) -> TestClient:
+def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, fake_invoicing, webhook_verifier, fake_query_llm, fake_dispute_writer, fake_assistant, fake_orders, tmp_path) -> TestClient:
     """The real app, but with this test's database and upload folder, and no Groq, Google or PayPal calls."""
     app = create_app()
     app.dependency_overrides[get_session] = lambda: db_session
@@ -97,6 +113,12 @@ def client(db_session, fake_llm, fake_maps, fake_vision, fake_paypal, fake_invoi
 
     app.dependency_overrides[get_query_llm] = lambda: fake_query_llm
     app.dependency_overrides[get_dispute_writer] = lambda: fake_dispute_writer
+    from app.agents.visit_agent import get_booking_assistant
+
+    app.dependency_overrides[get_booking_assistant] = lambda: fake_assistant
+    from app.adapters.paypal_orders import get_orders
+
+    app.dependency_overrides[get_orders] = lambda: fake_orders
     app.dependency_overrides[get_upload_dir] = lambda: tmp_path / "uploads"
     return TestClient(app)
 

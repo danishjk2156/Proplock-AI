@@ -89,22 +89,24 @@ class Adapters:
 
     paypal: PayPal | None = None
     invoicing: Any = None  # app.adapters.paypal_invoicing.Invoicing
+    orders: Any = None  # app.adapters.paypal_orders.Orders (Feature 3 visit holds)
 
 
 def _handlers() -> dict[str, tuple[str, Callable]]:
-    """kind -> (adapter it needs, handler). Feature 4 handlers live in invoice_jobs."""
-    from app.services import invoice_jobs
+    """kind -> (adapter it needs, handler). Feature 4 handlers live in invoice_jobs, Feature 3's
+    (capture or void a visit hold) in escrow_jobs."""
+    from app.services import escrow_jobs, invoice_jobs
 
-    return {MINT: ("paypal", _mint), **invoice_jobs.HANDLERS}
+    return {MINT: ("paypal", _mint), **invoice_jobs.HANDLERS, **escrow_jobs.HANDLERS}
 
 
 def run_job(
-    session: Session, job_id: str, paypal: PayPal | None, now: datetime | None = None, invoicing=None
+    session: Session, job_id: str, paypal: PayPal | None, now: datetime | None = None, invoicing=None, orders=None
 ) -> JobStatus | None:
     """Try one job. Returns its new status, or None if it wasn't due, another worker has it,
     or the service it needs wasn't passed in."""
     now = now or datetime.now(UTC)
-    adapters = Adapters(paypal=paypal, invoicing=invoicing)
+    adapters = Adapters(paypal=paypal, invoicing=invoicing, orders=orders)
     kind = session.scalar(select(OutboxJob.kind).where(OutboxJob.id == job_id))
     needs, handler = _handlers()[kind]
     if getattr(adapters, needs) is None or not _claim(session, job_id, now):
@@ -147,8 +149,8 @@ def try_now(session: Session, audit_id: str, paypal: PayPal) -> None:
         logger.exception("Immediate mint failed for audit %s; the outbox worker will retry", audit_id)
 
 
-def try_ref_now(session: Session, ref_id: str, invoicing, now: datetime | None = None, rounds: int = 3) -> None:
-    """Run the due jobs for one invoice/dispute now, following a short chain (create -> send).
+def try_ref_now(session: Session, ref_id: str, invoicing, now: datetime | None = None, rounds: int = 3, orders=None) -> None:
+    """Run the due jobs for one invoice, dispute or visit now, following a short chain (create -> send).
     Failures leave them queued for the worker."""
     now = now or datetime.now(UTC)
     for _ in range(rounds):
@@ -161,7 +163,7 @@ def try_ref_now(session: Session, ref_id: str, invoicing, now: datetime | None =
             return
         for job_id in due:
             try:
-                if run_job(session, job_id, None, now, invoicing=invoicing) is not JobStatus.DONE:
+                if run_job(session, job_id, None, now, invoicing=invoicing, orders=orders) is not JobStatus.DONE:
                     return
             except Exception:
                 session.rollback()
@@ -169,7 +171,8 @@ def try_ref_now(session: Session, ref_id: str, invoicing, now: datetime | None =
                 return
 
 
-def run_due(session: Session, paypal: PayPal | None, now: datetime | None = None, limit: int = 20, invoicing=None) -> int:
+def run_due(session: Session, paypal: PayPal | None, now: datetime | None = None, limit: int = 20, invoicing=None,
+            orders=None) -> int:
     """Run every job that is due. Returns how many succeeded."""
     now = now or datetime.now(UTC)
     due = session.scalars(
@@ -178,24 +181,31 @@ def run_due(session: Session, paypal: PayPal | None, now: datetime | None = None
         .order_by(OutboxJob.next_run_at)
         .limit(limit)
     ).all()
-    return sum(run_job(session, job_id, paypal, now, invoicing=invoicing) is JobStatus.DONE for job_id in due)
+    return sum(run_job(session, job_id, paypal, now, invoicing=invoicing, orders=orders) is JobStatus.DONE for job_id in due)
 
 
 def main(poll_seconds: int = 30) -> None:
     from app.adapters.paypal import get_paypal
     from app.adapters.paypal_invoicing import get_invoicing
+    from app.adapters.paypal_orders import get_orders
     from app.db.base import SessionLocal
+    from app.services.escrow_service import settle_due
     from app.services.listing_service import expire_stale
+    from app.services.visit_service import sweep_expired
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    paypal, invoicing = get_paypal(), get_invoicing()
-    logger.info("Outbox worker started with %s + %s; polling every %ss", paypal.name, invoicing.name, poll_seconds)
+    paypal, invoicing, orders = get_paypal(), get_invoicing(), get_orders()
+    logger.info("Outbox worker started with %s + %s + %s; polling every %ss", paypal.name, invoicing.name, orders.name,
+                poll_seconds)
     while True:
         with SessionLocal() as session:
-            done = run_due(session, paypal, invoicing=invoicing)
+            settled = settle_due(session)  # booked visits past their deadline: the referee's default
+            done = run_due(session, paypal, invoicing=invoicing, orders=orders)
             expired = expire_stale(session)  # LIVE listings not confirmed for 7 days
-        if done or expired:
-            logger.info("Ran %d job(s), expired %d stale listing(s)", done, expired)
+            holds = sweep_expired(session)  # visit soft holds nobody authorised in time
+        if done or expired or holds or settled:
+            logger.info("Ran %d job(s); expired %d stale listing(s) and %d visit hold(s); settled %d visit(s)",
+                        done, expired, holds, settled)
         time.sleep(poll_seconds)
 
 

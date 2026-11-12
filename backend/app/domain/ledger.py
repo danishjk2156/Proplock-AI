@@ -59,7 +59,9 @@ FEATURE3_KINDS = {EntryKind.HOLD_AUTHORIZED, EntryKind.HOLD_CAPTURED, EntryKind.
 class LedgerEvent(BaseModel):
     """The contract Feature 3 (visit escrow) sends for each hold event.
 
-    Feature 3 is not built yet; POST /dev/ledger/simulate-capture produces these in DEMO_MODE.
+    Feature 3 (app/services/escrow_service.py) records HOLD_AUTHORIZED when a visit is booked and
+    HOLD_CAPTURED / HOLD_VOIDED when the referee settles it. POST /dev/ledger/simulate-capture
+    makes up a token without a visit, for tests and scripts (DEMO_MODE only).
     paypal_ref is the PayPal authorization id (HOLD_AUTHORIZED / HOLD_VOIDED) or capture id
     (HOLD_CAPTURED); the capture id is what a closing later deducts.
     """

@@ -18,6 +18,7 @@ def test_migration_upgrades_and_downgrades_cleanly(tmp_path):
     tables = set(inspect(create_engine(url)).get_table_names())
     assert {"users", "properties", "mandates", "listings", "listing_versions", "audits", "outbox_jobs"} <= tables
     assert {"closings", "ledger_entries", "invoices", "webhook_events", "disputes"} <= tables
+    assert "visits" in tables
 
     command.downgrade(config, "base")
     assert set(inspect(create_engine(url)).get_table_names()) == {"alembic_version"}

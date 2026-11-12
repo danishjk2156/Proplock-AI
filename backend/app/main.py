@@ -3,18 +3,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import audits, broker, closings, disputes, manager, me, public, webhooks
+from app.api import audits, broker, closings, disputes, manager, me, public, visits, webhooks
 from app.config import get_settings
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="PropLock AI - Listing Audit (Feature 1) and Invoice Ledger (Feature 4)", version="0.2.0")
+    app = FastAPI(title="PropLock AI - Listing Audit (F1), Visit Booking (F2) and Invoice Ledger (F4)", version="0.3.0")
     origins = [o.strip() for o in get_settings().cors_origins.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,  # never "*": keys travel in a header any page could send
         allow_methods=["GET", "POST", "DELETE"],
-        allow_headers=["X-API-Key", "Content-Type"],
+        allow_headers=["X-API-Key", "X-Hold-Token", "Content-Type"],
     )
 
     @app.get("/health", tags=["health"])
@@ -26,6 +26,7 @@ def create_app() -> FastAPI:
     app.include_router(broker.router)
     app.include_router(audits.router)
     app.include_router(public.router)
+    app.include_router(visits.router)
     app.include_router(closings.router)
     app.include_router(disputes.router)
     app.include_router(webhooks.router)

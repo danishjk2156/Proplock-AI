@@ -54,8 +54,10 @@ function messageFrom(body: unknown, status: number): string {
   return `Request failed (HTTP ${status})`;
 }
 
-async function request<T>(method: string, path: string, body?: unknown, form?: FormData): Promise<T> {
-  const headers: Record<string, string> = {};
+async function request<T>(
+  method: string, path: string, body?: unknown, form?: FormData, extra?: Record<string, string>,
+): Promise<T> {
+  const headers: Record<string, string> = { ...extra };
   if (memoryKey) headers["X-API-Key"] = memoryKey;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const resp = await fetch(apiUrl(path), {
@@ -70,8 +72,10 @@ async function request<T>(method: string, path: string, body?: unknown, form?: F
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>("GET", path),
-  post: <T>(path: string, body?: unknown) => request<T>("POST", path, body ?? {}),
-  upload: <T>(path: string, form: FormData) => request<T>("POST", path, undefined, form),
+  // `headers` carries extras such as a tenant's X-Hold-Token (never put secrets in the URL).
+  get: <T>(path: string, headers?: Record<string, string>) => request<T>("GET", path, undefined, undefined, headers),
+  post: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>
+    request<T>("POST", path, body ?? {}, undefined, headers),
+  upload: <T>(path: string, form: FormData, headers?: Record<string, string>) => request<T>("POST", path, undefined, form, headers),
   del: (path: string) => request<void>("DELETE", path),
 };

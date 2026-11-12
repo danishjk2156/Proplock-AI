@@ -11,7 +11,9 @@ from app.adapters.paypal_invoicing import Invoicing, get_invoicing, png_data_url
 from app.auth import current_user, require_role
 from app.config import get_settings
 from app.db.base import get_session
-from app.db.models import Closing, Invoice, InvoiceStatus, LedgerEntry, LedgerSource, Listing, ListingStatus, Role, User
+from app.db.models import (
+    Closing, Invoice, InvoiceStatus, LedgerEntry, LedgerSource, Listing, ListingStatus, Role, User, Visit,
+)
 from app.domain.invoice_rules import InvoiceRefused
 from app.domain.ledger import EntryKind, LedgerEvent
 from app.agents import ledger_copilot as ledger_copilot_agent
@@ -108,12 +110,19 @@ def closable(user: User = Depends(current_user), session: Session = Depends(get_
         holds = session.scalars(select(LedgerEntry).where(
             LedgerEntry.listing_id == listing.id, LedgerEntry.kind == EntryKind.HOLD_CAPTURED
         ).order_by(LedgerEntry.occurred_at.desc()))
+        holds = [h for h in holds if h.paypal_ref not in used]
+        visits = {v.capture_ref: v for v in session.scalars(
+            select(Visit).where(Visit.capture_ref.in_([h.paypal_ref for h in holds])))}
+        # A no-show fee compensates the broker; it is nobody's token for a move-in invoice.
+        holds = [h for h in holds if getattr(visits.get(h.paypal_ref), "outcome", None) != "TENANT_NO_SHOW"]
         out.append(ClosableListing(
             listing_id=listing.id, property_id=listing.property_id, title=version.title,
             broker_name=session.get(User, listing.broker_id).name, deposit=report.terms.deposit,
             brokerage=report.terms.brokerage_fee, audit_id=audit.id,
-            holds=[HoldOut(capture_ref=h.paypal_ref, amount=h.amount, currency=h.currency, occurred_at=h.occurred_at)
-                   for h in holds if h.paypal_ref not in used],
+            holds=[HoldOut(capture_ref=h.paypal_ref, amount=h.amount, currency=h.currency, occurred_at=h.occurred_at,
+                           tenant_name=getattr(visits.get(h.paypal_ref), "tenant_name", None),
+                           tenant_email=getattr(visits.get(h.paypal_ref), "tenant_email", None))
+                   for h in holds],
         ))
     return out
 
@@ -220,7 +229,7 @@ def invoice_qr(
     return QrOut(data_url=png_data_url(b64), demo=invoice.paypal_invoice_id.startswith("FAKE-"))
 
 
-# --- Feature 3 stand-in (dev only) ---
+# --- dev only: a made-up visit token, for tests and scripts ---
 
 
 @router.post("/dev/ledger/simulate-capture", response_model=SimulateCaptureOut, tags=["dev"])
@@ -229,8 +238,8 @@ def simulate_capture(
     _: User = Depends(manager_only),
     session: Session = Depends(get_session),
 ):
-    """DEMO_MODE only: pretend Feature 3 authorised and captured a visit token, so Feature 4 can
-    be shown before Feature 3 exists. The ids start with FAKE- so they can't pass as real."""
+    """DEMO_MODE only, for tests and scripts: make up an authorised-then-captured visit token on a
+    listing without booking a visit. Real tokens come from Feature 3 settling a visit. Ids start with FAKE-."""
     if not get_settings().demo_mode:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
     stamp = datetime.now(UTC)

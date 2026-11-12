@@ -122,8 +122,8 @@ export default function PublicListing() {
       </main>
 
       <div className="footer-bar" style={{ gridAutoFlow: "row" }}>
-        <button className="btn dark" disabled>Book a visit · ₹500 refundable hold</button>
-        <span className="tiny muted" style={{ textAlign: "center" }}>Coming next: PayPal holds the ₹500 and releases it if you visit and pass.</span>
+        <Link className="btn dark" to={`/l/${l.listing_id}/visit`}><Icon name="calendar" size={18} />Book a visit</Link>
+        <span className="tiny muted" style={{ textAlign: "center" }}>Ask about the flat, then pick a time. PayPal holds a small visit fee; you aren’t charged to book.</span>
       </div>
     </div>
   );

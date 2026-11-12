@@ -1,5 +1,6 @@
 """Application settings, read from environment variables or backend/.env."""
 
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -43,6 +44,18 @@ class Settings(BaseSettings):
     invoice_due_days: int = 7
     # Reminder days relative to the due date; at most three are ever sent.
     invoice_reminder_offsets: str = "-1,1,3"
+
+    # Feature 2: visit booking. The fee is the refundable hold PayPal places for a visit; booking
+    # early costs less, booking last-minute costs more. Visits are 1 hour, inside visiting hours
+    # in the listings' local time, at most visit_window_days ahead (PayPal's authorization honor period).
+    visit_fee_base: Decimal = Decimal("15.00")
+    visit_fee_early_discount_pct: int = 20  # slot starts 48 h or more from now
+    visit_fee_late_surcharge_pct: int = 30  # slot starts within 12 h
+    visit_window_days: int = 3
+    visit_soft_hold_minutes: int = 15
+    visit_transit_buffer_minutes: int = 30  # a broker's gap between visits at two different flats
+    visit_hours: str = "9-18"  # visiting hours, local time: first slot 09:00, last one ends 18:00
+    visit_utc_offset_minutes: int = 330  # India (IST, no daylight saving)
 
     @model_validator(mode="after")
     def _real_secret_outside_development(self) -> "Settings":

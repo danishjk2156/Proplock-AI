@@ -1,7 +1,8 @@
 """End-to-end demo of Feature 4, on a throwaway database. Nothing touches proplock.db.
 
-The story: a verified LIVE listing -> the tenant's visit token is captured ($15, simulated
-Feature 3) -> the flat is locked and a PayPal invoice goes out for deposit + brokerage minus
+The story: a verified LIVE listing -> the tenant books a visit (Feature 2), its $15 fee is held
+by a (demo) PayPal authorization, and at the door she locks the flat, so the referee captures
+it (Feature 3) -> the flat is locked and a PayPal invoice goes out for deposit + brokerage minus
 the token -> a forged "paid" webhook is refused -> the real one marks it PAID, once -> the
 ledger copilot answers a question and refuses a write -> the tenant opens a dispute -> an
 evidence pack and a cited draft -> a manager approves -> evidence submitted.
@@ -21,7 +22,10 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
+from datetime import UTC, datetime, timedelta
+
 from app.adapters.llm import FakeVision, get_llm, get_vision
+from app.adapters.paypal_orders import DemoOrders, get_orders
 from app.adapters.maps import DemoTableMaps, get_maps
 from app.adapters.paypal import DemoPayPal, get_paypal
 from app.adapters.paypal_invoicing import (
@@ -88,6 +92,8 @@ def main() -> int:
     app.dependency_overrides[get_maps] = DemoTableMaps
     app.dependency_overrides[get_paypal] = DemoPayPal
     app.dependency_overrides[get_invoicing] = lambda: invoicing
+    orders = DemoOrders()
+    app.dependency_overrides[get_orders] = lambda: orders
     app.dependency_overrides[get_webhook_verifier] = lambda: DemoWebhookVerifier(settings.audit_secret)
     app.dependency_overrides[get_query_llm] = lambda: query_llm
     app.dependency_overrides[get_dispute_writer] = lambda: writer
@@ -112,9 +118,26 @@ def main() -> int:
     story.expect("listing", submitted["listing_status"], "LIVE")
     story.say("Signed terms: deposit 70,000 + brokerage 35,000")
 
-    story.step(2, "Asha visits; Feature 3 captures her $15 visit token (simulated)")
-    capture = client.post("/dev/ledger/simulate-capture", json={"listing_id": listing_id, "amount": "15.00"}, headers=manager).json()
-    story.say(f"hold {capture['authorization_ref']} authorised, then captured as {capture['capture_ref']}")
+    story.step(2, "Asha books a visit (Feature 2), the fee is held (Feature 3) and she locks the flat")
+    slots = client.get(f"/public/listings/{listing_id}/slots").json()["slots"]
+    slot = next(s for s in slots if s["fee"] == "15.00")  # 12-48 h ahead: the base fee
+    visit = client.post(f"/public/listings/{listing_id}/visits", json={
+        "tenant_name": "Asha Rao", "tenant_email": "asha@example.com",
+        "starts_at": slot["starts_at"], "ends_at": slot["ends_at"]}).json()
+    hold = {"X-Hold-Token": visit["hold_token"]}
+    client.post(f"/public/visits/{visit['id']}/paypal-order", headers=hold)
+    booked = client.post(f"/public/visits/{visit['id']}/authorize", headers=hold).json()
+    story.expect("visit", booked["status"], "COMMITTED")
+    with Session() as session:  # the demo can't wait for tomorrow: the visit "starts" now
+        row = session.get(models.Visit, visit["id"])
+        row.starts_at, row.ends_at = datetime.now(UTC) - timedelta(minutes=5), datetime.now(UTC) + timedelta(minutes=55)
+        session.commit()
+    client.post(f"/broker/visits/{visit['id']}/pin", json={"pin": booked["pin"]}, headers=broker)
+    client.post(f"/public/visits/{visit['id']}/decision", json={"choice": "LOCK"}, headers=hold)
+    locked = client.post(f"/broker/visits/{visit['id']}/approve-lock", headers=broker).json()
+    story.expect("referee", locked["outcome"], "LOCKED")
+    capture = {"authorization_ref": locked["authorization_ref"], "capture_ref": locked["capture_ref"]}
+    story.say(f"hold {capture['authorization_ref']} authorised at booking, captured as {capture['capture_ref']} on Lock")
 
     story.step(3, "Asha locks the flat: the move-in invoice goes out with the token deducted")
     closing = client.post(f"/broker/listings/{listing_id}/close", json={

@@ -1,4 +1,5 @@
-"""ORM tables for Feature 1 (listings and audits) and Feature 4 (closings, ledger, invoices).
+"""ORM tables for Feature 1 (listings and audits), Feature 2 (visits) and Feature 4 (closings,
+ledger, invoices).
 
 Money is Numeric(12, 2) -> Python Decimal (never float). Enums are stored as
 VARCHAR with a CHECK constraint so the same schema works on SQLite and Postgres.
@@ -422,8 +423,84 @@ class Dispute(Base):
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
+# --- Feature 2: visit booking ---
+
+
+class VisitStatus(StrEnum):
+    SOFT_HOLD = "SOFT_HOLD"  # the slot is kept for a few minutes while the tenant authorises the fee
+    COMMITTED = "COMMITTED"  # PayPal authorised the visit fee; the visit is booked
+    EXPIRED = "EXPIRED"  # the soft hold ran out before authorisation
+    RELEASED = "RELEASED"  # the tenant let the slot go
+    # Feature 3: the referee decided; the outbox is capturing or voiding the PayPal hold.
+    SETTLING = "SETTLING"
+    CAPTURED = "CAPTURED"  # the fee was taken (the tenant locked the flat, or didn't show)
+    VOIDED = "VOIDED"  # the hold was released (passed, broker no-show, no proof, or approved too late)
+
+
+class Visit(Base):
+    """One booked (or briefly held) site visit on a broker's calendar.
+
+    A SOFT_HOLD whose expires_at has passed counts as expired everywhere, even before the sweep
+    writes EXPIRED. The tenant has no account: the hold token returned once at booking (stored
+    only as a SHA-256) is what lets them authorise or release it."""
+
+    __tablename__ = "visits"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    listing_id: Mapped[str] = mapped_column(ForeignKey("listings.id"), index=True)
+    broker_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    tenant_name: Mapped[str] = mapped_column(String(150))
+    tenant_email: Mapped[str] = mapped_column(String(255))
+    starts_at: Mapped[datetime] = mapped_column(index=True)
+    ends_at: Mapped[datetime]
+    status: Mapped[VisitStatus] = enum_column(VisitStatus, default=VisitStatus.SOFT_HOLD)
+    expires_at: Mapped[datetime]
+    fee: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    hold_token_hash: Mapped[str] = mapped_column(String(64))
+    # The answers the tenant gave the booking assistant (budget, move-in date, profile), as JSON.
+    qualification_json: Mapped[str | None] = mapped_column(Text)
+    authorization_ref: Mapped[str | None] = mapped_column(String(100), unique=True)  # PayPal authorization id
+    capture_ref: Mapped[str | None] = mapped_column(String(100), unique=True)  # set once Feature 3 captures it
+    committed_at: Mapped[datetime | None]
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    # Feature 3: PayPal Orders v2 (intent=AUTHORIZE), the door PIN and the referee's verdict.
+    paypal_order_id: Mapped[str | None] = mapped_column(String(100), unique=True)
+    authorized_at: Mapped[datetime | None]
+    pin_hash: Mapped[str | None] = mapped_column(String(64))  # HMAC; the PIN itself is never stored
+    pin_attempts: Mapped[int] = mapped_column(default=0)
+    outcome: Mapped[str | None] = mapped_column(String(20))  # app.domain.referee.Outcome
+    outcome_reason: Mapped[str | None] = mapped_column(Text)
+    settled_at: Mapped[datetime | None]
+
+
+class VisitCheckin(Base):
+    """Append-only proof for the referee: PIN entries, GPS fixes, photos and each side's taps.
+    Nothing is edited or deleted (enforced below); the verdict is always re-derived from these rows."""
+
+    __tablename__ = "visit_checkins"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    visit_id: Mapped[str] = mapped_column(ForeignKey("visits.id"), index=True)
+    party: Mapped[str] = mapped_column(String(10))  # app.domain.referee.Party
+    kind: Mapped[str] = mapped_column(String(20))  # app.domain.referee.Proof
+    latitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
+    longitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
+    accuracy_m: Mapped[Decimal | None] = mapped_column(Numeric(8, 1))
+    distance_m: Mapped[Decimal | None] = mapped_column(Numeric(10, 1))  # from the flat's verified pin
+    photo_path: Mapped[str | None] = mapped_column(Text)
+    photo_phash: Mapped[str | None] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
 class LedgerIsAppendOnly(Exception):
     pass
+
+
+@event.listens_for(VisitCheckin, "before_update")
+@event.listens_for(VisitCheckin, "before_delete")
+def _no_checkin_changes(_mapper, _connection, target):
+    raise LedgerIsAppendOnly(f"check-in {target.id} is evidence and cannot be changed or deleted")
 
 
 @event.listens_for(LedgerEntry, "before_update")

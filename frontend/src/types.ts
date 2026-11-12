@@ -288,6 +288,8 @@ export interface Hold {
   amount: string;
   currency: string;
   occurred_at: string;
+  tenant_name: string | null; // set when the token came from a Feature 2 visit booking
+  tenant_email: string | null;
 }
 
 export interface ClosableListing {
@@ -332,4 +334,133 @@ export interface DisputeOut {
   approved_by: string | null;
   submitted_at: string | null;
   created_at: string;
+}
+
+// ---------- Feature 2: visit booking ----------
+
+export type VisitStatus = "SOFT_HOLD" | "COMMITTED" | "EXPIRED" | "RELEASED" | "SETTLING" | "CAPTURED" | "VOIDED";
+
+// Feature 3: how the referee settled a visit
+export type Outcome = "PASSED" | "LOCKED" | "TENANT_NO_SHOW" | "BROKER_NO_SHOW" | "NO_PROOF" | "TOO_LATE";
+
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface Collected {
+  budget?: string | number | null;
+  move_in_date?: string | null;
+  profile?: string | null;
+  preferred_slot?: string | null;
+}
+
+export interface Qualification {
+  answer: string;
+  collected: Collected;
+  next_question: string | null;
+  ready_to_book: boolean;
+  problems: string[];
+}
+
+export interface AssistantOut {
+  available: boolean;
+  reply: Qualification;
+  unavailable_reason: string | null;
+}
+
+export interface VisitSlot {
+  starts_at: string;
+  ends_at: string;
+  fee: string;
+  currency: string;
+}
+
+export interface SlotsOut {
+  slots: VisitSlot[];
+  window_days: number;
+  hold_minutes: number;
+  transit_buffer_minutes: number;
+}
+
+export interface VisitOut {
+  id: string;
+  listing_id: string;
+  starts_at: string;
+  ends_at: string;
+  status: VisitStatus;
+  expires_at: string;
+  fee: string;
+  currency: string;
+  paypal_order_id: string | null;
+  authorization_ref: string | null;
+  capture_ref: string | null;
+  demo_authorization: boolean;
+  outcome: Outcome | null;
+  outcome_reason: string | null;
+  pin: string | null; // only on the tenant's own requests
+  proof: ProofOut | null;
+  message: string | null;
+}
+
+export interface ProofOut {
+  pin_entered: boolean;
+  pin_attempts_left: number;
+  tenant_at_flat: boolean;
+  tenant_photo: boolean;
+  broker_at_flat: boolean;
+  tenant_choice: "PASS" | "LOCK" | null;
+  broker_approved_lock: boolean;
+  no_show_claimed: boolean;
+  broker_absent_claimed: boolean;
+  grace_ends_at: string;
+  settle_deadline: string | null;
+  waiting_for: string | null;
+  log: { party: string; kind: string; at: string; distance_m: number | null; counts: boolean }[];
+}
+
+export interface OrderOut {
+  order_id: string;
+  demo: boolean;
+}
+
+export interface PaymentsConfig {
+  paypal_client_id: string | null;
+  demo: boolean;
+  currency: string;
+}
+
+export interface HoldOut extends VisitOut {
+  hold_token: string;
+}
+
+export interface CalendarVisit {
+  id: string;
+  listing_id: string;
+  listing_title: string;
+  broker_id: string;
+  broker_name: string;
+  tenant_name: string;
+  tenant_email: string;
+  starts_at: string;
+  ends_at: string;
+  status: VisitStatus;
+  expires_at: string;
+  fee: string;
+  currency: string;
+  authorization_ref: string | null;
+  capture_ref: string | null;
+  qualification: Collected | null;
+  outcome: Outcome | null;
+  outcome_reason: string | null;
+  proof: ProofOut | null;
+}
+
+export interface CalendarOut {
+  now: string;
+  window_days: number;
+  utc_offset_minutes: number;
+  visit_hours: string;
+  transit_buffer_minutes: number;
+  visits: CalendarVisit[];
 }

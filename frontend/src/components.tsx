@@ -28,6 +28,7 @@ const PATHS: Record<string, ReactNode> = {
   ledger: (<><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></>),
   scale: (<><path d="M12 4v16M7 20h10M5 8h14" /><path d="M5 8l-3 6h6zM19 8l-3 6h6z" /></>),
   spark: (<><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6" /></>),
+  send: <path d="M4 12 20 4l-5 16-3-7z M12 13l8-9" />,
   refresh: (<><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8" /><path d="M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16" /><path d="M20 20v-4h-4" /></>),
 };
 
@@ -87,8 +88,22 @@ const PILL: Record<string, { label: string; style: string }> = {
   APPROVED: { label: "APPROVED", style: "thin" },
   SUBMITTED: { label: "EVIDENCE SENT", style: "thin" },
   RESOLVED: { label: "RESOLVED", style: "solid" },
+  // Feature 2: visits (EXPIRED is shared with listings)
+  SOFT_HOLD: { label: "HELD", style: "dashed" },
+  COMMITTED: { label: "BOOKED", style: "solid" },
+  RELEASED: { label: "LET GO", style: "grey" },
+  // Feature 3: the PayPal hold after the referee decided
+  SETTLING: { label: "SETTLING", style: "dashed" },
+  CAPTURED: { label: "FEE CAPTURED", style: "ink" },
+  VOIDED: { label: "HOLD RELEASED", style: "thin" },
+  PASSED: { label: "VISITED · PASSED", style: "thin" },
+  LOCKED: { label: "LOCKED", style: "solid" },
+  TENANT_NO_SHOW: { label: "TENANT NO-SHOW", style: "ink" },
+  BROKER_NO_SHOW: { label: "BROKER NO-SHOW", style: "outline" },
+  NO_PROOF: { label: "NO PROOF", style: "grey" },
+  TOO_LATE: { label: "APPROVED TOO LATE", style: "grey" },
 };
-const PILL_ICON: Record<string, string> = { LIVE: "check", VERIFIED: "check", PASS: "check", FAIL: "x", PAID: "check", RESOLVED: "check", DISPUTED: "warn" };
+const PILL_ICON: Record<string, string> = { LIVE: "check", VERIFIED: "check", PASS: "check", FAIL: "x", PAID: "check", RESOLVED: "check", DISPUTED: "warn", COMMITTED: "check", LOCKED: "check", BROKER_NO_SHOW: "warn" };
 
 export function Pill({ status }: { status: ListingStatus | string }) {
   const p = PILL[status] ?? { label: status, style: "grey" };

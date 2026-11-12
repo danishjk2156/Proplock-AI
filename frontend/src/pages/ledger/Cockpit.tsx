@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../../api";
 import { ErrorBox, Icon, Loading, Pill, useLoad } from "../../components";
 import { dateTime, kindLabel, money } from "../../format";
@@ -219,21 +220,14 @@ function CloseFlat({ isManager, demo, onClosed }: { isManager: boolean; demo: bo
   useEffect(() => {
     setCaptureRef(listing?.holds[0]?.capture_ref ?? "");
   }, [listing]);
+  // A token from a booked visit already knows the tenant.
+  useEffect(() => {
+    const hold = listing?.holds.find((h) => h.capture_ref === captureRef);
+    if (hold?.tenant_name) setName(hold.tenant_name);
+    if (hold?.tenant_email) setEmail(hold.tenant_email);
+  }, [listing, captureRef]);
 
   if (!closable.data?.length && !closable.loading) return null;
-
-  async function simulate() {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.post("/dev/ledger/simulate-capture", { listing_id: listingId, amount: "15.00", currency: "USD" });
-      await closable.reload();
-    } catch (e) {
-      setError(e);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function close() {
     setBusy(true);
@@ -274,9 +268,13 @@ function CloseFlat({ isManager, demo, onClosed }: { isManager: boolean; demo: bo
                 {listing.holds.map((h) => <option key={h.capture_ref} value={h.capture_ref}>{h.capture_ref} · {money(h.amount, h.currency)} · {dateTime(h.occurred_at)}</option>)}
               </select>
             ) : (
-              <p className="small muted">No captured visit token for this listing yet{demo ? "." : " (Feature 3 records them when a visit happens)."}</p>
+              <p className="small muted">
+                No captured visit token for this listing yet. The tenant books a visit from the listing page;
+                {demo && isManager
+                  ? <> once they have visited, capture it from the <Link to="/m/visits">visit calendar</Link> (demo).</>
+                  : " Feature 3 captures it when the visit happens."}
+              </p>
             )}
-            {demo && isManager && <button className="btn small ghost" disabled={busy} onClick={simulate}>Simulate a $15 visit token (demo)</button>}
           </div>
           <div className="grid2">
             <div className="field"><label htmlFor="cl-name">Tenant name</label><input id="cl-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" /></div>

@@ -156,6 +156,9 @@ class HoldOut(BaseModel):
     amount: Decimal
     currency: str
     occurred_at: datetime
+    # Who booked the visit (Feature 2), so the closing form can start with their details.
+    tenant_name: str | None = None
+    tenant_email: str | None = None
 
 
 class ClosableListing(BaseModel):
