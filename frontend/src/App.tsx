@@ -12,13 +12,14 @@ import ManagerFlats from "./pages/manager/Flats";
 import ManagerReviews from "./pages/manager/Reviews";
 import PublicListing from "./pages/public/PublicListing";
 import Verify from "./pages/public/Verify";
+import Explore from "./pages/public/Explore";
 import BookVisit from "./pages/public/BookVisit";
 import { BrokerVisits, ManagerVisits } from "./pages/visits/Pages";
 import BrokerDoor from "./pages/escrow/BrokerDoor";
 import { BrokerLedger, ManagerLedger } from "./pages/ledger/Pages";
 import Disputes from "./pages/ledger/Disputes";
 import type { Role } from "./types";
-import { BrokerLayout, ManagerLayout, PublicLayout } from "./ui/shell/Shell";
+import { BrokerLayout, EXPLORE_ENABLED, ManagerLayout, PublicLayout } from "./ui/shell/Shell";
 
 function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
   const { me, loading } = useAuth();
@@ -56,6 +57,8 @@ export default function App() {
 
       {/* Public: no login */}
       <Route element={<PublicLayout />}>
+        {/* S02 needs GET /public/listings (plan §6); until then the route doesn't exist. */}
+        {EXPLORE_ENABLED && <Route path="/explore" element={<Explore />} />}
         <Route path="/l/:listingId" element={<PublicListing />} />
         <Route path="/l/:listingId/visit" element={<BookVisit />} />
         <Route path="/v/:auditId" element={<Verify />} />

@@ -123,7 +123,7 @@ Each step ends with `npm run build` passing and a browser check (light and dark,
 |---|---|
 | 0 Tokens | approved 2026-11-12: `docs/frontend/design-tokens.md`, `frontend/src/styles/tokens.css` |
 | 1 Shell | done 2026-11-12 (`src/ui/`, `src/ui/shell/Shell.tsx`) |
-| 2 Tenant | not started |
+| 2 Tenant | done 2026-11-12 (S03, S04, S05 restyle; S02 behind `VITE_EXPLORE`) |
 | 3 Broker | not started |
 | 4 Manager | not started |
 | 5 Polish | not started |
@@ -134,3 +134,5 @@ Each step ends with `npm run build` passing and a browser check (light and dark,
 - **2026-11-12: Feature 2 and 3 already exist.** Commit `68f9a98` added visit booking (`/l/:id/visit`), the PayPal auth-hold, door check-in and visit calendars, and removed `/dev/ledger/simulate-capture`. So S05 is no longer a "coming soon" sheet: its real screens (`BookVisit`, `TenantVisit`, `BrokerDoor`, `visits/*`) get the redesign instead, and S17's demo token now comes from a real booked visit's capture.
 - **Accent split (user decision, 2026-11-12):** orange from the inspiration is for actions only; verified states stay green (`docs/frontend/design-tokens.md`).
 - **Nav search:** for Phase 1 it is always the ledger copilot for signed-in users. The wireframe's "otherwise a filter over their own listings" comes with the S06 and S12 boards.
+- **S02 contract:** the frontend expects `GET /public/listings` to return `{items: ExploreItem[], next_cursor}` (see `frontend/src/types.ts`): listing_id, title, rent, furnishing, city, photo_url, photo_width, photo_height, commute (best passing claim or null), trust_score. Adjust either side when the backend adds it.
+- **S03 photo sizes:** `/public/listings/{id}` doesn't return photo dimensions, so the close-up carousel uses a fixed 4:3 frame with `object-fit: contain` (never crops).

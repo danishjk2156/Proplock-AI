@@ -464,3 +464,27 @@ export interface CalendarOut {
   transit_buffer_minutes: number;
   visits: CalendarVisit[];
 }
+
+/**
+ * S02 explore feed: the shape the frontend expects from the planned GET /public/listings
+ * (plans/pending/frontend-redesign.md §6). Not served by the backend yet; the feed stays behind
+ * VITE_EXPLORE until it is.
+ */
+export interface ExploreItem {
+  listing_id: string;
+  title: string;
+  rent: string;
+  furnishing: Furnishing;
+  city: string;
+  photo_url: string | null;
+  photo_width: number | null;
+  photo_height: number | null;
+  /** The best commute claim that passed the rush-hour check, if any. */
+  commute: CommuteClaim | null;
+  trust_score: number;
+}
+
+export interface ExplorePage {
+  items: ExploreItem[];
+  next_cursor: string | null;
+}

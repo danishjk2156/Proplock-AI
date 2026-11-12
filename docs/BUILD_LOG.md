@@ -871,3 +871,25 @@ Still not verified for real: webhook delivery (needs a public URL and `PAYPAL_WE
   - The theme toggle sets `data-theme` and persists it.
   - The copilot in the nav shows the backend's own refusal when no Groq key is set.
   - `npm run build` passes.
+
+## Frontend redesign · Phase 2: tenant screens (2026-11-12)
+
+- **S03 close-up** (`pages/public/PublicListing.tsx`):
+  - Layout: image and details side by side on desktop (photo sticky). On phones, a full-bleed photo with the details sliding over it as a sheet, and a pinned "Book a visit".
+  - Carousel (`ui/Carousel.tsx`): the owner's photos only, uncropped on a matte band, with arrows, a counter, thumbnails, swipe and arrow keys. Alt text reads "Living room, owner's photo 1 of 4".
+  - Commute rows show CHECKED (rush-hour route) or a dashed NOT CHECKED ("the agency reviewed it by hand").
+  - Move-in total as money rows; the broker card with a trust ring and "confirmed N days ago"; an "Is this genuine?" link.
+  - Share uses the Web Share API, with copy-link as the fallback.
+  - Per-route document titles via `ui/hooks.ts`.
+- **S04 verify** (`pages/public/Verify.tsx`):
+  - Two states readable at a glance: green with a shield and ticks, or matte black with a warning. The words say it too.
+  - Mismatches are shown as "field: checked X → now Y". An unknown id shows "No audit with this id exists".
+- **S05 booking:** Feature 3 is built, so this is the real flow (`BookVisit` / `TenantVisit`) on the new tokens, plus a summary pin and a "How the visit fee works" panel. The panel follows `domain/referee.py`: authorization, not a charge; PIN at the door; captured and deducted if you lock; released if you pass or the broker doesn't come; kept if you don't turn up.
+- **S02 explore** (`pages/public/Explore.tsx`) only exists with `VITE_EXPLORE=true`:
+  - Masonry of pins from `GET /public/listings`, with client-side filter chips and a "Load more" button.
+  - The response shape it expects is `ExploreItem` / `ExplorePage` in `types.ts`.
+  - If the endpoint is missing, it says the feed isn't switched on. It never fakes a feed. "More verified flats" under a close-up hides itself on any error.
+- **Verified** against scratch copies of `scripts/demo.py`'s database: one left untampered (genuine) and one tampered (signature broken). Four placeholder owner photos were uploaded through the manager API.
+  - 375 px and 1280 px, light and dark: no horizontal scroll, no console errors.
+  - Carousel arrows, keys, thumbnails and wrap-around all work, and share falls back to the clipboard.
+  - `npm run build` passes.

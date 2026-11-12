@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useParams } from "react-router-dom";
-import { api, ApiError } from "../../api";
+import { api, ApiError, apiUrl } from "../../api";
 import { AppBar, ErrorBox, Icon, isGone, Loading, useLoad } from "../../components";
 import { money, rupees } from "../../format";
 import type {
@@ -254,6 +254,8 @@ export default function BookVisit() {
   const holdMinutes = slots.data?.hold_minutes ?? 15;
 
   return (
+    <div className="book">
+      <BookingSummary listing={l} />
     <div className="phone">
       <AppBar title="Book a visit" subtitle={l.title} back={`/l/${listingId}`} />
       <main className="content">
@@ -370,5 +372,36 @@ export default function BookVisit() {
         )}
       </main>
     </div>
+    </div>
+  );
+}
+
+/** S05: what the tenant is booking and, in plain words, what happens to the PayPal hold (Feature 3's referee). */
+function BookingSummary({ listing: l }: { listing: PublicListing }) {
+  const photo = l.photos[0];
+  return (
+    <aside className="book-aside" aria-label="The flat you’re booking">
+      <div className="pin book-pin">
+        <div className={`pin-media${photo ? "" : " ph"}`} style={photo ? undefined : { aspectRatio: "4 / 3" }}>
+          {photo ? <img src={apiUrl(photo.url)} alt={`${l.title}: owner’s photo`} /> : <span className="ph-label">No owner photos yet</span>}
+          <span className="pin-fade" aria-hidden="true" />
+          <span className="pin-badges"><span className="pill solid"><Icon name="check" size={12} />Verified</span></span>
+          <span className="pin-tag">{rupees(l.rent)} <small>/ mo</small></span>
+        </div>
+        <span className="pin-cap">
+          <span className="pin-title">{l.title}</span>
+          <span className="pin-meta">{l.furnishing} · {l.city} · {l.broker.name}</span>
+        </span>
+      </div>
+      <details className="card how-hold" open>
+        <summary><strong>How the visit fee works</strong></summary>
+        <ol className="steps">
+          <li><strong>PayPal holds the fee.</strong> It’s an authorization, not a charge.</li>
+          <li><strong>At the door,</strong> show the broker your 4-digit PIN. That proves you both came.</li>
+          <li><strong>Take the flat:</strong> the fee is kept and taken off your move-in invoice.</li>
+          <li><strong>Not for you, or the broker didn’t come:</strong> the hold is released. If you don’t turn up, the fee is kept.</li>
+        </ol>
+      </details>
+    </aside>
   );
 }
