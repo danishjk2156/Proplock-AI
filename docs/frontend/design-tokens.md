@@ -1,6 +1,6 @@
 # PropLock design tokens (Phase 0)
 
-Status: **proposed 2026-11-12**, waiting for approval before Phase 1.
+Status: **in use since 2026-11-12.** `src/main.tsx` imports `tokens.css` before `styles.css`, which no longer defines its own palette.
 Code: [`frontend/src/styles/tokens.css`](../../frontend/src/styles/tokens.css). Preview: [`token-preview.html`](token-preview.html).
 
 ## 1. Where the look comes from

@@ -22,14 +22,14 @@ const theme = themeQuartz.withParams({
   headerBackgroundColor: "var(--surface-2)",
   headerTextColor: "var(--muted)",
   borderColor: "var(--line)",
-  rowHoverColor: "var(--accent-soft)",
-  selectedRowBackgroundColor: "var(--accent-soft)",
-  accentColor: "var(--accent)",
+  rowHoverColor: "var(--surface-2)",
+  selectedRowBackgroundColor: "var(--action-soft)",
+  accentColor: "var(--action)",
   oddRowBackgroundColor: "var(--surface)",
   fontFamily: "Inter, system-ui, sans-serif",
   fontSize: 13,
   headerFontWeight: 600,
-  wrapperBorderRadius: 20,
+  wrapperBorderRadius: 16,
   spacing: 7,
 });
 

@@ -844,3 +844,14 @@ Still not verified for real: webhook delivery (needs a public URL and `PAYPAL_WE
 - Changes from the inspiration: the button orange is `#C2410C`, because white on `#F97316` is only 2.80:1. Verified states stay **green**, and orange is used for actions only (the user chose this). Muted grey is darkened to `#65656D`, because `#71717A` on `#F4F4F5` is 4.40:1.
 - Verified: all 18 text/background pairs pass AA in both themes (lowest 4.92:1). The preview has no horizontal scroll at 375 px or 1280 px, in light or dark.
 - `tokens.css` is not imported by the app yet. Phase 1 wires it in and replaces `styles.css`.
+
+## Frontend redesign · Phase 1 (part 1): tokens wired in (2026-11-12)
+
+- Merged `feature/frontend-redesign` into `main` (fast-forward). `main.tsx` imports `styles/tokens.css` first; `styles.css` lost its own palette and maps every use to a role:
+  actions (primary buttons, links, focus ring, selected nav, a selected visit slot, selected grid row) are orange `--action`;
+  verified states (LIVE/PASS/PAID pills, booked visits, money in, trust ring) stay green; dashed warn pills get the amber soft fill;
+  the avatar, the tenant's chat bubbles and segmented selections are matte-black `--inverse`; cards and tables are 16 px with hairline borders and quiet shadows; controls are 12 px.
+- The AG Grid theme follows: `accentColor` is `var(--action)`, `wrapperBorderRadius` 16.
+- Checked in the browser: tenant listing (light, 375 px), visit booking (dark, 375 px, no horizontal scroll), manager ledger (light, desktop); no console errors.
+- Not done yet (rest of Phase 1): the new shell (TopNav, TabBar, search/copilot bar, dialog primitive, Masonry, Pin) and the theme toggle.
+

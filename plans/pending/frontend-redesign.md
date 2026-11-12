@@ -121,8 +121,8 @@ Each step ends with `npm run build` passing and a browser check (light and dark,
 
 | Phase | Status |
 |---|---|
-| 0 Tokens | proposed 2026-11-12: `docs/frontend/design-tokens.md`, `frontend/src/styles/tokens.css` (awaiting approval) |
-| 1 Shell | not started |
+| 0 Tokens | done 2026-11-12: `docs/frontend/design-tokens.md`, `frontend/src/styles/tokens.css`, merged into `main` |
+| 1 Shell | started 2026-11-12: tokens wired into the whole app (all screens incl. Features 2-3, AG Grid); shell components (TopNav, TabBar, dialogs, Masonry, Pin) not started |
 | 2 Tenant | not started |
 | 3 Broker | not started |
 | 4 Manager | not started |
