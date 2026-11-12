@@ -1,57 +1,144 @@
-# PropLock AI: Listing Audit (F1), Visit Booking (F2), Visit Escrow (F3) and Invoice Ledger (F4)
+# PropLock AI
 
-PropLock checks a broker's rental ad against facts the broker can't change before it goes live.
-It checks the owner's agreed terms, rush-hour routes, state deposit rules, and photos taken at the flat.
-It then signs the result and publishes the verified listing as a **PayPal Catalog product**.
+**Verified rental listings, refereed site visits and PayPal invoices, so neither broker nor tenant can cheat.**
 
-**Feature 4** closes the deal on that verified listing. When a tenant locks the flat, a **PayPal invoice** goes out for the verified deposit and brokerage, minus the visit token already captured. Every money event lands in an **append-only ledger** shown in an AG Grid cockpit that you can question in plain English. When a payer disputes, a copilot drafts a cited response from PropLock's own signed records, and a person approves it.
-**Feature 2** turns a tenant's questions into a booked visit. A booking assistant answers only from the listing's signed audit and collects budget, move-in date and profile. The tenant then holds a slot for 15 minutes and authorises a small visit fee with PayPal. Brokers and managers watch it all on a live visit calendar.
-**Feature 3** makes that fee a real **PayPal Orders v2 authorization** (held, not charged) and referees the visit at the door. The tenant shows a 4-digit PIN that the broker types in, and both phones can check in by GPS. Fixed rules then decide, from that proof alone, whether PayPal **voids** the hold or **captures** it. A captured fee from a locked flat is the token Feature 4's invoice deducts.
+PropLock is a trust layer for renting a flat through a broker. It checks every ad against facts the broker can't change. An AI assistant answers tenants only from those verified facts. **PayPal holds the visit fee** and releases or captures it based on proof from the door. The move-in invoice charges exactly what was verified.
 
-Built for the PayPal AI Hackathon. Background: [docs/PropLock_Solution_Overview.pdf](docs/PropLock_Solution_Overview.pdf).
-Step-by-step build notes: [docs/BUILD_LOG.md](docs/BUILD_LOG.md).
+Built for the PayPal AI Hackathon 2026 on the **PayPal developer platform (sandbox)** with **Groq-hosted LLMs**.
 
-## Screenshots
-
-| Broker home | Pre-check with suggested fixes | Audit result: needs fix |
+| Sign-in | Booking assistant | Door PIN |
 |---|---|---|
-| ![Broker home](docs/screenshots/broker-home.jpg) | ![Pre-check](docs/screenshots/broker-precheck.jpg) | ![Needs fix](docs/screenshots/broker-needs-fix.jpg) |
+| ![Sign-in landing](docs/screenshots/devpost/01-landing.png) | ![AI booking assistant](docs/screenshots/devpost/02-booking-assistant.png) | ![Tenant door PIN](docs/screenshots/devpost/03-door-pin.png) |
 
-| Live listing | Tenant: verified listing | Tenant: is this genuine? |
+| Visit calendar (agency) | Money ledger and PayPal invoice |
+|---|---|
+| ![Visit calendar](docs/screenshots/devpost/04-visit-calendar.png) | ![Money ledger](docs/screenshots/devpost/05-money-ledger.png) |
+
+Background reading: [solution overview (PDF)](docs/PropLock_Solution_Overview.pdf) · [build log](docs/BUILD_LOG.md) · [design tokens](docs/frontend/design-tokens.md)
+
+---
+
+## 1. The problem
+
+Renting a flat in an Indian metro usually goes through a broker, and both sides have good reason not to trust each other.
+
+**Tenants can't trust the ad.** Common tricks:
+
+| Trick | How it works |
+|---|---|
+| Fake or stolen photos | Photos of a nicer flat, copied from another portal or a builder's brochure |
+| Commute lies | "5 min to metro" measured as a straight line, not the real walk at rush hour |
+| Rent markup | Listed at ₹40,000; the owner gets ₹35,000 and the broker keeps the difference |
+| Inflated deposit | 6–10 months asked for, sometimes beyond what state rules allow |
+| Furnishing lies | "Fully furnished" turns out to be a bed and a fan |
+| Token-advance scam | "Pay ₹10,000 to hold the flat", then the broker disappears |
+| Hidden charges | Extra fees that appear only at signing |
+
+**Brokers can't trust the tenant.** A broker's stock in trade is their time: driving across town, collecting keys and giving a tour. A verbal "I'll come Saturday at 4" costs the tenant nothing if they don't turn up. The PropLock blueprint *estimates* that up to 70% of free scheduled visits end in a no-show or a last-minute cancellation. Brokers are paid only when a deal closes, so each no-show is unpaid work.
+
+**So both sides lose.** Tenants won't send token money through a raw payment link to an unknown broker, because it looks exactly like an advance-fee scam and nobody can get it back. Brokers, in turn, won't take tenants seriously without a commitment. Existing tools each cover a piece:
+
+- **AI chatbots and AI agents** qualify leads and book tours, but they don't check whether the ad is true, and booking is free.
+- **"Verified" badges** verify the person posting, not each claim in the ad.
+- **Payment links** have no refund guarantee and no proof of attendance.
+
+## 2. The solution
+
+PropLock places a referee between the broker, the agency and the tenant. Money is never handed to the broker at booking time: **PayPal holds it**, and fixed rules decide from proof whether it is released or captured.
+
+| | Feature | What it does |
 |---|---|---|
-| ![Live listing](docs/screenshots/broker-live.jpg) | ![Tenant listing](docs/screenshots/tenant-listing.jpg) | ![Verify](docs/screenshots/tenant-verify.jpg) |
+| 1 | **Listing audit** | Before an ad goes live, four checks run in parallel. **A · Photos:** taken at the flat (GPS within 100 m) in the last 30 days, never reused from another flat, and compared with the owner's photos. **B · Commute:** claims are checked against real routes at rush hour. **C · Deposit:** checked against state rules, with the source cited. **D · Owner terms:** the rent range, deposit, furnishing and brokerage cap the owner agreed to. A failing ad comes back with the evidence and a suggested fix. A passing ad is **HMAC-signed** and published as a **PayPal Catalog product**, and anyone can verify the signature on the public page. |
+| 2 | **AI booking assistant** | It answers tenants **only from the signed audit**. It refuses discounts and attempts to override its instructions, and it collects budget, move-in date, household and preferred time. Our own rules then re-check that the tenant qualifies. The tenant holds a slot for 15 minutes, with a 30-minute travel gap between the broker's visits at different flats. The fee is lower when booked early. |
+| 3 | **Visit escrow and door referee** | The visit fee is a **PayPal Orders v2 `AUTHORIZE` hold**: held, not charged. At the door the broker types the tenant's 4-digit PIN, and both phones can check in by GPS. A pure rules engine then decides (table below). |
+| 4 | **Invoice ledger** | When the tenant locks the flat, a **PayPal invoice** goes out for the verified deposit and brokerage **minus the captured visit token**, with reminders and a QR pay link. Every money event lands in an **append-only ledger** that you can question in plain English. If the tenant disputes the payment, a copilot drafts a response citing PropLock's own signed records, and a manager approves it before it is sent. |
 
-**Agency manager (web, dark theme)**
+**How a visit ends (Feature 3):**
 
-![Manager: flats and mandates](docs/screenshots/manager-flats.jpg)
+| What happened | Proof needed | PayPal |
+|---|---|---|
+| Tenant visited, not interested | Correct PIN, or the tenant's GPS at the flat | **void**: $0 |
+| Tenant wants the flat | Check-in + tenant taps Lock + broker approves | **capture**: becomes the move-in token |
+| Tenant didn't show | Broker's GPS at the flat *before* claiming, 30 min after the start | **capture**: no-show fee |
+| Broker didn't show | Tenant's GPS and a live photo at the flat, no PIN or broker check-in | **void**, and the listing is taken down |
+| Nobody proved anything | The deadline passes | **void** |
 
-![Manager: review queue](docs/screenshots/manager-reviews.jpg)
+A correct PIN proves both people were at the door, so neither no-show claim can succeed after it.
 
-## How an ad is judged
+## 3. How it solves the existing problem
+
+| Problem | PropLock's answer |
+|---|---|
+| Fake photos | The check-in photo must be within 100 m of the owner-verified pin and under 30 days old. Perceptual hashes catch photos reused across flats. The vision model compares extra photos with the owner's. Tenants see the **owner's** photos. |
+| Commute lies | Claims are measured on real routes (OpenStreetMap, or Google Routes at rush hour), with a margin of ×1.2 or +5 minutes, whichever is larger. |
+| Rent markup, inflated deposit, hidden charges | The ad must fit the owner's mandate. The deposit is checked against state rules with a citation. Brokerage is a separate, capped field. The tenant page shows the full move-in total, and the invoice can only charge what was verified. |
+| Bait listings, stale ads | Only LIVE listings with a signed audit are shown. A listing expires unless the broker confirms it is still available every 7 days. |
+| Token-advance scam | No money goes to the broker. PayPal holds the visit fee, and the rules release it unless there is proof. |
+| Tenant no-shows | The PayPal hold is real commitment. A no-show is captured only on the broker's own GPS proof from the flat. |
+| "It's my word against yours" | Every proof, decision and money event is stored append-only. Audits are signed, and disputes get an evidence pack with source ids. |
+| Tampering with the records afterwards | `/public/audits/{id}/verify` recomputes the signature and compares it with the current database rows, so an edit made straight in the database is caught. |
+
+## 4. Architecture
 
 ```text
-broker submits ──► mandate gate (403 without one)
-                    │
-                    ▼
-            claim extractor (Groq LLM reads the title + description)
-                    │
-     ┌──────────────┼──────────────┬──────────────┐      in parallel (LangGraph)
-     ▼              ▼              ▼              ▼
- A · photos     B · commute    C · deposit    D · owner terms
- GPS ≤100 m,    rush-hour      state rules    rent range, deposit,
- ≤30 days,      route, ×1.2    with citation  furnishing, brokerage
- no reuse,      or +5 min
- same flat
-     └──────────────┴──────┬───────┴──────────────┘
-                           ▼
-       any FAIL → NEEDS_FIX (evidence + suggested fix)
-       any UNVERIFIABLE → IN_REVIEW (a manager decides)
-       all PASS → signed (HMAC) → outbox → PayPal product → LIVE
+             Broker app (phone)        Agency desk (web)        Tenant pages (no login)
+                     └──────────────────────┬──────────────────────┘
+                                React + Vite + TypeScript  (X-API-Key / hold token)
+                                            │
+                                   FastAPI backend (Python 3.11)
+   ┌──────────────────────────┬─────────────┴──────────────┬─────────────────────────────┐
+   │ F1 audit pipeline        │ F2 booking                 │ F3 escrow referee            │ F4 closing + ledger
+   │ LangGraph:               │ Groq assistant →           │ PIN · GPS · photo proof      │ signed invoice
+   │ extract claims (Groq) →  │ rules re-check "ready" →   │ (append-only) → pure rules → │ append-only ledger
+   │ A·B·C·D in parallel →    │ slots + travel gaps →      │ capture / void               │ ledger copilot (Groq)
+   │ decide → sign (HMAC)     │ 15-min hold (row lock)     │                              │ dispute copilot (Groq)
+   └─────────────┬────────────┴─────────────┬──────────────┴──────────────┬──────────────┘
+                 │                          │                             │
+          SQLAlchemy + Alembic (SQLite for the demo; Postgres-ready, with an exclusion constraint)
+                 │
+          Outbox (commit first, then call PayPal; fixed PayPal-Request-Id; retries with backoff)
+                 │
+   PayPal sandbox: Catalog Products · Orders v2 AUTHORIZE · Authorizations capture/void ·
+                   Invoicing v2 · Webhooks (verified) · Customer Disputes · JS SDK buttons
+   AI:             Groq openai/gpt-oss-120b (text) · Groq qwen/qwen3.8-27b (vision)
+   Maps:           OpenStreetMap (Nominatim + OSRM)  or  Google Routes API
 ```
 
-"Couldn't check" (no key, no route data, an unsure vision model) is **never** turned into a pass or into a made-up number.
+Design rules that hold everywhere:
 
-## Quick start (Windows, Python 3.11)
+- **The AI proposes; the rules decide.** Claim extraction, the assistant, the copilot and dispute drafts are model outputs, and each is checked by deterministic code. The assistant's "ready to book" can only be overruled toward "not ready". The copilot only fills in a whitelisted, read-only query. A dispute draft is never sent without a person's approval.
+- **"Couldn't check" is never a pass.** No key, no route data, an unsure model or an unknown state all send the item to a person.
+- **Money moves once.** Every PayPal call runs from the outbox after the decision is saved, with a request id derived from our own record. Ledger entries have unique idempotency keys. Webhooks are verified, stored raw and applied once.
+- **Evidence is append-only.** The ORM refuses updates and deletes on ledger entries and check-in proof. Balances are always summed from entries, never stored.
+- **No double booking.** A hold takes a lock on the broker's row before reading the calendar. A four-thread race test proves only one tenant wins.
+
+## 5. Impact on real-world data
+
+PropLock's checks run on **real data sources**, not on what the broker types:
+
+| Data | Source | What PropLock does with it |
+|---|---|---|
+| Routes and travel times | **OpenStreetMap** (Nominatim geocoding, OSRM routing for walking and driving), called live. Optionally Google Routes API with traffic. | Measures each commute claim on a real route from the owner-verified pin. OSM has no traffic or transit data, so a driving claim that only passes on empty roads, or any transit claim, goes to a manager instead of being guessed. |
+| Photos | The device's GPS and the photo's EXIF data, plus perceptual hashes (pHash) | Distance to the flat, photo age, and reuse across flats. Photos are stored by content hash. |
+| Deposit law | `backend/app/rules/deposit_caps.yaml`: each rule has a citation, section, source URL, effective date and a `verified` flag | Tamil Nadu: the 2017 tenancy Act's 3-month cap, flagged as "not yet verified against the gazette". Karnataka: labelled as PropLock policy, not law. An unlisted state goes to a manager. |
+| The owner's terms | The agency's mandate (rent range, deposit cap, furnishing, brokerage cap) | Each ad field is compared with it. No mandate means the broker can't list at all (403). |
+| Money | **PayPal sandbox**: Orders, Authorizations, Invoicing, Webhooks, Disputes | Real order ids, authorization ids and invoice ids flow into the ledger. Invoicing has been verified end to end in the sandbox (create, retry, read back, send, QR, cancel). |
+| Ad text and tenant questions | Groq LLMs | Read as untrusted input, fenced in the prompt, and never allowed to override the rules. |
+
+What this changes in practice:
+
+- **Visible lies get caught before publishing.** In the bundled demo, a typical inflated ad (₹40,000 rent against an owner range of ₹32,000–35,000, a ₹1,40,000 deposit, "fully furnished" for an unfurnished flat, a "2 min walk" that is really 11) comes back with **6 mismatches**, each with evidence and a suggested fix. The corrected ad goes LIVE.
+- **Visit fees become refundable by rule.** A tenant who visits and passes pays $0; a tenant who never shows pays the broker. Neither side can claim the other's money on their own word.
+- **Tenants pay only the verified move-in total.** The invoice is built from the signed audit ($70,000 deposit + $35,000 brokerage − $15 token = **$104,985** in the demo), and a manager override needs a written note that is recorded in the ledger.
+- **Disputes are answered from records, not memory.** The evidence pack cites the signed audit, the check-in photo, the invoice and the ledger entries by id.
+
+Amounts are shown in rupees on the listing. The PayPal sandbox invoices in USD, because PayPal has no domestic INR between Indian accounts.
+
+## 6. Setup
+
+You need **Python 3.11**, **Node 20+**, and optionally Groq and PayPal sandbox keys. Without keys, `DEMO_MODE=true` uses demo PayPal ids (`FAKE-…`) and demo routes, and anything that would need a real AI answer goes to manual review.
+
+### Backend
 
 From `backend/`:
 
@@ -64,27 +151,38 @@ python -m venv .venv
 ```bash
 cp .env.example .env
 ```
-Edit `.env`: set `GROQ_API_KEY`, `GROQ_TEXT_MODEL=openai/gpt-oss-120b`, `GROQ_VISION_MODEL=qwen/qwen3.8-27b`, and for a demo `DEMO_MODE=true`.
+
+Edit `.env`. For the full demo set:
+
+- `DEMO_MODE=true`
+- `GROQ_API_KEY=…`, `GROQ_TEXT_MODEL=openai/gpt-oss-120b`, `GROQ_VISION_MODEL=qwen/qwen3.8-27b`
+- `MAPS_PROVIDER=osm` (free, no key)
+- optionally `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` (sandbox REST app)
+
 ```bash
 .venv/Scripts/alembic upgrade head
 ```
 ```bash
 .venv/Scripts/python -m app.db.seed
 ```
-This prints three API keys (manager, an honest broker, a dishonest broker) and saves them to `demo_keys.json`.
+
+The seed prints three API keys (the agency manager, an honest broker and a dishonest broker) and saves them to `demo_keys.json`.
+
 ```bash
 .venv/Scripts/python -m uvicorn app.main:app --reload
 ```
-Open http://localhost:8000/docs, click **Authorize**, and paste a key.
 
-Optional background worker (retries PayPal publishing, expires listings that weren't confirmed for 7 days):
+The API runs at http://localhost:8000 (interactive docs at `/docs`; click **Authorize** and paste a key). The background worker retries PayPal calls, sends reminders, expires stale listings and visit holds, and settles visits past their deadline:
+
 ```bash
 .venv/Scripts/python -m app.services.outbox
 ```
 
-### The web app (Node 20+)
+On macOS or Linux, use `.venv/bin/` instead of `.venv/Scripts/`.
 
-With the backend running on port 8000, from `frontend/`:
+### Frontend
+
+From `frontend/`, with the backend on port 8000:
 
 ```bash
 npm install
@@ -92,199 +190,40 @@ npm install
 ```bash
 npm run dev
 ```
-Open http://localhost:5173 and paste a key from `demo_keys.json`. A broker key opens the broker app; the manager key opens the agency desk. Vite forwards `/api/*` to the backend, so no CORS setup is needed in development. A deployed build sets `VITE_API_BASE` to the API's URL, and the backend's `CORS_ORIGINS` must list the site's origin.
 
-| Who | Screens |
-|---|---|
-| Broker (phone-first) | My listings · check-in photo (GPS distance to the flat) · write the ad with pre-check · audit result with fixes · live listing (share, "still available", rented) |
-| Manager (web) | Flats & mandates (register a flat, owner photos, give or revoke mandates) · review queue (approve or send back, with a note) |
-| Tenant (no login) | `/l/{listing id}`: the verified listing and move-in total · `/v/{audit id}`: is this genuine? |
+Open http://localhost:5173 and paste a key from `demo_keys.json`: a broker key opens the broker app, and the manager key opens the agency desk. Tenants don't sign in; brokers share `/l/{listing id}`. Vite forwards `/api/*` to the backend. A deployed build sets `VITE_API_BASE`, and the backend's `CORS_ORIGINS` must list the site's origin.
 
-## The whole story in one command
+### One-command demos (each uses a throwaway database)
 
 ```bash
 .venv/Scripts/python -m scripts.demo
 ```
-
-On a throwaway database, the demo runs these steps and prints each result:
-1. A dishonest ad gets **NEEDS_FIX** with evidence.
-2. The pre-check suggests the corrected wording.
-3. The resubmitted ad is **VERIFIED → LIVE** as a PayPal product.
-4. The public page is shown.
-5. Someone edits the database, and `/verify` catches it twice.
-
-The script exits non-zero if any step behaves differently. Add `--offline` to skip Groq.
-
-## Feature 2: from question to booked visit
-
-```text
-tenant opens /l/{id} → "Book a visit" (/l/{id}/visit)
-        │
-        ▼
-booking assistant (Groq) ── answers ONLY from the signed audit; refuses discounts, off-listing
-        │                    facts and prompt injection; collects budget, move-in, profile, time
-        ▼
-our rules re-check "ready": budget ≥ verified rent, move-in not past, time within 3 days
-        │ (the model can only be overruled to "not ready", never the other way)
-        ▼
-open slots: 1 h, 09:00–18:00 IST, next 3 days (PayPal honours an authorization for 3 days),
-            minus the broker's visits and a 30-min travel gap around visits at other flats
-        │ fee: base $15, −20% if ≥ 48 h ahead, +30% if < 12 h ahead
-        ▼
-SOFT_HOLD (15 min; the broker's row is locked while the calendar is checked, so two
-           tenants can never take one slot)  ──► EXPIRED (sweep) / RELEASED (tenant)
-        │ authorise
-        ▼
-PayPal JS SDK button → Orders v2 (intent=AUTHORIZE) → authorize → COMMITTED + HOLD_AUTHORIZED
-        (approved after the soft hold ran out → voided at once)            ──► Feature 3 below
-```
-
-If Groq isn't configured or fails, the page says the assistant is offline and still lets the tenant pick a time; it never shows a made-up answer.
-
-| Who | Screens |
-|---|---|
-| Tenant (no login) | `/l/{id}/visit`: chat, "before you book" checklist, slot picker with fees, hold countdown, authorise |
-| Broker | **My visits** (`/b/visits`, the calendar icon on the home screen): own visits, live |
-| Manager | **Visit calendar** (`/m/visits`): every broker's lanes with travel gaps, outcomes and the referee's reasons |
-
-| API | |
-|---|---|
-| Public | `POST /public/listings/{id}/assistant` · `GET /public/listings/{id}/slots` · `POST /public/listings/{id}/visits` (returns a one-time hold token) · `GET /public/visits/{id}` · `POST /public/visits/{id}/authorize` · `POST /public/visits/{id}/release` (all three with `X-Hold-Token`) |
-| Broker / manager | `GET /visits` |
-
-## Feature 3: the visit fee, refereed at the door
-
-```text
-booked visit (fee authorised, ~3-day PayPal honor period) ── tenant sees a 4-digit PIN
-        │
-        ▼  proof, append-only (visit_checkins): the broker types the PIN · GPS from either phone
-        │  (≤150 m from the flat's verified pin, 30 min either side of the slot) · tenant photo
-        │  taps: tenant Pass / Lock / "broker didn't come" · broker approve lock / claim no-show
-        ▼
-referee (pure rules, no LLM) re-derives the verdict from the rows on every tap:
-   A visited + Pass, or nobody locks by the deadline ...................... void
-   B visited + Lock + broker approves ...................................... capture → Feature 4 token
-   C broker's GPS at the flat, no tenant proof, 30 min after start, claimed . capture (no-show fee)
-   D tenant GPS + live photo, no broker proof or PIN, 30 min after start ... void, listing off, trust −10
-   - nothing proved by the deadline (end + 12 h, inside the honor period) .. void
-        │  a correct PIN makes both no-show claims impossible
-        ▼
-visit SETTLING + one outbox job (PayPal-Request-Id from the visit id) ──► capture or void ──► CAPTURED / VOIDED
-ledger HOLD_CAPTURED / HOLD_VOIDED (same keys as the webhooks, so each counts once)
-webhooks PAYMENT.CAPTURE.COMPLETED / DENIED, PAYMENT.AUTHORIZATION.VOIDED confirm or correct; they never decide
-```
-
-The PIN is never stored: it is derived from the tenant's hold token, and the server keeps only an HMAC to check what the broker types (5 tries). The worker settles visits past their deadline. A no-show fee compensates the broker and is never offered as a closing token.
-
-| Who | Screens |
-|---|---|
-| Tenant | `/l/{id}/visit` after booking: PayPal button (a plain demo button without keys), door PIN, "I'm at the flat", Not for me / Lock, "the broker didn't come" with a camera photo. The visit survives a reload (hold token in local storage). |
-| Broker | **At the door** (`/b/visits/{id}`, from My visits): PIN pad, "I'm here", approve the lock, claim a no-show |
-| Manager | Visit calendar: outcome badges and reasons, "Settle now" (the referee's default, applied now) |
-
-| API | |
-|---|---|
-| Tenant (`X-Hold-Token`) | `GET /public/payments/config` · `POST /public/visits/{id}/paypal-order` · `POST …/authorize` · `POST …/checkin` · `POST …/photo` · `POST …/decision` (`PASS` / `LOCK` / `BROKER_ABSENT`) |
-| Broker | `POST /broker/visits/{id}/pin` · `…/checkin` · `…/approve-lock` · `…/claim-no-show` |
-| Manager | `POST /manager/visits/{id}/settle-now` |
-| PayPal | `POST /webhooks/paypal` (capture completed / denied, authorization voided, order approved) |
+Feature 1: a dishonest ad gets NEEDS_FIX → the pre-check suggests fixes → it goes LIVE as a PayPal product → a database edit is caught by `/verify`.
 
 ```bash
 .venv/Scripts/python -m scripts.demo_feature3
 ```
-On a throwaway database, five tenants book visits and each ends a different way (A–D and no proof), with demo PayPal ids; it exits non-zero if any step behaves differently.
-
-Spike: `python -m scripts.spike_orders` creates two sandbox AUTHORIZE orders and waits while you approve them with a **sandbox buyer** in your browser, then authorizes, captures one and voids the other (`--create-only` checks only the keys and the order shape).
-
-## Feature 4: from locked flat to paid invoice
-
-```text
-Feature 3 capture of a locked visit's fee (PayPal Orders; DemoOrders FAKE- ids in DEMO_MODE)
-        │ HOLD_CAPTURED $15
-        ▼
-close the LIVE listing ──► invoice = signed deposit + signed brokerage − token
-        │                  (other amounts: manager override + note, recorded)
-        │  one commit: closing + signed invoice + ledger entry + outbox job
-        ▼
-outbox ──► PayPal: create → send → reminders (due−1, +1, +3; none once paid)
-        ▼
-verified webhook / "Check PayPal now" ──► INVOICE_PAID, once ──► closing PAID
-        ▼
-dispute webhook ──► evidence pack (audit, check-in, invoice, ledger, trust; each with a source id)
-                ──► cited draft (Groq, else a template) ──► manager approves the text ──► PayPal
-```
-
-The rules: the ledger is append-only (the ORM refuses updates and deletes); balances are summed from entries, never stored; every PayPal call goes through the outbox with a fixed `PayPal-Request-Id`; an unverified webhook changes nothing; the LLM only writes query objects and drafts, never a money-moving call.
+Features 2 and 3: five tenants book visits, and each visit ends a different way (passed, locked, tenant no-show, broker no-show, no proof).
 
 ```bash
 .venv/Scripts/python -m scripts.demo_feature4
 ```
-Runs the whole story on a throwaway database, using demo PayPal invoicing (`FAKE-INV-` ids) and webhooks signed by the script. Add `--offline` to skip Groq.
+Features 2–4: book, lock and capture, invoice, a forged webhook refused, the real one applied once, a ledger question, then a dispute with an evidence pack, a draft and approval.
 
-| Who | Screens |
-|---|---|
-| Manager | **Money ledger** (`/m/ledger`): KPIs, AG Grid of closings and money events, "Ask the ledger", invoice drawer (breakdown, pay link, QR, timeline, cancel), close a flat with an optional override · **Disputes** (`/m/disputes`): evidence pack, draft, approve |
-| Broker | **My money ledger** (`/b/ledger`, the ledger icon on the home screen): own closings only; close a flat with a captured token |
+Each demo exits non-zero if any step behaves differently. Add `--offline` (`demo`, `demo_feature4`) to skip Groq.
 
-| API | |
-|---|---|
-| Broker | `POST /broker/listings/{id}/close` |
-| Manager | `POST /manager/listings/{id}/close` (override) · `POST /closings/{id}/cancel` · `GET /manager/disputes` · `POST /manager/disputes/{id}/draft` · `POST …/approve` |
-| Both | `GET /ledger` · `GET /ledger/closable` · `GET /closings/{id}` · `POST /closings/{id}/refresh` · `GET /closings/{id}/qr` · `POST /ledger/copilot` |
-| PayPal | `POST /webhooks/paypal` |
-| Demo only | `POST /dev/ledger/simulate-capture` · `POST /dev/disputes/simulate` |
+### Sandbox spikes (real PayPal calls)
 
-Spikes: `python -m scripts.spike_invoicing` (real sandbox invoice) and `python -m scripts.spike_ledger_copilot` (10 questions through Groq).
-
-## Configuration
-
-| Variable | Needed for | Without it |
-|---|---|---|
-| `GROQ_API_KEY`, `GROQ_TEXT_MODEL` | reading claims in ad text; the Feature 2 booking assistant | claims check UNVERIFIABLE → review; the assistant says it is offline and the tenant picks a time directly |
-| `GROQ_VISION_MODEL` | comparing extra photos with the owner's | extra photos UNVERIFIABLE → review |
-| `MAPS_PROVIDER=osm` | real routes from OpenStreetMap: free, no key or card | — (default `auto`: Google if keyed, else the demo table in `DEMO_MODE`) |
-| `GOOGLE_MAPS_API_KEY` | real rush-hour routes with live traffic (Routes API, needs billing) | `DEMO_MODE` route table, else UNVERIFIABLE |
-| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | sandbox Catalog products | `DEMO_MODE` `FAKE-` ids, else the listing waits as VERIFIED |
-| `DEMO_MODE` | demo route table and fake PayPal ids; Feature 4's simulated visit token and demo-signed webhooks | off: missing services are UNVERIFIABLE |
-| `PAYPAL_WEBHOOK_ID` | trusting PayPal webhooks (verified with PayPal) | every webhook is rejected (in `DEMO_MODE`, only script-signed ones pass) |
-| `INVOICE_CURRENCY`, `INVOICE_DUE_DAYS`, `INVOICE_REMINDER_OFFSETS` | Feature 4 invoices | `USD`, 7 days, `-1,1,3` |
-| `VISIT_FEE_BASE`, `VISIT_WINDOW_DAYS`, `VISIT_SOFT_HOLD_MINUTES`, `VISIT_TRANSIT_BUFFER_MINUTES`, `VISIT_HOURS`, `VISIT_UTC_OFFSET_MINUTES` | Feature 2 visit booking | $15 fee (−20% ≥ 48 h ahead, +30% < 12 h), 3 days, 15 min, 30 min, 9-18, 330 (IST) |
-| `AUDIT_SECRET` | signing audits | dev default (refused when `APP_ENV=production`) |
-| `DATABASE_URL`, `UPLOAD_DIR` | storage | `sqlite:///./proplock.db`, `uploads/` |
-
-## API by role
-
-| Role | Endpoints |
-|---|---|
-| Manager | `POST/GET /manager/properties` · `POST /manager/properties/{id}/photos` (owner photos) · `GET /manager/brokers` · `POST/GET /manager/mandates` · `POST /manager/mandates/{id}/revoke` · `GET /manager/reviews` · `POST /manager/reviews/{audit_id}` · `POST /manager/outbox/run` |
-| Broker | `POST /broker/listings` · `POST/GET /broker/listings/{id}/photos` · `DELETE …/photos/{photo_id}` · `POST /broker/precheck` · `POST /broker/listings/{id}/submit` · `POST …/confirm-availability` · `POST …/mark-rented` |
-| Both | `GET /me` · `GET /audits/{id}` (brokers see only their own) |
-| Public | `GET /public/listings/{id}` · `GET /public/photos/{id}` · `GET /public/audits/{id}/verify` |
-
-Every request carries an `X-API-Key` header except `/public/*` and `/health`.
-
-## Project layout
-
-```text
-backend/
-  app/
-    domain/     pure rules: ground truth (D), commute (B), deposits (C), photos (A), decision, signing;
-                visit_rules (Feature 2: fee, slots, clashes, hold status, the assistant's guardrail)
-    adapters/   Groq (text + vision), Maps, PayPal, images; each with a Fake for tests
-    agents/     LangGraph pipeline: extract → checks in parallel → decide; visit_agent (booking assistant)
-    services/   audits, photos, outbox, listings (availability/expiry), visits, trust score, rate limit
-    api/        manager, broker, audits, public, visits
-    rules/      deposit_caps.yaml, commute_matrix.yaml (demo routes)
-    db/         SQLAlchemy models, seed
-  alembic/      migrations
-  scripts/      demo, spike_groq, spike_paypal
-  tests/        unit/ and api/; no test calls the network
-frontend/      Vite + React + TypeScript single-page app
-  src/pages/    broker/, manager/, public/ screens
-  src/api.ts    fetch wrapper (sends X-API-Key, shows the backend's error messages)
+```bash
+.venv/Scripts/python -m scripts.spike_invoicing
+```
+```bash
+.venv/Scripts/python -m scripts.spike_orders --create-only
 ```
 
-## Tests
+`spike_invoicing` sends a real sandbox invoice. `spike_orders` creates AUTHORIZE orders; without `--create-only` it waits for you to approve them with a **sandbox buyer**, then captures one and voids the other.
+
+### Tests
 
 ```bash
 .venv/Scripts/python -m pytest -q
@@ -292,22 +231,72 @@ frontend/      Vite + React + TypeScript single-page app
 ```bash
 npm run build
 ```
-(from `frontend/`: a strict TypeScript check plus a production build)
 
-## Known limits
+474 backend tests; none of them calls the network. The frontend build runs a strict TypeScript check.
 
-- **Not yet tested against the real services:** no Google Maps or PayPal sandbox call has been made (no keys). OpenStreetMap routing has been called for real.
-- **OpenStreetMap has no live traffic or transit:** walking claims are judged fully; a driving claim that fits the empty-road time, or any transit claim, goes to a manager. Both adapters are tested against mock servers. Run `python -m scripts.spike_paypal` once PayPal keys exist.
-- **The Tamil Nadu deposit cap is unverified:** it is labelled "not yet verified against the official text" until someone checks the gazette by hand. Karnataka's limits are PropLock policy, not law.
-- **Check-in GPS can be faked:** it comes from the upload request (or the photo's EXIF data), so an API client can send any coordinates until the frontend has its own camera page.
-- **Single-process limits:** the pre-check rate limit (10/min per broker) is kept in memory, and photo-reuse detection scans every photo. Both are fine for a demo, not for scale.
-- **Sign-in is an API key:** the web app keeps it in the browser's local storage. Fine for a demo, but a real login would use a session cookie.
-- **The frontend has no automated tests yet:** it was checked by hand in a browser (see the build log).
-- **Feature 3 against real PayPal:** creating sandbox AUTHORIZE orders is verified (`spike_orders --create-only`, idempotent). Approve → authorize → capture/void needs a sandbox buyer, so run the full spike yourself; the adapter is tested against a mock server. The PayPal button uses the JS SDK with the sandbox client id.
-- **Door GPS can be spoofed**, like check-in photo GPS. The PIN is the strong proof; GPS-only outcomes (no-shows) show the referee's reason to the manager.
-- **A broker no-show takes the listing off the public site** (`EXPIRED`) and costs 10 trust points; the broker can re-confirm it. There is no separate manager review step for it yet.
-- **No-show fees are not paid out** to brokers (PayPal Payouts is out of scope); they stay with the agency and are marked in the ledger.
-- **Visit times are in one time zone** (`VISIT_UTC_OFFSET_MINUTES`, India by default), and the booking rate limits are kept in memory like the pre-check's.
-- **Feature 4 against real PayPal:** Invoicing is verified in the sandbox (`scripts/spike_invoicing` passes). Webhooks need a public URL and `PAYPAL_WEBHOOK_ID`; until then, "Check PayPal now" reads the invoice status directly. Dispute evidence submission is tested only against a mock server. `scripts/demo_feature4` always uses `FAKE-INV-` invoices.
-- **Invoices are in USD** in the sandbox (PayPal has no domestic INR between Indian accounts), using the ₹ figures verified in the listing.
-- **AG Grid Community has no row grouping**, so closings and their money events are two views plus a detail drawer.
+### Configuration
+
+| Variable | Used for | Without it |
+|---|---|---|
+| `GROQ_API_KEY`, `GROQ_TEXT_MODEL` | claim extraction, booking assistant, ledger and dispute copilots | claims go to review; the assistant says it is offline and the tenant picks a time directly; the ledger copilot says it couldn't search; dispute drafts use a template |
+| `GROQ_VISION_MODEL` | comparing extra photos with the owner's | extra photos go to review |
+| `MAPS_PROVIDER=osm` / `GOOGLE_MAPS_API_KEY` | real routes (free OSM, or Google with traffic) | demo route table in `DEMO_MODE`, else review |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_API_BASE` | Catalog, Orders, Invoicing, Disputes (sandbox) | `DEMO_MODE` uses `FAKE-` ids; otherwise PayPal steps wait in the outbox |
+| `PAYPAL_WEBHOOK_ID` | verifying PayPal webhooks | every webhook is rejected (in `DEMO_MODE` only script-signed ones pass) |
+| `DEMO_MODE` | demo routes, demo PayPal, demo-signed webhooks | missing services are "couldn't check" |
+| `INVOICE_CURRENCY`, `INVOICE_DUE_DAYS`, `INVOICE_REMINDER_OFFSETS` | invoices | `USD`, 7 days, `-1,1,3` |
+| `VISIT_FEE_BASE`, `VISIT_WINDOW_DAYS`, `VISIT_SOFT_HOLD_MINUTES`, `VISIT_TRANSIT_BUFFER_MINUTES`, `VISIT_HOURS`, `VISIT_UTC_OFFSET_MINUTES` | visit booking | $15 (−20% booked 48 h ahead, +30% under 12 h), 3 days, 15 min, 30 min, 9–18, IST |
+| `AUDIT_SECRET` | signing audits and PIN hashes | dev default (refused when `APP_ENV=production`) |
+| `DATABASE_URL`, `UPLOAD_DIR`, `CORS_ORIGINS` | storage and the browser origin | `sqlite:///./proplock.db`, `uploads/`, `http://localhost:5173` |
+
+## 7. Screens and API
+
+| Who | Screens |
+|---|---|
+| Tenant (no login) | `/l/{id}` verified listing and move-in total · `/v/{audit id}` "is this genuine?" · `/l/{id}/visit` assistant, slots, hold, PayPal, door PIN, Pass/Lock, broker-no-show report |
+| Broker (phone-first) | `/b` listings · check-in photo · write the ad with a live pre-check · audit result with fixes · live listing · `/b/visits` visits and **At the door** · `/b/ledger` own closings |
+| Agency manager (web) | `/m` flats and mandates · `/m/reviews` review queue · `/m/visits` visit calendar · `/m/ledger` money ledger, invoice drawer, close a flat, ask the ledger · `/m/disputes` evidence, draft, approve |
+
+| Role | Main endpoints |
+|---|---|
+| Public | `GET /public/listings/{id}` · `GET /public/audits/{id}/verify` · `POST /public/listings/{id}/assistant` · `GET …/slots` · `POST …/visits` · `POST /public/visits/{id}/paypal-order` · `…/authorize` · `…/checkin` · `…/photo` · `…/decision` · `…/release` (visit calls carry `X-Hold-Token`) |
+| Broker | `POST /broker/listings` · photos · `POST /broker/precheck` · `…/submit` · `…/confirm-availability` · `…/mark-rented` · `POST /broker/listings/{id}/close` · `POST /broker/visits/{id}/pin` · `…/checkin` · `…/approve-lock` · `…/claim-no-show` |
+| Manager | properties, photos, mandates, reviews · `POST /manager/listings/{id}/close` (override with a note) · disputes, draft, approve · `POST /manager/visits/{id}/settle-now` |
+| Both | `GET /me` · `GET /visits` · `GET /ledger` · `GET /ledger/closable` · `GET /closings/{id}` · `…/refresh` · `…/qr` · `POST /ledger/copilot` |
+| PayPal | `POST /webhooks/paypal` |
+
+Every request carries an `X-API-Key` header, except `/public/*` and `/health`.
+
+## 8. Project layout
+
+```text
+backend/
+  app/
+    domain/     pure rules: owner terms, commute, deposits, photos, decision, signing,
+                visit_rules (fee, slots, clashes), referee (visit outcomes, PIN), ledger, invoice_rules
+    adapters/   Groq (text + vision), maps (OSM / Google), PayPal catalog, orders, invoicing; each with a fake
+    agents/     LangGraph audit pipeline, booking assistant, ledger copilot, dispute copilot
+    services/   audits, photos, listings, visits, escrow + escrow jobs, closings, ledger, webhooks, outbox
+    api/        manager, broker, audits, public, visits, closings, disputes, webhooks
+    rules/      deposit_caps.yaml, commute_matrix.yaml (demo routes)
+    db/         SQLAlchemy models, seed
+  alembic/      migrations
+  scripts/      demos and sandbox spikes
+  tests/        unit/ and api/ (474 tests, no network)
+frontend/
+  src/styles/   tokens.css (design tokens: midnight and gold, light theme)
+  src/pages/    broker/, manager/, public/, visits/, escrow/, ledger/
+docs/           solution overview, build log, design tokens, screenshots
+plans/          feature plans
+```
+
+## 9. Known limits
+
+- **PayPal, verified vs mocked.** Invoicing is verified end to end in the sandbox, and so is creating AUTHORIZE orders. The full approve → capture/void flow needs a sandbox buyer (run `spike_orders`). Webhooks need a public URL and `PAYPAL_WEBHOOK_ID`, so their handling and dispute evidence are tested against mock servers. The demos use `FAKE-` ids.
+- **GPS can be spoofed** by a determined client, for both check-in photos and door check-ins. The PIN is the strong proof, and GPS-only outcomes show the referee's reason to the manager.
+- **OpenStreetMap has no live traffic or transit;** those claims go to a manager.
+- **The Tamil Nadu deposit cap is unverified** against the gazette. Karnataka's limit is PropLock policy, not law.
+- **No-show fees are not paid out to brokers** (PayPal Payouts is out of scope); they stay with the agency and are recorded in the ledger.
+- **Demo-grade sign-in:** an API key kept in local storage. Rate limits are in memory, for a single process.
+- **One time zone** for visits (`VISIT_UTC_OFFSET_MINUTES`, India by default).
+- **The frontend has no automated tests;** it was checked by hand in the browser (see the build log).
