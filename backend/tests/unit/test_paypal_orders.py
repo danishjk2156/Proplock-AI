@@ -115,3 +115,12 @@ def test_adapter_choice(monkeypatch, settings, expected):
     finally:
         module.get_orders.cache_clear()
     assert DemoOrders().create_authorize_order(REQ, "x").startswith("FAKE-ORDER-")
+
+
+def test_demo_ids_never_repeat_across_restarts_and_old_holds_still_settle():
+    first, second = DemoOrders(), DemoOrders()  # two server processes
+    a = first.authorize(first.create_authorize_order(REQ, "c"), "a")
+    b = second.authorize(second.create_authorize_order(REQ, "c"), "a")
+    assert a.id != b.id and a.id.startswith("FAKE-AUTH-")
+    second.capture(a.id, "FAKE-ORDER-OLD", "cap")  # booked before the restart: no KeyError
+    second.void(first.authorize(first.create_authorize_order(REQ, "c2"), "a2").id, "v")

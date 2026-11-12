@@ -10,6 +10,7 @@ FakeOrders (tests) keep state in memory; demo ids start with FAKE- so they can't
 """
 
 import logging
+import secrets
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -176,6 +177,7 @@ class FakeOrders:
     fail like a 503. `needs_approval`: authorize fails until approve() (the buyer's popup)."""
 
     prefix: str = "FAKE-T-"
+    run_tag: str = ""  # DemoOrders: a random tag per process, so ids stay unique across restarts
     needs_approval: bool = False
     fail_times: int = 0
     name: str = "fake-orders"
@@ -200,7 +202,7 @@ class FakeOrders:
 
     def create_authorize_order(self, req: OrderRequest, request_id: str) -> str:
         def make():
-            order_id = f"{self.prefix}ORDER-{len(self.orders) + 1:04d}"
+            order_id = f"{self.prefix}ORDER-{self.run_tag}{len(self.orders) + 1:04d}"
             self.orders[order_id] = _Order(req)
             return order_id
         return self._once("create", request_id, make)
@@ -215,7 +217,7 @@ class FakeOrders:
                 raise PayPalError("authorize order failed RESOURCE_NOT_FOUND", 404)
             if self.needs_approval and not order.approved:
                 raise PayPalError("authorize order failed UNPROCESSABLE_ENTITY ORDER_NOT_APPROVED", 422)
-            auth = Authorization(f"{self.prefix}AUTH-{len(self.authorizations) + 1:04d}", "CREATED",
+            auth = Authorization(f"{self.prefix}AUTH-{self.run_tag}{len(self.authorizations) + 1:04d}", "CREATED",
                                  order.req.amount, order.req.currency, datetime.now(UTC))
             order.authorization = auth.id
             self.authorizations[auth.id] = auth
@@ -231,7 +233,7 @@ class FakeOrders:
             auth = self.authorizations[authorization_id]
             if auth.status == "VOIDED":
                 raise PayPalError("capture authorization failed AUTHORIZATION_VOIDED", 422)
-            cap = Capture(f"{self.prefix}CAP-{len(self.captures) + 1:04d}", "COMPLETED", auth.amount, auth.currency)
+            cap = Capture(f"{self.prefix}CAP-{self.run_tag}{len(self.captures) + 1:04d}", "COMPLETED", auth.amount, auth.currency)
             self.captures[cap.id] = cap
             self.authorizations[authorization_id] = Authorization(auth.id, "CAPTURED", auth.amount, auth.currency)
             return cap
@@ -251,10 +253,33 @@ class FakeOrders:
 
 
 class DemoOrders(FakeOrders):
-    """DEMO_MODE only, no keys. Kept per process: a restart forgets demo holds (they were never real)."""
+    """DEMO_MODE only, no keys. State is kept per process, so ids carry a random per-process tag
+    (a restart never reuses an id already in the database), and a hold this process has never
+    seen (booked before a restart) is treated as a fresh demo authorization: it was never real."""
 
     def __init__(self):
-        super().__init__(prefix="FAKE-", name="demo-orders")
+        super().__init__(prefix="FAKE-", name="demo-orders", run_tag=f"{secrets.token_hex(2).upper()}-")
+
+    def _known(self, authorization_id: str) -> None:
+        if authorization_id not in self.authorizations:
+            self.authorizations[authorization_id] = Authorization(authorization_id, "CREATED", Decimal("0"), "USD")
+
+    def authorize(self, order_id: str, request_id: str) -> Authorization:
+        if order_id not in self.orders:  # created before a restart
+            self.orders[order_id] = _Order(OrderRequest(order_id, Decimal("0"), "USD", "demo order from an earlier run"))
+        return super().authorize(order_id, request_id)
+
+    def capture(self, authorization_id: str, order_id: str, request_id: str) -> Capture:
+        self._known(authorization_id)
+        return super().capture(authorization_id, order_id, request_id)
+
+    def void(self, authorization_id: str, request_id: str) -> None:
+        self._known(authorization_id)
+        super().void(authorization_id, request_id)
+
+    def get_authorization(self, authorization_id: str) -> Authorization:
+        self._known(authorization_id)
+        return super().get_authorization(authorization_id)
 
 
 class UnconfiguredOrders:
