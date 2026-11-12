@@ -311,3 +311,10 @@ npm run build
 - **Feature 4 against real PayPal:** Invoicing is verified in the sandbox (`scripts/spike_invoicing` passes). Webhooks need a public URL and `PAYPAL_WEBHOOK_ID`; until then, "Check PayPal now" reads the invoice status directly. Dispute evidence submission is tested only against a mock server. `scripts/demo_feature4` always uses `FAKE-INV-` invoices.
 - **Invoices are in USD** in the sandbox (PayPal has no domestic INR between Indian accounts), using the ₹ figures verified in the listing.
 - **AG Grid Community has no row grouping**, so closings and their money events are two views plus a detail drawer.
+
+## Contributors
+
+| Name | GitHub | Work |
+|---|---|---|
+| Muhammad Danish J | [@danishjk2156](https://github.com/danishjk2156) | Backend, Features 1–4, original web app |
+| Natasha P A | [@natashapa07](https://github.com/natashapa07) | Frontend redesign (design tokens, app shell, screens) |
